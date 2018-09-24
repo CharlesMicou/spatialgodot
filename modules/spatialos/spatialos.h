@@ -6,16 +6,13 @@
 
 class Spatialos : public Node {
     GDCLASS(Spatialos, Node);
-
-    int count;
+    int workerId;
 
 protected:
     static void _bind_methods();
 
 public:
-    void add(int value);
-    void reset();
-    int get_total() const;
+    void joinGame();
 
     Spatialos();
 };
