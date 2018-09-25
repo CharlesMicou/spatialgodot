@@ -8,13 +8,17 @@
 class Spatialos : public Node {
     GDCLASS(Spatialos, Node);
     int workerId;
-    worker::Dispatcher dispatcher;
+    std::unique_ptr<worker::Dispatcher> dispatcher;
+    std::unique_ptr<worker::Connection> connection;
+    bool isConnected;
 
 protected:
     static void _bind_methods();
 
 public:
     void joinGame();
+    void processOps();
+    void setPosition(double x, double y);
 
     Spatialos();
 };
