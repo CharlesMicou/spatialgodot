@@ -2,13 +2,14 @@
 
 #include "spatialos.h"
 #include <improbable/worker.h>
+#include <improbable/standard_library.h>
 #include <iostream>
 
 const std::string kWorkerType = "godot";
 const std::string kReceptionistIp = "localhost";
 const std::uint16_t kReceptionistPort = 7777;
 
-using ComponentRegistry = worker::Components<>;
+using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata>;
 
 worker::Connection ConnectWithReceptionist(const std::string hostname,
                                            const std::uint16_t port,
@@ -41,6 +42,13 @@ void Spatialos::joinGame() {
         isConnected = false;
     });
 
+    dispatcher.OnAddEntity([&](const worker::AddEntityOp& op) {
+        worker::EntityId entityId = op.EntityId;
+        std::string entityAddedMsg = "got entity add for ";
+        entityAddedMsg += std::to_string(entityId);
+        connection.SendLogMessage(worker::LogLevel::kInfo, "godot_logger", entityAddedMsg);
+    });
+
     while (isConnected) {
         dispatcher.Process(connection.GetOpList(100));
     }
@@ -52,5 +60,6 @@ void Spatialos::_bind_methods() {
 
 Spatialos::Spatialos() {
     workerId = 0;
+    worker::Dispatcher dispatcher{ComponentRegistry{}};
 }
 

@@ -6,11 +6,13 @@ module_env = env.Clone()
 src_list = ["spatialos.cpp", "register_types.cpp"]
 module_env.Append(CXXFLAGS=['-O2', '-std=c++11'])
 module_env.Append(CPPPATH="worker_sdk/cpp/include")
+module_env.Append(CPPPATH="generated_code/cpp")
+module_env.Append(CPPPATH="generated_code/cpp/improbable")
 module_env.add_source_files(env.modules_sources, src_list)
+module_env.add_source_files(env.modules_sources, "generated_code/cpp/*.cpp")
+module_env.add_source_files(env.modules_sources, "generated_code/cpp/improbable/*.cpp")
 
 worker_sdk_dir = "worker_sdk/";
-
-#lib = env.add_library("spatialos", thirdparty_sources)
 
 afiles = [
     "cpp/lib/libCoreSdk.a",
@@ -22,14 +24,12 @@ afiles = [
     "cpp/lib/libssl.a",
     "cpp/lib/libWorkerSdk.a",
     "cpp/lib/libz.a",
+    "cpp/lib/libSchema.a",
 ]
 
 apaths = [env.File(worker_sdk_dir + file) for file in afiles]
 
 env.Append(LIBPATH=[worker_sdk_dir + "cpp/lib"])
 env.Append(LIBS=apaths)
-#lib = env.add_library("spatialos", apaths)
-#env.Append(LIBS=[lib])
-#env.Append(CPPPATH="worker_sdk/cpp/include")
 
 Export('env')
