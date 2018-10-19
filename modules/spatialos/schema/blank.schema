@@ -1,8 +1,0 @@
-package sample;
-
-// This is stolen from the CPP demo project.
-// Codegen isn't done in here just yet, this is just for reference.
-
-component Blank {
-  id = 1001;
-}

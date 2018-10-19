@@ -5,7 +5,7 @@
 #include <improbable/standard_library.h>
 #include <iostream>
 
-const std::string kWorkerType = "godot";
+const std::string kWorkerType = "GodotServer";
 const std::string kReceptionistIp = "localhost";
 const std::uint16_t kReceptionistPort = 7777;
 

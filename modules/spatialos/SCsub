@@ -3,33 +3,30 @@
 Import('env')
 
 module_env = env.Clone()
+
+# Godot's setup for what constitutes sources
 src_list = ["spatialos.cpp", "register_types.cpp"]
-module_env.Append(CXXFLAGS=['-O2', '-std=c++11'])
-module_env.Append(CPPPATH="worker_sdk/cpp/include")
+module_env.add_source_files(env.modules_sources, src_list)
+
+# Schema dependencies
 module_env.Append(CPPPATH="generated_code/cpp")
 module_env.Append(CPPPATH="generated_code/cpp/improbable")
-module_env.add_source_files(env.modules_sources, src_list)
-module_env.add_source_files(env.modules_sources, "generated_code/cpp/*.cpp")
-module_env.add_source_files(env.modules_sources, "generated_code/cpp/improbable/*.cpp")
+module_env.Append(CPPPATH="generated_code/cpp/spellcrest")
 
-worker_sdk_dir = "worker_sdk/";
+# Set compiler options as the worker sdk requires c++11
+module_env.Append(CXXFLAGS=['-O2', '-std=c++11'])
 
-afiles = [
-    "cpp/lib/libCoreSdk.a",
-    "cpp/lib/libgpr.a",
-    "cpp/lib/libgrpc.a",
-    "cpp/lib/libgrpc++.a",
-    "cpp/lib/libprotobuf.a",
-    "cpp/lib/libRakNetLibStatic.a",
-    "cpp/lib/libssl.a",
-    "cpp/lib/libWorkerSdk.a",
-    "cpp/lib/libz.a",
-    "cpp/lib/libSchema.a",
-]
+# Worker SDK dependencies
+module_env.Append(CPPPATH="worker_sdk/cpp/include")
+env.Append(LIBPATH=["worker_sdk/cpp/lib"])
+env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.a"))
 
-apaths = [env.File(worker_sdk_dir + file) for file in afiles]
-
-env.Append(LIBPATH=[worker_sdk_dir + "cpp/lib"])
-env.Append(LIBS=apaths)
+# Build schema into a static library
+improbable_schema = Glob("generated_code/cpp/improbable/*.h", strings=True) + Glob("generated_code/cpp/improbable/*.cc", strings=True)
+spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.h", strings=True) + Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
+schemaLib = module_env.Library(target='#bin/schema', source=(improbable_schema + spellcrest_schema))
+shim = schemaLib[0].name.rsplit('.', 1)[0]
+env.Append(LIBS=[shim])
+env.Append(LIBPATH=['#bin'])
 
 Export('env')
