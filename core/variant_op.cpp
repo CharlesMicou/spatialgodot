@@ -521,7 +521,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 				const Dictionary *arr_a = reinterpret_cast<const Dictionary *>(p_a._data._mem);
 				const Dictionary *arr_b = reinterpret_cast<const Dictionary *>(p_b._data._mem);
 
-				_RETURN((*arr_a == *arr_b) == false);
+				_RETURN(*arr_a != *arr_b);
 			}
 
 			CASE_TYPE(math, OP_NOT_EQUAL, ARRAY) {
@@ -3521,7 +3521,7 @@ void Variant::interpolate(const Variant &a, const Variant &b, float c, Variant &
 			//not as efficient but..
 			real_t va = a;
 			real_t vb = b;
-			r_dst = (1.0 - c) * va + vb * c;
+			r_dst = va + (vb - va) * c;
 
 		} else {
 			r_dst = a;
@@ -3542,13 +3542,13 @@ void Variant::interpolate(const Variant &a, const Variant &b, float c, Variant &
 		case INT: {
 			int64_t va = a._data._int;
 			int64_t vb = b._data._int;
-			r_dst = int((1.0 - c) * va + vb * c);
+			r_dst = int(va + (vb - va) * c);
 		}
 			return;
 		case REAL: {
 			real_t va = a._data._real;
 			real_t vb = b._data._real;
-			r_dst = (1.0 - c) * va + vb * c;
+			r_dst = va + (vb - va) * c;
 		}
 			return;
 		case STRING: {
@@ -3556,7 +3556,9 @@ void Variant::interpolate(const Variant &a, const Variant &b, float c, Variant &
 			String sa = *reinterpret_cast<const String *>(a._data._mem);
 			String sb = *reinterpret_cast<const String *>(b._data._mem);
 			String dst;
-			int csize = sb.length() * c + sa.length() * (1.0 - c);
+			int sa_len = sa.length();
+			int sb_len = sb.length();
+			int csize = sa_len + (sb_len - sa_len) * c;
 			if (csize == 0) {
 				r_dst = "";
 				return;

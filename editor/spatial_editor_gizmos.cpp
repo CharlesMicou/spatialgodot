@@ -715,6 +715,7 @@ EditorSpatialGizmo::EditorSpatialGizmo() {
 	instanced = false;
 	spatial_node = NULL;
 	gizmo_plugin = NULL;
+	selectable_icon_size = -1.0f;
 }
 
 EditorSpatialGizmo::~EditorSpatialGizmo() {
@@ -3453,10 +3454,9 @@ void CollisionShapeSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 
 		if (points.size() > 3) {
 
-			QuickHull qh;
 			Vector<Vector3> varr = Variant(points);
 			Geometry::MeshData md;
-			Error err = qh.build(varr, md);
+			Error err = QuickHull::build(varr, md);
 			if (err == OK) {
 				Vector<Vector3> points;
 				points.resize(md.edges.size() * 2);
@@ -4200,21 +4200,16 @@ void JointSpatialGizmoPlugin::CreateGeneric6DOFJointGizmo(
 	float cs = 0.25;
 
 	for (int ax = 0; ax < 3; ax++) {
-		/*r_points.push_back(p_offset.translated(Vector3(+cs,0,0)).origin);
-		r_points.push_back(p_offset.translated(Vector3(-cs,0,0)).origin);
-		r_points.push_back(p_offset.translated(Vector3(0,+cs,0)).origin);
-		r_points.push_back(p_offset.translated(Vector3(0,-cs,0)).origin);
-		r_points.push_back(p_offset.translated(Vector3(0,0,+cs*2)).origin);
-		r_points.push_back(p_offset.translated(Vector3(0,0,-cs*2)).origin); */
+		float ll = 0;
+		float ul = 0;
+		float lll = 0;
+		float lul = 0;
 
-		float ll;
-		float ul;
-		float lll;
-		float lul;
-
-		int a1, a2, a3;
-		bool enable_ang;
-		bool enable_lin;
+		int a1 = 0;
+		int a2 = 0;
+		int a3 = 0;
+		bool enable_ang = false;
+		bool enable_lin = false;
 
 		switch (ax) {
 			case 0:

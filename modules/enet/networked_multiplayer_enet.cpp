@@ -207,13 +207,13 @@ void NetworkedMultiplayerENet::poll() {
 	_pop_current_packet();
 
 	ENetEvent event;
-	/* Wait up to 1000 milliseconds for an event. */
+	/* Keep servicing until there are no available events left in queue. */
 	while (true) {
 
 		if (!host || !active) // Might have been disconnected while emitting a notification
 			return;
 
-		int ret = enet_host_service(host, &event, 1);
+		int ret = enet_host_service(host, &event, 0);
 
 		if (ret < 0) {
 			// Error, do something?
@@ -293,7 +293,7 @@ void NetworkedMultiplayerENet::poll() {
 							encode_uint32(*id, &packet->data[4]);
 							enet_peer_send(E->get(), SYSCH_CONFIG, packet);
 						}
-					} else if (!server) {
+					} else {
 						emit_signal("server_disconnected");
 						close_connection();
 						return;

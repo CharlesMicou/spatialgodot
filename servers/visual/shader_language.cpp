@@ -2023,10 +2023,7 @@ bool ShaderLanguage::_validate_function_call(BlockNode *p_block, OperatorNode *p
 
 	StringName name = static_cast<VariableNode *>(p_func->arguments[0])->name.operator String();
 
-	bool all_const = true;
 	for (int i = 1; i < p_func->arguments.size(); i++) {
-		if (p_func->arguments[i]->type != Node::TYPE_CONSTANT)
-			all_const = false;
 		args.push_back(p_func->arguments[i]->get_datatype());
 	}
 
@@ -2369,6 +2366,21 @@ Variant ShaderLanguage::constant_value_to_variant(const Vector<ShaderLanguage::C
 				value = Variant(t);
 				break;
 			}
+			case ShaderLanguage::TYPE_ISAMPLER2DARRAY:
+			case ShaderLanguage::TYPE_ISAMPLER2D:
+			case ShaderLanguage::TYPE_ISAMPLER3D:
+			case ShaderLanguage::TYPE_SAMPLER2DARRAY:
+			case ShaderLanguage::TYPE_SAMPLER2D:
+			case ShaderLanguage::TYPE_SAMPLER3D:
+			case ShaderLanguage::TYPE_USAMPLER2DARRAY:
+			case ShaderLanguage::TYPE_USAMPLER2D:
+			case ShaderLanguage::TYPE_USAMPLER3D:
+			case ShaderLanguage::TYPE_SAMPLERCUBE: {
+				// Texture types, likely not relevant here.
+				break;
+			}
+			case ShaderLanguage::TYPE_VOID:
+				break;
 		}
 		return value;
 	}
@@ -3008,6 +3020,7 @@ ShaderLanguage::Node *ShaderLanguage::_parse_expression(BlockNode *p_block, cons
 							case TYPE_IVEC2: member_type = TYPE_INT; break;
 							case TYPE_UVEC2: member_type = TYPE_UINT; break;
 							case TYPE_MAT2: member_type = TYPE_VEC2; break;
+							default: break;
 						}
 
 						break;
@@ -3033,6 +3046,7 @@ ShaderLanguage::Node *ShaderLanguage::_parse_expression(BlockNode *p_block, cons
 							case TYPE_IVEC3: member_type = TYPE_INT; break;
 							case TYPE_UVEC3: member_type = TYPE_UINT; break;
 							case TYPE_MAT3: member_type = TYPE_VEC3; break;
+							default: break;
 						}
 						break;
 					case TYPE_BVEC4:
@@ -3057,6 +3071,7 @@ ShaderLanguage::Node *ShaderLanguage::_parse_expression(BlockNode *p_block, cons
 							case TYPE_IVEC4: member_type = TYPE_INT; break;
 							case TYPE_UVEC4: member_type = TYPE_UINT; break;
 							case TYPE_MAT4: member_type = TYPE_VEC4; break;
+							default: break;
 						}
 						break;
 					default: {
@@ -3491,6 +3506,7 @@ ShaderLanguage::Node *ShaderLanguage::_reduce_expression(BlockNode *p_block, Sha
 						nv.sint = -cn->values[i].sint;
 					} break;
 					case TYPE_UINT: {
+						// FIXME: This can't work on uint
 						nv.uint = -cn->values[i].uint;
 					} break;
 					case TYPE_FLOAT: {

@@ -128,11 +128,13 @@ private:
 		Vector<GLint> texture_uniform_locations;
 		uint32_t code_version;
 		bool ok;
-		Version() {
-			code_version = 0;
-			ok = false;
-			uniform_location = NULL;
-		}
+		Version() :
+				id(0),
+				vert_id(0),
+				frag_id(0),
+				uniform_location(NULL),
+				code_version(0),
+				ok(false) {}
 	};
 
 	Version *version;
@@ -336,6 +338,7 @@ public:
 	}
 
 	uint32_t get_version() const { return new_conditional_version.version; }
+	_FORCE_INLINE_ bool is_version_valid() const { return version && version->ok; }
 
 	void set_uniform_camera(int p_idx, const CameraMatrix &p_mat) {
 

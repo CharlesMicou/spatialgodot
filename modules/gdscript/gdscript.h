@@ -147,7 +147,7 @@ public:
 	const Map<StringName, Variant> &get_constants() const { return constants; }
 	const Set<StringName> &get_members() const { return members; }
 	const GDScriptDataType &get_member_type(const StringName &p_member) const {
-		ERR_FAIL_COND_V(!member_indices.has(p_member), GDScriptDataType());
+		CRASH_COND(!member_indices.has(p_member));
 		return member_indices[p_member].data_type;
 	}
 	const Map<StringName, GDScriptFunction *> &get_member_functions() const { return member_functions; }
@@ -301,8 +301,8 @@ struct GDScriptWarning {
 	static Code get_code_from_name(const String &p_name);
 
 	GDScriptWarning() :
-			line(-1),
-			code(WARNING_MAX) {}
+			code(WARNING_MAX),
+			line(-1) {}
 };
 #endif // DEBUG_ENABLED
 

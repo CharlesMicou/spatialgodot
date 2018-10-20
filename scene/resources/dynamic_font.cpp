@@ -201,10 +201,10 @@ Error DynamicFontAtSize::_load() {
 
 	if (FT_HAS_COLOR(face)) {
 		int best_match = 0;
-		int diff = ABS(id.size - face->available_sizes[0].width);
+		int diff = ABS(id.size - ((int64_t)face->available_sizes[0].width));
 		scale_color_font = float(id.size) / face->available_sizes[0].width;
 		for (int i = 1; i < face->num_fixed_sizes; i++) {
-			int ndiff = ABS(id.size - face->available_sizes[i].width);
+			int ndiff = ABS(id.size - ((int64_t)face->available_sizes[i].width));
 			if (ndiff < diff) {
 				best_match = i;
 				diff = ndiff;
@@ -1083,8 +1083,19 @@ void DynamicFont::update_oversampling() {
 				E->self()->outline_data_at_size->update_oversampling();
 			}
 
+			for (int i = 0; i < E->self()->fallback_data_at_size.size(); i++) {
+				if (E->self()->fallback_data_at_size[i].is_valid()) {
+					E->self()->fallback_data_at_size.write[i]->update_oversampling();
+
+					if (E->self()->has_outline() && E->self()->fallback_outline_data_at_size[i].is_valid()) {
+						E->self()->fallback_outline_data_at_size.write[i]->update_oversampling();
+					}
+				}
+			}
+
 			changed.push_back(Ref<DynamicFont>(E->self()));
 		}
+
 		E = E->next();
 	}
 

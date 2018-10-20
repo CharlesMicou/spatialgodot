@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+Import('env')
+Import('env_modules')
+
+# Thirdparty sources
+
 libvpx_dir = "#thirdparty/libvpx/"
 
 libvpx_sources = [
@@ -249,12 +254,8 @@ libvpx_sources_arm_neon_armasm_ms = [libvpx_dir + file for file in libvpx_source
 libvpx_sources_arm_neon_gas_apple = [libvpx_dir + file for file in libvpx_sources_arm_neon_gas_apple]
 
 
-Import('env')
-Import('env_webm')
-
-env_webm.Append(CPPPATH=[libvpx_dir])
-
-env_libvpx = env.Clone()
+env_libvpx = env_modules.Clone()
+env_libvpx.disable_warnings()
 env_libvpx.Append(CPPPATH=[libvpx_dir])
 
 webm_multithread = env["platform"] != 'javascript'
@@ -349,7 +350,7 @@ if webm_multithread:
     env_libvpx.add_source_files(env.modules_sources, libvpx_sources_mt)
 
 if webm_cpu_x86:
-    is_clang_or_gcc = ('gcc' in env["CC"]) or ('clang' in env["CC"]) or ("OSXCROSS_ROOT" in os.environ)
+    is_clang_or_gcc = ('gcc' in os.path.basename(env["CC"])) or ('clang' in os.path.basename(env["CC"])) or ("OSXCROSS_ROOT" in os.environ)
 
     env_libvpx_mmx = env_libvpx.Clone()
     if cpu_bits == '32' and is_clang_or_gcc:

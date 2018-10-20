@@ -853,7 +853,7 @@ public:
 
 	virtual int step(const Variant **p_inputs, Variant **p_outputs, StartMode p_start_mode, Variant *p_working_mem, Variant::CallError &r_error, String &r_error_str) {
 
-		if (instance->get_variable(variable, p_outputs[0]) == false) {
+		if (!instance->get_variable(variable, p_outputs[0])) {
 			r_error.error = Variant::CallError::CALL_ERROR_INVALID_METHOD;
 			r_error_str = RTR("VariableGet not found in script: ") + "'" + String(variable) + "'";
 			return false;
@@ -975,7 +975,7 @@ public:
 
 	virtual int step(const Variant **p_inputs, Variant **p_outputs, StartMode p_start_mode, Variant *p_working_mem, Variant::CallError &r_error, String &r_error_str) {
 
-		if (instance->set_variable(variable, *p_inputs[0]) == false) {
+		if (!instance->set_variable(variable, *p_inputs[0])) {
 
 			r_error.error = Variant::CallError::CALL_ERROR_INVALID_METHOD;
 			r_error_str = RTR("VariableSet not found in script: ") + "'" + String(variable) + "'";
@@ -3708,18 +3708,18 @@ void register_visual_script_nodes() {
 		for (List<MethodInfo>::Element *E = constructors.front(); E; E = E->next()) {
 
 			if (E->get().arguments.size() > 0) {
-
-				String name = "functions/constructors/" + Variant::get_type_name(Variant::Type(i)) + " ( ";
+				String name = "functions/constructors/" + Variant::get_type_name(Variant::Type(i)) + "(";
 				for (int j = 0; j < E->get().arguments.size(); j++) {
-					if (j > 0)
+					if (j > 0) {
 						name += ", ";
-					if (E->get().arguments.size() == 1)
+					}
+					if (E->get().arguments.size() == 1) {
 						name += Variant::get_type_name(E->get().arguments[j].type);
-					else
+					} else {
 						name += E->get().arguments[j].name;
+					}
 				}
-				name += ") ";
-
+				name += ")";
 				VisualScriptLanguage::singleton->add_register_func(name, create_constructor_node);
 				Pair<Variant::Type, MethodInfo> pair;
 				pair.first = Variant::Type(i);

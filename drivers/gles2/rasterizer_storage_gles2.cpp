@@ -52,6 +52,10 @@ GLuint RasterizerStorageGLES2::system_fbo = 0;
 #define _GL_HALF_FLOAT_OES 0x8D61
 #endif
 
+#define _EXT_TEXTURE_CUBE_MAP_SEAMLESS 0x884F
+
+#define _DEPTH_COMPONENT24_OES 0x81A6
+
 void RasterizerStorageGLES2::bind_quad_array() const {
 	glBindBuffer(GL_ARRAY_BUFFER, resources.quadie);
 	glVertexAttribPointer(VS::ARRAY_VERTEX, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
@@ -354,7 +358,6 @@ void RasterizerStorageGLES2::texture_allocate(RID p_texture, int p_width, int p_
 	GLenum type;
 
 	bool compressed = false;
-	bool srgb = false;
 
 	if (p_flags & VS::TEXTURE_FLAG_USED_FOR_STREAMING) {
 		p_flags &= ~VS::TEXTURE_FLAG_MIPMAPS; // no mipies for video
@@ -495,22 +498,6 @@ void RasterizerStorageGLES2::texture_set_data(RID p_texture, const Ref<Image> &p
 		glTexParameterf(texture->target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	}
 
-//set swizle for older format compatibility
-#ifdef GLES_OVER_GL
-	switch (texture->format) {
-
-		case Image::FORMAT_L8: {
-
-		} break;
-		case Image::FORMAT_LA8: {
-
-		} break;
-		default: {
-
-		} break;
-	}
-#endif
-
 	int mipmaps = ((texture->flags & VS::TEXTURE_FLAG_MIPMAPS) && img->has_mipmaps()) ? img->get_mipmap_count() + 1 : 1;
 
 	int w = img->get_width();
@@ -590,7 +577,7 @@ Ref<Image> RasterizerStorageGLES2::texture_get_data(RID p_texture, int p_layer) 
 
 	PoolVector<uint8_t> data;
 
-	int data_size = Image::get_image_data_size(texture->alloc_width, texture->alloc_height, real_format, texture->mipmaps > 1 ? -1 : 0);
+	int data_size = Image::get_image_data_size(texture->alloc_width, texture->alloc_height, real_format, texture->mipmaps > 1);
 
 	data.resize(data_size * 2); //add some memory at the end, just in case for buggy drivers
 	PoolVector<uint8_t>::Write wb = data.write();
@@ -914,26 +901,27 @@ void RasterizerStorageGLES2::sky_set_texture(RID p_sky, RID p_panorama, int p_ra
 	// attachements for it, so we can fill them by issuing draw calls.
 	GLuint tmp_fb;
 
-	glGenFramebuffers(1, &tmp_fb);
-	glBindFramebuffer(GL_FRAMEBUFFER, tmp_fb);
-
 	int size = p_radiance_size;
 
 	int lod = 0;
-
-	shaders.cubemap_filter.set_conditional(CubemapFilterShaderGLES2::USE_SOURCE_PANORAMA, texture->target == GL_TEXTURE_2D);
-
-	shaders.cubemap_filter.bind();
 
 	int mipmaps = 6;
 
 	int mm_level = mipmaps;
 
-	GLenum internal_format = GL_RGBA;
-	GLenum format = GL_RGBA;
-	GLenum type = GL_UNSIGNED_BYTE; // This is suboptimal... TODO other format for FBO?
+	GLenum internal_format = GL_RGB;
+	GLenum format = GL_RGB;
+	GLenum type = GL_UNSIGNED_BYTE;
 
 	// Set the initial (empty) mipmaps
+#if 1
+	//Mobile hardware (PowerVR specially) prefers this approach, the other one kills the game
+	for (int i = 0; i < 6; i++) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internal_format, size, size, 0, format, type, NULL);
+	}
+
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+#else
 	while (size >= 1) {
 
 		for (int i = 0; i < 6; i++) {
@@ -944,7 +932,14 @@ void RasterizerStorageGLES2::sky_set_texture(RID p_sky, RID p_panorama, int p_ra
 
 		size >>= 1;
 	}
+#endif
+	//framebuffer
+	glGenFramebuffers(1, &tmp_fb);
+	glBindFramebuffer(GL_FRAMEBUFFER, tmp_fb);
 
+	shaders.cubemap_filter.set_conditional(CubemapFilterShaderGLES2::USE_SOURCE_PANORAMA, texture->target == GL_TEXTURE_2D);
+
+	shaders.cubemap_filter.bind();
 	lod = 0;
 	mm_level = mipmaps;
 
@@ -963,6 +958,7 @@ void RasterizerStorageGLES2::sky_set_texture(RID p_sky, RID p_panorama, int p_ra
 			shaders.cubemap_filter.set_uniform(CubemapFilterShaderGLES2::FACE_ID, i);
 
 			float roughness = mm_level ? lod / (float)(mipmaps - 1) : 1;
+			roughness = MIN(1.0, roughness); //keep max at 1
 			shaders.cubemap_filter.set_uniform(CubemapFilterShaderGLES2::ROUGHNESS, roughness);
 
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -1308,8 +1304,13 @@ void RasterizerStorageGLES2::shader_get_param_list(RID p_shader, List<PropertyIn
 				pi.hint_string = "CubeMap";
 			} break;
 
-			default: {
-
+			case ShaderLanguage::TYPE_SAMPLER2DARRAY:
+			case ShaderLanguage::TYPE_ISAMPLER2DARRAY:
+			case ShaderLanguage::TYPE_USAMPLER2DARRAY:
+			case ShaderLanguage::TYPE_SAMPLER3D:
+			case ShaderLanguage::TYPE_ISAMPLER3D:
+			case ShaderLanguage::TYPE_USAMPLER3D: {
+				// Not implemented in GLES2
 			} break;
 		}
 
@@ -2634,9 +2635,9 @@ void RasterizerStorageGLES2::update_dirty_multimeshes() {
 
 			if (multimesh->mesh.is_valid()) {
 				mesh_aabb = mesh_get_aabb(multimesh->mesh, RID());
-			} else {
-				mesh_aabb.size += Vector3(0.001, 0.001, 0.001);
 			}
+
+			mesh_aabb.size += Vector3(0.001, 0.001, 0.001); //in case mesh is empty in one of the sides
 
 			int stride = multimesh->color_floats + multimesh->xform_floats + multimesh->custom_data_floats;
 			int count = multimesh->data.size();
@@ -3109,6 +3110,7 @@ void RasterizerStorageGLES2::light_set_param(RID p_light, VS::LightParam p_param
 			light->version++;
 			light->instance_change_notify();
 		} break;
+		default: {}
 	}
 
 	light->param[p_param] = p_value;
@@ -3160,6 +3162,9 @@ void RasterizerStorageGLES2::light_set_reverse_cull_face_mode(RID p_light, bool 
 	ERR_FAIL_COND(!light);
 
 	light->reverse_cull = p_enabled;
+
+	light->version++;
+	light->instance_change_notify();
 }
 
 void RasterizerStorageGLES2::light_omni_set_shadow_mode(RID p_light, VS::LightOmniShadowMode p_mode) {
@@ -3300,69 +3305,194 @@ AABB RasterizerStorageGLES2::light_get_aabb(RID p_light) const {
 /* PROBE API */
 
 RID RasterizerStorageGLES2::reflection_probe_create() {
-	return RID();
+
+	ReflectionProbe *reflection_probe = memnew(ReflectionProbe);
+
+	reflection_probe->intensity = 1.0;
+	reflection_probe->interior_ambient = Color();
+	reflection_probe->interior_ambient_energy = 1.0;
+	reflection_probe->max_distance = 0;
+	reflection_probe->extents = Vector3(1, 1, 1);
+	reflection_probe->origin_offset = Vector3(0, 0, 0);
+	reflection_probe->interior = false;
+	reflection_probe->box_projection = false;
+	reflection_probe->enable_shadows = false;
+	reflection_probe->cull_mask = (1 << 20) - 1;
+	reflection_probe->update_mode = VS::REFLECTION_PROBE_UPDATE_ONCE;
+	reflection_probe->resolution = 128;
+
+	return reflection_probe_owner.make_rid(reflection_probe);
 }
 
 void RasterizerStorageGLES2::reflection_probe_set_update_mode(RID p_probe, VS::ReflectionProbeUpdateMode p_mode) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->update_mode = p_mode;
+	reflection_probe->instance_change_notify();
 }
 
 void RasterizerStorageGLES2::reflection_probe_set_intensity(RID p_probe, float p_intensity) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->intensity = p_intensity;
 }
 
 void RasterizerStorageGLES2::reflection_probe_set_interior_ambient(RID p_probe, const Color &p_ambient) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->interior_ambient = p_ambient;
 }
 
 void RasterizerStorageGLES2::reflection_probe_set_interior_ambient_energy(RID p_probe, float p_energy) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->interior_ambient_energy = p_energy;
 }
 
 void RasterizerStorageGLES2::reflection_probe_set_interior_ambient_probe_contribution(RID p_probe, float p_contrib) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->interior_ambient_probe_contrib = p_contrib;
 }
 
 void RasterizerStorageGLES2::reflection_probe_set_max_distance(RID p_probe, float p_distance) {
-}
 
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->max_distance = p_distance;
+	reflection_probe->instance_change_notify();
+}
 void RasterizerStorageGLES2::reflection_probe_set_extents(RID p_probe, const Vector3 &p_extents) {
-}
 
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->extents = p_extents;
+	reflection_probe->instance_change_notify();
+}
 void RasterizerStorageGLES2::reflection_probe_set_origin_offset(RID p_probe, const Vector3 &p_offset) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->origin_offset = p_offset;
+	reflection_probe->instance_change_notify();
 }
 
 void RasterizerStorageGLES2::reflection_probe_set_as_interior(RID p_probe, bool p_enable) {
-}
 
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->interior = p_enable;
+}
 void RasterizerStorageGLES2::reflection_probe_set_enable_box_projection(RID p_probe, bool p_enable) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->box_projection = p_enable;
 }
 
 void RasterizerStorageGLES2::reflection_probe_set_enable_shadows(RID p_probe, bool p_enable) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->enable_shadows = p_enable;
+	reflection_probe->instance_change_notify();
+}
+void RasterizerStorageGLES2::reflection_probe_set_cull_mask(RID p_probe, uint32_t p_layers) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->cull_mask = p_layers;
+	reflection_probe->instance_change_notify();
 }
 
-void RasterizerStorageGLES2::reflection_probe_set_cull_mask(RID p_probe, uint32_t p_layers) {
+void RasterizerStorageGLES2::reflection_probe_set_resolution(RID p_probe, int p_resolution) {
+
+	ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND(!reflection_probe);
+
+	reflection_probe->resolution = p_resolution;
 }
 
 AABB RasterizerStorageGLES2::reflection_probe_get_aabb(RID p_probe) const {
-	return AABB();
+	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND_V(!reflection_probe, AABB());
+
+	AABB aabb;
+	aabb.position = -reflection_probe->extents;
+	aabb.size = reflection_probe->extents * 2.0;
+
+	return aabb;
 }
 VS::ReflectionProbeUpdateMode RasterizerStorageGLES2::reflection_probe_get_update_mode(RID p_probe) const {
-	return VS::REFLECTION_PROBE_UPDATE_ALWAYS;
+
+	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND_V(!reflection_probe, VS::REFLECTION_PROBE_UPDATE_ALWAYS);
+
+	return reflection_probe->update_mode;
 }
 
 uint32_t RasterizerStorageGLES2::reflection_probe_get_cull_mask(RID p_probe) const {
-	return 0;
+
+	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND_V(!reflection_probe, 0);
+
+	return reflection_probe->cull_mask;
 }
 
 Vector3 RasterizerStorageGLES2::reflection_probe_get_extents(RID p_probe) const {
-	return Vector3();
+
+	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND_V(!reflection_probe, Vector3());
+
+	return reflection_probe->extents;
 }
 Vector3 RasterizerStorageGLES2::reflection_probe_get_origin_offset(RID p_probe) const {
-	return Vector3();
+
+	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND_V(!reflection_probe, Vector3());
+
+	return reflection_probe->origin_offset;
 }
 
 bool RasterizerStorageGLES2::reflection_probe_renders_shadows(RID p_probe) const {
-	return false;
+
+	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND_V(!reflection_probe, false);
+
+	return reflection_probe->enable_shadows;
 }
 
 float RasterizerStorageGLES2::reflection_probe_get_origin_max_distance(RID p_probe) const {
-	return 0;
+
+	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND_V(!reflection_probe, 0);
+
+	return reflection_probe->max_distance;
+}
+
+int RasterizerStorageGLES2::reflection_probe_get_resolution(RID p_probe) const {
+
+	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
+	ERR_FAIL_COND_V(!reflection_probe, 0);
+
+	return reflection_probe->resolution;
 }
 
 RID RasterizerStorageGLES2::gi_probe_create() {
@@ -3463,46 +3593,100 @@ void RasterizerStorageGLES2::gi_probe_dynamic_data_update(RID p_gi_probe_data, i
 ///////
 
 RID RasterizerStorageGLES2::lightmap_capture_create() {
-	return RID();
+
+	LightmapCapture *capture = memnew(LightmapCapture);
+	return lightmap_capture_data_owner.make_rid(capture);
 }
 
 void RasterizerStorageGLES2::lightmap_capture_set_bounds(RID p_capture, const AABB &p_bounds) {
-}
 
+	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND(!capture);
+	capture->bounds = p_bounds;
+	capture->instance_change_notify();
+}
 AABB RasterizerStorageGLES2::lightmap_capture_get_bounds(RID p_capture) const {
-	return AABB();
-}
 
+	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND_V(!capture, AABB());
+	return capture->bounds;
+}
 void RasterizerStorageGLES2::lightmap_capture_set_octree(RID p_capture, const PoolVector<uint8_t> &p_octree) {
-}
 
+	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND(!capture);
+
+	ERR_FAIL_COND(p_octree.size() == 0 || (p_octree.size() % sizeof(LightmapCaptureOctree)) != 0);
+
+	capture->octree.resize(p_octree.size() / sizeof(LightmapCaptureOctree));
+	if (p_octree.size()) {
+		PoolVector<LightmapCaptureOctree>::Write w = capture->octree.write();
+		PoolVector<uint8_t>::Read r = p_octree.read();
+		copymem(w.ptr(), r.ptr(), p_octree.size());
+	}
+	capture->instance_change_notify();
+}
 PoolVector<uint8_t> RasterizerStorageGLES2::lightmap_capture_get_octree(RID p_capture) const {
-	return PoolVector<uint8_t>();
+
+	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND_V(!capture, PoolVector<uint8_t>());
+
+	if (capture->octree.size() == 0)
+		return PoolVector<uint8_t>();
+
+	PoolVector<uint8_t> ret;
+	ret.resize(capture->octree.size() * sizeof(LightmapCaptureOctree));
+	{
+		PoolVector<LightmapCaptureOctree>::Read r = capture->octree.read();
+		PoolVector<uint8_t>::Write w = ret.write();
+		copymem(w.ptr(), r.ptr(), ret.size());
+	}
+
+	return ret;
 }
 
 void RasterizerStorageGLES2::lightmap_capture_set_octree_cell_transform(RID p_capture, const Transform &p_xform) {
+	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND(!capture);
+	capture->cell_xform = p_xform;
 }
 
 Transform RasterizerStorageGLES2::lightmap_capture_get_octree_cell_transform(RID p_capture) const {
-	return Transform();
+	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND_V(!capture, Transform());
+	return capture->cell_xform;
 }
 
 void RasterizerStorageGLES2::lightmap_capture_set_octree_cell_subdiv(RID p_capture, int p_subdiv) {
+	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND(!capture);
+	capture->cell_subdiv = p_subdiv;
 }
 
 int RasterizerStorageGLES2::lightmap_capture_get_octree_cell_subdiv(RID p_capture) const {
-	return 0;
+	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND_V(!capture, 0);
+	return capture->cell_subdiv;
 }
 
 void RasterizerStorageGLES2::lightmap_capture_set_energy(RID p_capture, float p_energy) {
+
+	LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND(!capture);
+	capture->energy = p_energy;
 }
 
 float RasterizerStorageGLES2::lightmap_capture_get_energy(RID p_capture) const {
-	return 0.0;
+
+	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND_V(!capture, 0);
+	return capture->energy;
 }
 
 const PoolVector<RasterizerStorage::LightmapCaptureOctree> *RasterizerStorageGLES2::lightmap_capture_get_octree_ptr(RID p_capture) const {
-	return NULL;
+	const LightmapCapture *capture = lightmap_capture_data_owner.getornull(p_capture);
+	ERR_FAIL_COND_V(!capture, NULL);
+	return &capture->octree;
 }
 
 ///////
@@ -3594,15 +3778,115 @@ void RasterizerStorageGLES2::update_particles() {
 ////////
 
 void RasterizerStorageGLES2::instance_add_skeleton(RID p_skeleton, RasterizerScene::InstanceBase *p_instance) {
+
+	Skeleton *skeleton = skeleton_owner.getornull(p_skeleton);
+	ERR_FAIL_COND(!skeleton);
+
+	skeleton->instances.insert(p_instance);
 }
 
 void RasterizerStorageGLES2::instance_remove_skeleton(RID p_skeleton, RasterizerScene::InstanceBase *p_instance) {
+
+	Skeleton *skeleton = skeleton_owner.getornull(p_skeleton);
+	ERR_FAIL_COND(!skeleton);
+
+	skeleton->instances.erase(p_instance);
 }
 
 void RasterizerStorageGLES2::instance_add_dependency(RID p_base, RasterizerScene::InstanceBase *p_instance) {
+
+	Instantiable *inst = NULL;
+	switch (p_instance->base_type) {
+		case VS::INSTANCE_MESH: {
+			inst = mesh_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		case VS::INSTANCE_MULTIMESH: {
+			inst = multimesh_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		case VS::INSTANCE_IMMEDIATE: {
+			inst = immediate_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		/*case VS::INSTANCE_PARTICLES: {
+			inst = particles_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;*/
+		case VS::INSTANCE_REFLECTION_PROBE: {
+			inst = reflection_probe_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		case VS::INSTANCE_LIGHT: {
+			inst = light_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		/*case VS::INSTANCE_GI_PROBE: {
+			inst = gi_probe_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;*/
+		case VS::INSTANCE_LIGHTMAP_CAPTURE: {
+			inst = lightmap_capture_data_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		default: {
+			if (!inst) {
+				ERR_FAIL();
+			}
+		}
+	}
+
+	inst->instance_list.add(&p_instance->dependency_item);
 }
 
 void RasterizerStorageGLES2::instance_remove_dependency(RID p_base, RasterizerScene::InstanceBase *p_instance) {
+
+	Instantiable *inst = NULL;
+
+	switch (p_instance->base_type) {
+		case VS::INSTANCE_MESH: {
+			inst = mesh_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		case VS::INSTANCE_MULTIMESH: {
+			inst = multimesh_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		case VS::INSTANCE_IMMEDIATE: {
+			inst = immediate_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		/*case VS::INSTANCE_PARTICLES: {
+			inst = particles_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;*/
+		case VS::INSTANCE_REFLECTION_PROBE: {
+			inst = reflection_probe_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		case VS::INSTANCE_LIGHT: {
+			inst = light_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		/*case VS::INSTANCE_GI_PROBE: {
+			inst = gi_probe_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break; */
+		case VS::INSTANCE_LIGHTMAP_CAPTURE: {
+			inst = lightmap_capture_data_owner.getornull(p_base);
+			ERR_FAIL_COND(!inst);
+		} break;
+		default: {
+
+			if (!inst) {
+				ERR_FAIL();
+			}
+		}
+	}
+
+	ERR_FAIL_COND(!inst);
+
+	inst->instance_list.remove(&p_instance->dependency_item);
 }
 
 /* RENDER TARGET */
@@ -3644,7 +3928,7 @@ void RasterizerStorageGLES2::_render_target_allocate(RenderTarget *rt) {
 
 	glGenRenderbuffers(1, &rt->depth);
 	glBindRenderbuffer(GL_RENDERBUFFER, rt->depth);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, rt->width, rt->height);
+	glRenderbufferStorage(GL_RENDERBUFFER, _DEPTH_COMPONENT24_OES, rt->width, rt->height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rt->depth);
 
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -3860,6 +4144,10 @@ VS::InstanceType RasterizerStorageGLES2::get_base_type(RID p_rid) const {
 		return VS::INSTANCE_MULTIMESH;
 	} else if (immediate_owner.owns(p_rid)) {
 		return VS::INSTANCE_IMMEDIATE;
+	} else if (reflection_probe_owner.owns(p_rid)) {
+		return VS::INSTANCE_REFLECTION_PROBE;
+	} else if (lightmap_capture_data_owner.owns(p_rid)) {
+		return VS::INSTANCE_LIGHTMAP_CAPTURE;
 	} else {
 		return VS::INSTANCE_NONE;
 	}
@@ -4037,6 +4325,25 @@ bool RasterizerStorageGLES2::free(RID p_rid) {
 		memdelete(light);
 
 		return true;
+	} else if (reflection_probe_owner.owns(p_rid)) {
+
+		// delete the texture
+		ReflectionProbe *reflection_probe = reflection_probe_owner.get(p_rid);
+		reflection_probe->instance_remove_deps();
+
+		reflection_probe_owner.free(p_rid);
+		memdelete(reflection_probe);
+
+		return true;
+	} else if (lightmap_capture_data_owner.owns(p_rid)) {
+
+		// delete the texture
+		LightmapCapture *lightmap_capture = lightmap_capture_data_owner.get(p_rid);
+		lightmap_capture->instance_remove_deps();
+
+		lightmap_capture_data_owner.free(p_rid);
+		memdelete(lightmap_capture);
+		return true;
 	} else {
 		return false;
 	}
@@ -4088,15 +4395,15 @@ void RasterizerStorageGLES2::initialize() {
 	}
 
 	config.shrink_textures_x2 = false;
-	config.float_texture_supported = config.extensions.find("GL_ARB_texture_float") != NULL || config.extensions.find("GL_OES_texture_float") != NULL;
-	config.s3tc_supported = config.extensions.find("GL_EXT_texture_compression_s3tc") != NULL;
-	config.etc1_supported = config.extensions.has("GL_OES_compressed_ETC1_RGB8_texture") != NULL;
+
+	config.float_texture_supported = config.extensions.has("GL_ARB_texture_float") || config.extensions.has("GL_OES_texture_float");
+	config.s3tc_supported = config.extensions.has("GL_EXT_texture_compression_s3tc");
+	config.etc1_supported = config.extensions.has("GL_OES_compressed_ETC1_RGB8_texture");
 
 	frame.count = 0;
 	frame.delta = 0;
 	frame.current_rt = NULL;
 	frame.clear_request = false;
-	// config.keep_original_textures = false;
 
 	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &config.max_texture_image_units);
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &config.max_texture_size);
@@ -4199,13 +4506,13 @@ void RasterizerStorageGLES2::initialize() {
 
 	// radical inverse vdc cache texture
 	// used for cubemap filtering
-	if (config.float_texture_supported) {
+	if (true /*||config.float_texture_supported*/) { //uint8 is similar and works everywhere
 		glGenTextures(1, &resources.radical_inverse_vdc_cache_tex);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, resources.radical_inverse_vdc_cache_tex);
 
-		float radical_inverse[512];
+		uint8_t radical_inverse[512];
 
 		for (uint32_t i = 0; i < 512; i++) {
 			uint32_t bits = i;
@@ -4217,14 +4524,23 @@ void RasterizerStorageGLES2::initialize() {
 			bits = ((bits & 0x00FF00FF) << 8) | ((bits & 0xFF00FF00) >> 8);
 
 			float value = float(bits) * 2.3283064365386963e-10;
-
-			radical_inverse[i] = value;
+			radical_inverse[i] = uint8_t(CLAMP(value * 255.0, 0, 255));
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, 512, 1, 0, GL_LUMINANCE, GL_FLOAT, radical_inverse);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, 512, 1, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, radical_inverse);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
+
+#ifdef GLES_OVER_GL
+	//this needs to be enabled manually in OpenGL 2.1
+
+	glEnable(_EXT_TEXTURE_CUBE_MAP_SEAMLESS);
+	glEnable(GL_POINT_SPRITE);
+	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+#endif
+
+	config.force_vertex_shading = GLOBAL_GET("rendering/quality/shading/force_vertex_shading");
 }
 
 void RasterizerStorageGLES2::finalize() {
@@ -4239,6 +4555,7 @@ void RasterizerStorageGLES2::update_dirty_resources() {
 	update_dirty_shaders();
 	update_dirty_materials();
 	update_dirty_skeletons();
+	update_dirty_multimeshes();
 }
 
 RasterizerStorageGLES2::RasterizerStorageGLES2() {

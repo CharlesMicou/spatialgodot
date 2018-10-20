@@ -34,7 +34,6 @@
 #include "core/os/os.h"
 #include "core/project_settings.h"
 #include "core/sort.h"
-#include "default_mouse_cursor.xpm"
 #include "visual_server_canvas.h"
 #include "visual_server_global.h"
 #include "visual_server_scene.h"
@@ -190,6 +189,9 @@ void VisualServerRaster::call_set_use_vsync(bool p_enable) {
 	OS::get_singleton()->_set_use_vsync(p_enable);
 }
 
+bool VisualServerRaster::is_low_end() const {
+	return VSG::rasterizer->is_low_end();
+}
 VisualServerRaster::VisualServerRaster() {
 
 	VSG::canvas = memnew(VisualServerCanvas);

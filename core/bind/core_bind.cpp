@@ -180,6 +180,7 @@ void _ResourceSaver::_bind_methods() {
 	BIND_ENUM_CONSTANT(FLAG_OMIT_EDITOR_PROPERTIES);
 	BIND_ENUM_CONSTANT(FLAG_SAVE_BIG_ENDIAN);
 	BIND_ENUM_CONSTANT(FLAG_COMPRESS);
+	BIND_ENUM_CONSTANT(FLAG_REPLACE_SUBRESOURCE_PATHS);
 }
 
 _ResourceSaver::_ResourceSaver() {
@@ -2487,7 +2488,7 @@ _Thread::~_Thread() {
 	if (active) {
 		ERR_EXPLAIN("Reference to a Thread object object was lost while the thread is still running...");
 	}
-	ERR_FAIL_COND(active == true);
+	ERR_FAIL_COND(active);
 }
 /////////////////////////////////////
 

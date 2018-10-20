@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  value_evaluator.h                                                    */
+/*  test_astar.h                                                         */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,19 +28,14 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef VALUE_EVALUATOR_H
-#define VALUE_EVALUATOR_H
+#ifndef TEST_ASTAR_H
+#define TEST_ASTAR_H
 
-#include "core/object.h"
+#include "core/os/main_loop.h"
 
-class ValueEvaluator : public Object {
+namespace TestAStar {
 
-	GDCLASS(ValueEvaluator, Object);
+MainLoop *test();
+}
 
-public:
-	virtual double eval(const String &p_text) {
-		return p_text.to_double();
-	}
-};
-
-#endif // VALUE_EVALUATOR_H
+#endif

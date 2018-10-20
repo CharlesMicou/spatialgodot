@@ -2287,6 +2287,8 @@ void PhysicalBone::_reload_joint() {
 			}
 
 		} break;
+		case JOINT_TYPE_NONE: {
+		} break;
 	}
 }
 
@@ -2341,6 +2343,8 @@ void PhysicalBone::set_joint_type(JointType p_joint_type) {
 			break;
 		case JOINT_TYPE_6DOF:
 			joint_data = memnew(SixDOFJointData);
+			break;
+		case JOINT_TYPE_NONE:
 			break;
 	}
 
@@ -2505,12 +2509,12 @@ PhysicalBone::PhysicalBone() :
 		gizmo_move_joint(false),
 #endif
 		joint_data(NULL),
+		parent_skeleton(NULL),
 		static_body(false),
-		simulate_physics(false),
 		_internal_static_body(false),
+		simulate_physics(false),
 		_internal_simulate_physics(false),
 		bone_id(-1),
-		parent_skeleton(NULL),
 		bone_name(""),
 		bounce(0),
 		mass(1),

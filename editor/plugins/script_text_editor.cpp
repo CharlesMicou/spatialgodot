@@ -817,6 +817,9 @@ void ScriptTextEditor::_edit_option(int p_op) {
 				if (tx->get_selection_to_column() == 0)
 					end -= 1;
 
+				int col_to = tx->get_selection_to_column();
+				int cursor_pos = tx->cursor_get_column();
+
 				// Check if all lines in the selected block are commented
 				bool is_commented = true;
 				for (int i = begin; i <= end; i++) {
@@ -839,19 +842,42 @@ void ScriptTextEditor::_edit_option(int p_op) {
 					}
 					tx->set_line(i, line_text);
 				}
+
+				// Adjust selection & cursor position.
+				int offset = is_commented ? -1 : 1;
+				int col_from = tx->get_selection_from_column() > 0 ? tx->get_selection_from_column() + offset : 0;
+
+				if (is_commented && tx->cursor_get_column() == tx->get_line(tx->cursor_get_line()).length() + 1)
+					cursor_pos += 1;
+
+				if (tx->get_selection_to_column() != 0 && col_to != tx->get_line(tx->get_selection_to_line()).length() + 1)
+					col_to += offset;
+
+				if (tx->cursor_get_column() != 0)
+					cursor_pos += offset;
+
+				tx->select(begin, col_from, tx->get_selection_to_line(), col_to);
+				tx->cursor_set_column(cursor_pos);
+
 			} else {
 				int begin = tx->cursor_get_line();
 				String line_text = tx->get_line(begin);
 
-				if (line_text.begins_with(delimiter))
+				int col = tx->cursor_get_column();
+				if (line_text.begins_with(delimiter)) {
 					line_text = line_text.substr(delimiter.length(), line_text.length());
-				else
+					col -= 1;
+				} else {
 					line_text = delimiter + line_text;
+					col += 1;
+				}
+
 				tx->set_line(begin, line_text);
+				tx->cursor_set_column(col);
 			}
 			tx->end_complex_operation();
 			tx->update();
-			//tx->deselect();
+
 		} break;
 		case EDIT_COMPLETE: {
 
@@ -940,7 +966,8 @@ void ScriptTextEditor::_edit_option(int p_op) {
 		} break;
 		case SEARCH_LOCATE_FUNCTION: {
 
-			quick_open->popup(get_functions());
+			quick_open->popup_dialog(get_functions());
+			quick_open->set_title(TTR("Go to Function"));
 		} break;
 		case SEARCH_GOTO_LINE: {
 
@@ -1275,7 +1302,6 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 				word_at_mouse = tx->get_selection_text();
 
 			bool has_color = (word_at_mouse == "Color");
-			int fold_state = 0;
 			bool foldable = tx->can_fold(row) || tx->is_folded(row);
 			bool open_docs = false;
 			bool goto_definition = false;
@@ -1567,8 +1593,8 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/toggle_breakpoint", TTR("Toggle Breakpoint"), KEY_F9);
 #endif
 	ED_SHORTCUT("script_text_editor/remove_all_breakpoints", TTR("Remove All Breakpoints"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_F9);
-	ED_SHORTCUT("script_text_editor/goto_next_breakpoint", TTR("Goto Next Breakpoint"), KEY_MASK_CMD | KEY_PERIOD);
-	ED_SHORTCUT("script_text_editor/goto_previous_breakpoint", TTR("Goto Previous Breakpoint"), KEY_MASK_CMD | KEY_COMMA);
+	ED_SHORTCUT("script_text_editor/goto_next_breakpoint", TTR("Go to Next Breakpoint"), KEY_MASK_CMD | KEY_PERIOD);
+	ED_SHORTCUT("script_text_editor/goto_previous_breakpoint", TTR("Go to Previous Breakpoint"), KEY_MASK_CMD | KEY_COMMA);
 
 	ED_SHORTCUT("script_text_editor/find", TTR("Find..."), KEY_MASK_CMD | KEY_F);
 #ifdef OSX_ENABLED
@@ -1581,14 +1607,14 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/replace", TTR("Replace..."), KEY_MASK_CMD | KEY_R);
 #endif
 
-	ED_SHORTCUT("script_text_editor/find_in_files", TTR("Find in files..."), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_F);
+	ED_SHORTCUT("script_text_editor/find_in_files", TTR("Find in Files..."), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_F);
 
 #ifdef OSX_ENABLED
-	ED_SHORTCUT("script_text_editor/goto_function", TTR("Goto Function..."), KEY_MASK_CTRL | KEY_MASK_CMD | KEY_J);
+	ED_SHORTCUT("script_text_editor/goto_function", TTR("Go to Function..."), KEY_MASK_CTRL | KEY_MASK_CMD | KEY_J);
 #else
-	ED_SHORTCUT("script_text_editor/goto_function", TTR("Goto Function..."), KEY_MASK_ALT | KEY_MASK_CMD | KEY_F);
+	ED_SHORTCUT("script_text_editor/goto_function", TTR("Go to Function..."), KEY_MASK_ALT | KEY_MASK_CMD | KEY_F);
 #endif
-	ED_SHORTCUT("script_text_editor/goto_line", TTR("Goto Line..."), KEY_MASK_CMD | KEY_L);
+	ED_SHORTCUT("script_text_editor/goto_line", TTR("Go to Line..."), KEY_MASK_CMD | KEY_L);
 
 #ifdef OSX_ENABLED
 	ED_SHORTCUT("script_text_editor/contextual_help", TTR("Contextual Help"), KEY_MASK_ALT | KEY_MASK_SHIFT | KEY_SPACE);

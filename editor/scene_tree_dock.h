@@ -75,6 +75,7 @@ class SceneTreeDock : public VBoxContainer {
 		TOOL_ERASE,
 		TOOL_COPY_NODE_PATH,
 		TOOL_BUTTON_MAX,
+		TOOL_OPEN_DOCUMENTATION,
 		TOOL_SCENE_EDITABLE_CHILDREN,
 		TOOL_SCENE_USE_PLACEHOLDER,
 		TOOL_SCENE_MAKE_LOCAL,
@@ -121,6 +122,7 @@ class SceneTreeDock : public VBoxContainer {
 	ScriptCreateDialog *script_create_dialog;
 	AcceptDialog *accept;
 	ConfirmationDialog *delete_dialog;
+	ConfirmationDialog *editable_instance_remove_dialog;
 
 	ReparentDialog *reparent_dialog;
 	EditorFileDialog *file;
@@ -168,6 +170,8 @@ class SceneTreeDock : public VBoxContainer {
 	void _script_created(Ref<Script> p_script);
 
 	void _delete_confirm();
+
+	void _toggle_editable_children();
 
 	void _node_prerenamed(Node *p_node, const String &p_new_name);
 

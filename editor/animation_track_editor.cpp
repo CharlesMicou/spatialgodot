@@ -29,6 +29,7 @@
 /*************************************************************************/
 
 #include "animation_track_editor.h"
+
 #include "animation_track_editor_plugins.h"
 #include "core/os/keyboard.h"
 #include "editor/animation_bezier_editor.h"
@@ -771,9 +772,6 @@ void AnimationTimelineEdit::_notification(int p_what) {
 		Ref<Texture> hsize_icon = get_icon("Hsize", "EditorIcons");
 		hsize_rect = Rect2(get_name_limit() - hsize_icon->get_width() - 2 * EDSCALE, (get_size().height - hsize_icon->get_height()) / 2, hsize_icon->get_width(), hsize_icon->get_height());
 		draw_texture(hsize_icon, hsize_rect.position);
-
-		float keys_from = get_value();
-		float keys_to = keys_from + zoomw / scale;
 
 		{
 			float time_min = 0;
@@ -4088,6 +4086,8 @@ void AnimationTrackEditor::_move_selection_commit() {
 	for (int i = 0; i < track_edits.size(); i++) {
 		track_edits[i]->update();
 	}
+
+	_update_key_edit();
 }
 void AnimationTrackEditor::_move_selection_cancel() {
 
@@ -4923,8 +4923,8 @@ AnimationTrackEditor::AnimationTrackEditor() {
 	//this shortcut will be checked from the track itself. so no need to enable it here (will conflict with scenetree dock)
 
 	edit->get_popup()->add_separator();
-	edit->get_popup()->add_shortcut(ED_SHORTCUT("animation_editor/goto_next_step", TTR("Goto Next Step"), KEY_MASK_CMD | KEY_RIGHT), EDIT_GOTO_NEXT_STEP);
-	edit->get_popup()->add_shortcut(ED_SHORTCUT("animation_editor/goto_prev_step", TTR("Goto Prev Step"), KEY_MASK_CMD | KEY_LEFT), EDIT_GOTO_PREV_STEP);
+	edit->get_popup()->add_shortcut(ED_SHORTCUT("animation_editor/goto_next_step", TTR("Go to Next Step"), KEY_MASK_CMD | KEY_RIGHT), EDIT_GOTO_NEXT_STEP);
+	edit->get_popup()->add_shortcut(ED_SHORTCUT("animation_editor/goto_prev_step", TTR("Go to Previous Step"), KEY_MASK_CMD | KEY_LEFT), EDIT_GOTO_PREV_STEP);
 	edit->get_popup()->add_separator();
 	edit->get_popup()->add_item(TTR("Optimize Animation"), EDIT_OPTIMIZE_ANIMATION);
 	edit->get_popup()->add_item(TTR("Clean-Up Animation"), EDIT_CLEAN_UP_ANIMATION);

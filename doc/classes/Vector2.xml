@@ -227,7 +227,7 @@
 			<argument index="1" name="t" type="float">
 			</argument>
 			<description>
-				Returns the result of SLERP between this vector and [code]b[/code], by amount [code]t[/code]. [code]t[/code] is in the range of  [code]0.0 - 1.0[/code], representing the amount of interpolation.
+				Returns the result of SLERP between this vector and [code]b[/code], by amount [code]t[/code]. [code]t[/code] is in the range of [code]0.0 - 1.0[/code], representing the amount of interpolation.
 				Both vectors need to be normalized.
 			</description>
 		</method>
@@ -267,7 +267,10 @@
 	</members>
 	<constants>
 		<constant name="ZERO" value="Vector2( 0, 0 )">
-			Null vector.
+			Zero vector.
+		</constant>
+		<constant name="ONE" value="Vector2( 1, 1 )">
+			One vector.
 		</constant>
 		<constant name="INF" value="Vector2( inf, inf )">
 			Infinite vector.

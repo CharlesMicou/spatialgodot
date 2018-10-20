@@ -46,7 +46,6 @@
 AreaBullet::AreaBullet() :
 		RigidCollisionObjectBullet(CollisionObjectBullet::TYPE_AREA),
 		monitorable(true),
-		isScratched(false),
 		spOv_mode(PhysicsServer::AREA_SPACE_OVERRIDE_DISABLED),
 		spOv_gravityPoint(false),
 		spOv_gravityPointDistanceScale(0),
@@ -55,10 +54,11 @@ AreaBullet::AreaBullet() :
 		spOv_gravityMag(10),
 		spOv_linearDump(0.1),
 		spOv_angularDump(1),
-		spOv_priority(0) {
+		spOv_priority(0),
+		isScratched(false) {
 
 	btGhost = bulletnew(btGhostObject);
-	btGhost->setCollisionShape(BulletPhysicsServer::get_empty_shape());
+	reload_shapes();
 	setupBulletCollisionObject(btGhost);
 	/// Collision objects with a callback still have collision response with dynamic rigid bodies.
 	/// In order to use collision objects as trigger, you have to disable the collision response.
@@ -93,6 +93,9 @@ void AreaBullet::dispatch_callbacks() {
 				call_event(otherObj.object, PhysicsServer::AREA_BODY_REMOVED);
 				otherObj.object->on_exit_area(this);
 				overlappingObjects.remove(i); // Remove after callback
+				break;
+			case OVERLAP_STATE_DIRTY:
+			case OVERLAP_STATE_INSIDE:
 				break;
 		}
 	}
@@ -163,11 +166,9 @@ bool AreaBullet::is_monitoring() const {
 	return get_godot_object_flags() & GOF_IS_MONITORING_AREA;
 }
 
-void AreaBullet::main_shape_resetted() {
-	if (get_main_shape())
-		btGhost->setCollisionShape(get_main_shape());
-	else
-		btGhost->setCollisionShape(BulletPhysicsServer::get_empty_shape());
+void AreaBullet::main_shape_changed() {
+	CRASH_COND(!get_main_shape())
+	btGhost->setCollisionShape(get_main_shape());
 }
 
 void AreaBullet::reload_body() {

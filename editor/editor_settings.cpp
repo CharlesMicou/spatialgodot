@@ -485,6 +485,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("editors/2d/bone_outline_color", Color(0.35, 0.35, 0.35));
 	_initial_set("editors/2d/bone_outline_size", 2);
 	_initial_set("editors/2d/keep_margins_when_changing_anchors", false);
+	_initial_set("editors/2d/viewport_border_color", Color(0.4, 0.4, 1.0, 0.4));
 	_initial_set("editors/2d/warped_mouse_panning", true);
 	_initial_set("editors/2d/simple_spacebar_panning", false);
 	_initial_set("editors/2d/scroll_to_pan", false);
@@ -530,7 +531,6 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 
 	_initial_set("docks/property_editor/texture_preview_width", 48);
 	_initial_set("docks/property_editor/auto_refresh_interval", 0.3);
-	_initial_set("text_editor/help/doc_path", "");
 	_initial_set("text_editor/help/show_help_index", true);
 
 	_initial_set("filesystem/import/ask_save_before_reimport", false);

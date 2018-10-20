@@ -1793,22 +1793,22 @@ template <>
 struct EditorSceneImporterGLTFInterpolate<Quat> {
 
 	Quat lerp(const Quat &a, const Quat &b, float c) const {
-		ERR_FAIL_COND_V(a.is_normalized() == false, Quat());
-		ERR_FAIL_COND_V(b.is_normalized() == false, Quat());
+		ERR_FAIL_COND_V(!a.is_normalized(), Quat());
+		ERR_FAIL_COND_V(!b.is_normalized(), Quat());
 
 		return a.slerp(b, c).normalized();
 	}
 
 	Quat catmull_rom(const Quat &p0, const Quat &p1, const Quat &p2, const Quat &p3, float c) {
-		ERR_FAIL_COND_V(p1.is_normalized() == false, Quat());
-		ERR_FAIL_COND_V(p2.is_normalized() == false, Quat());
+		ERR_FAIL_COND_V(!p1.is_normalized(), Quat());
+		ERR_FAIL_COND_V(!p2.is_normalized(), Quat());
 
 		return p1.slerp(p2, c).normalized();
 	}
 
 	Quat bezier(Quat start, Quat control_1, Quat control_2, Quat end, float t) {
-		ERR_FAIL_COND_V(start.is_normalized() == false, Quat());
-		ERR_FAIL_COND_V(end.is_normalized() == false, Quat());
+		ERR_FAIL_COND_V(!start.is_normalized(), Quat());
+		ERR_FAIL_COND_V(!end.is_normalized(), Quat());
 
 		return start.slerp(end, t).normalized();
 	}
@@ -1910,15 +1910,15 @@ void EditorSceneImporterGLTF::_import_animation(GLTFState &state, AnimationPlaye
 		NodePath node_path;
 
 		GLTFNode *node = state.nodes[E->key()];
-		for (int i = 0; i < node->godot_nodes.size(); i++) {
+		for (int n = 0; n < node->godot_nodes.size(); n++) {
 
 			if (node->joints.size()) {
-				Skeleton *sk = (Skeleton *)node->godot_nodes[i];
+				Skeleton *sk = (Skeleton *)node->godot_nodes[n];
 				String path = ap->get_parent()->get_path_to(sk);
-				String bone = sk->get_bone_name(node->joints[i].godot_bone_index);
+				String bone = sk->get_bone_name(node->joints[n].godot_bone_index);
 				node_path = path + ":" + bone;
 			} else {
-				node_path = ap->get_parent()->get_path_to(node->godot_nodes[i]);
+				node_path = ap->get_parent()->get_path_to(node->godot_nodes[n]);
 			}
 
 			for (int i = 0; i < track.rotation_track.times.size(); i++) {
@@ -1993,8 +1993,8 @@ void EditorSceneImporterGLTF::_import_animation(GLTFState &state, AnimationPlaye
 						xform.basis.set_quat_scale(rot, scale);
 						xform.origin = pos;
 
-						Skeleton *skeleton = skeletons[node->joints[i].skin];
-						int bone = node->joints[i].godot_bone_index;
+						Skeleton *skeleton = skeletons[node->joints[n].skin];
+						int bone = node->joints[n].godot_bone_index;
 						xform = skeleton->get_bone_rest(bone).affine_inverse() * xform;
 
 						rot = xform.basis.get_rotation_quat();

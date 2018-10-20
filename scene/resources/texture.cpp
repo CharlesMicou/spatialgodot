@@ -207,6 +207,9 @@ void ImageTexture::set_flags(uint32_t p_flags) {
 
 	flags=p_flags|cube;	*/
 	flags = p_flags;
+	if (w == 0 || h == 0) {
+		return; //uninitialized, do not set to texture
+	}
 	VisualServer::get_singleton()->texture_set_flags(texture, p_flags);
 }
 
@@ -422,6 +425,15 @@ ImageTexture::~ImageTexture() {
 }
 
 //////////////////////////////////////////
+
+void StreamTexture::set_path(const String &p_path, bool p_take_over) {
+
+	if (texture.is_valid()) {
+		VisualServer::get_singleton()->texture_set_path(texture, p_path);
+	}
+
+	Resource::set_path(p_path, p_take_over);
+}
 
 void StreamTexture::_requested_3d(void *p_ud) {
 

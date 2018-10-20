@@ -355,6 +355,11 @@ public:
 						visible == p_cache.visible);
 			}
 
+			bool operator!=(const LightCache &p_cache) {
+
+				return !operator==(p_cache);
+			}
+
 			LightCache() {
 
 				type = VS::LIGHT_DIRECTIONAL;
@@ -544,7 +549,7 @@ public:
 	bool free(RID p_rid);
 
 	VisualServerScene();
-	~VisualServerScene();
+	virtual ~VisualServerScene();
 };
 
 #endif // VISUALSERVERSCENE_H

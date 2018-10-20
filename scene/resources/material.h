@@ -286,7 +286,7 @@ private:
 		mk.key = 0;
 		for (int i = 0; i < FEATURE_MAX; i++) {
 			if (features[i]) {
-				mk.feature_mask |= (1 << i);
+				mk.feature_mask |= ((uint64_t)1 << i);
 			}
 		}
 		mk.detail_uv = detail_uv;
@@ -295,7 +295,7 @@ private:
 		mk.cull_mode = cull_mode;
 		for (int i = 0; i < FLAG_MAX; i++) {
 			if (flags[i]) {
-				mk.flags |= (1 << i);
+				mk.flags |= ((uint64_t)1 << i);
 			}
 		}
 		mk.detail_blend_mode = detail_blend_mode;
@@ -441,6 +441,8 @@ private:
 	};
 
 	static Ref<SpatialMaterial> materials_for_2d[MAX_MATERIALS_FOR_2D]; //used by Sprite3D and other stuff
+
+	void _validate_high_end(const String &text, PropertyInfo &property) const;
 
 protected:
 	static void _bind_methods();

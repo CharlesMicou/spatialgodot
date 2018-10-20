@@ -320,14 +320,17 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 				Color color;
 				Color font_color_shadow;
 				bool underline = false;
+				bool strikethrough = false;
 
 				if (p_mode == PROCESS_DRAW) {
 					color = _find_color(text, p_base_color);
 					font_color_shadow = _find_color(text, p_font_color_shadow);
-					underline = _find_underline(text);
-					if (_find_meta(text, &meta) && underline_meta) {
+					if (_find_underline(text) || (_find_meta(text, &meta) && underline_meta)) {
 
 						underline = true;
+					} else if (_find_strikethrough(text)) {
+
+						strikethrough = true;
 					}
 
 				} else if (p_mode == PROCESS_CACHE) {
@@ -418,7 +421,7 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 								int cw = 0;
 
-								bool visible = visible_characters < 0 || p_char_count < visible_characters && YRANGE_VISIBLE(y + lh - line_descent - line_ascent, line_ascent + line_descent);
+								bool visible = visible_characters < 0 || (p_char_count < visible_characters && YRANGE_VISIBLE(y + lh - line_descent - line_ascent, line_ascent + line_descent));
 								if (visible)
 									line_is_blank = false;
 
@@ -469,6 +472,15 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 							underline_width *= EDSCALE;
 #endif
 							VS::get_singleton()->canvas_item_add_line(ci, p_ofs + Point2(align_ofs + wofs, uy), p_ofs + Point2(align_ofs + wofs + w, uy), uc, underline_width);
+						} else if (strikethrough) {
+							Color uc = color;
+							uc.a *= 0.5;
+							int uy = y + lh / 2 - line_descent + 2;
+							float strikethrough_width = 1.0;
+#ifdef TOOLS_ENABLED
+							strikethrough_width *= EDSCALE;
+#endif
+							VS::get_singleton()->canvas_item_add_line(ci, p_ofs + Point2(align_ofs + wofs, uy), p_ofs + Point2(align_ofs + wofs + w, uy), uc, strikethrough_width);
 						}
 					}
 
@@ -497,7 +509,7 @@ int RichTextLabel::_process_line(ItemFrame *p_frame, const Vector2 &p_ofs, int &
 
 				ENSURE_WIDTH(img->image->get_width());
 
-				bool visible = visible_characters < 0 || p_char_count < visible_characters && YRANGE_VISIBLE(y + lh - font->get_descent() - img->image->get_height(), img->image->get_height());
+				bool visible = visible_characters < 0 || (p_char_count < visible_characters && YRANGE_VISIBLE(y + lh - font->get_descent() - img->image->get_height(), img->image->get_height()));
 				if (visible)
 					line_is_blank = false;
 
@@ -835,8 +847,6 @@ void RichTextLabel::_notification(int p_what) {
 			bool use_outline = get_constant("shadow_as_outline");
 			Point2 shadow_ofs(get_constant("shadow_offset_x"), get_constant("shadow_offset_y"));
 
-			float x_ofs = 0;
-
 			visible_line_count = 0;
 			while (y < size.height && from_line < main->lines.size()) {
 
@@ -854,7 +864,6 @@ void RichTextLabel::_find_click(ItemFrame *p_frame, const Point2i &p_click, Item
 	if (r_click_item)
 		*r_click_item = NULL;
 
-	Size2 size = get_size();
 	Rect2 text_rect = _get_text_rect();
 	int ofs = vscroll->get_value();
 	Color font_color_shadow = get_color("font_color_shadow");
@@ -1227,6 +1236,23 @@ bool RichTextLabel::_find_underline(Item *p_item) {
 	return false;
 }
 
+bool RichTextLabel::_find_strikethrough(Item *p_item) {
+
+	Item *item = p_item;
+
+	while (item) {
+
+		if (item->type == ITEM_STRIKETHROUGH) {
+
+			return true;
+		}
+
+		item = item->parent;
+	}
+
+	return false;
+}
+
 bool RichTextLabel::_find_meta(Item *p_item, Variant *r_meta) {
 
 	Item *item = p_item;
@@ -1458,6 +1484,7 @@ void RichTextLabel::push_font(const Ref<Font> &p_font) {
 	item->font = p_font;
 	_add_item(item, true);
 }
+
 void RichTextLabel::push_color(const Color &p_color) {
 
 	ERR_FAIL_COND(current->type == ITEM_TABLE);
@@ -1466,10 +1493,19 @@ void RichTextLabel::push_color(const Color &p_color) {
 	item->color = p_color;
 	_add_item(item, true);
 }
+
 void RichTextLabel::push_underline() {
 
 	ERR_FAIL_COND(current->type == ITEM_TABLE);
 	ItemUnderline *item = memnew(ItemUnderline);
+
+	_add_item(item, true);
+}
+
+void RichTextLabel::push_strikethrough() {
+
+	ERR_FAIL_COND(current->type == ITEM_TABLE);
+	ItemStrikethrough *item = memnew(ItemStrikethrough);
 
 	_add_item(item, true);
 }
@@ -1683,7 +1719,7 @@ Error RichTextLabel::append_bbcode(const String &p_bbcode) {
 		}
 
 		if (brk_pos == p_bbcode.length())
-			break; //nothing else o add
+			break; //nothing else to add
 
 		int brk_end = p_bbcode.find("]", brk_pos + 1);
 
@@ -1749,7 +1785,7 @@ Error RichTextLabel::append_bbcode(const String &p_bbcode) {
 			int columns = tag.substr(6, tag.length()).to_int();
 			if (columns < 1)
 				columns = 1;
-			//use monospace font
+
 			push_table(columns);
 			pos = brk_end + 1;
 			tag_stack.push_front("table");
@@ -1763,7 +1799,7 @@ Error RichTextLabel::append_bbcode(const String &p_bbcode) {
 			int ratio = tag.substr(5, tag.length()).to_int();
 			if (ratio < 1)
 				ratio = 1;
-			//use monospace font
+
 			set_table_column_expand(get_current_table_column(), true, ratio);
 			push_cell();
 			pos = brk_end + 1;
@@ -1776,43 +1812,37 @@ Error RichTextLabel::append_bbcode(const String &p_bbcode) {
 			tag_stack.push_front(tag);
 		} else if (tag == "s") {
 
-			//use strikethrough (not supported underline instead)
-			push_underline();
+			//use strikethrough
+			push_strikethrough();
 			pos = brk_end + 1;
 			tag_stack.push_front(tag);
 		} else if (tag == "center") {
 
-			//use underline
 			push_align(ALIGN_CENTER);
 			pos = brk_end + 1;
 			tag_stack.push_front(tag);
 		} else if (tag == "fill") {
 
-			//use underline
 			push_align(ALIGN_FILL);
 			pos = brk_end + 1;
 			tag_stack.push_front(tag);
 		} else if (tag == "right") {
 
-			//use underline
 			push_align(ALIGN_RIGHT);
 			pos = brk_end + 1;
 			tag_stack.push_front(tag);
 		} else if (tag == "ul") {
 
-			//use underline
 			push_list(LIST_DOTS);
 			pos = brk_end + 1;
 			tag_stack.push_front(tag);
 		} else if (tag == "ol") {
 
-			//use underline
 			push_list(LIST_NUMBERS);
 			pos = brk_end + 1;
 			tag_stack.push_front(tag);
 		} else if (tag == "indent") {
 
-			//use underline
 			indent_level++;
 			push_indent(indent_level);
 			pos = brk_end + 1;
@@ -1820,7 +1850,6 @@ Error RichTextLabel::append_bbcode(const String &p_bbcode) {
 
 		} else if (tag == "url") {
 
-			//use strikethrough (not supported underline instead)
 			int end = p_bbcode.find("[", brk_end);
 			if (end == -1)
 				end = p_bbcode.length();
@@ -1838,7 +1867,6 @@ Error RichTextLabel::append_bbcode(const String &p_bbcode) {
 			tag_stack.push_front("url");
 		} else if (tag == "img") {
 
-			//use strikethrough (not supported underline instead)
 			int end = p_bbcode.find("[", brk_end);
 			if (end == -1)
 				end = p_bbcode.length();
@@ -2145,6 +2173,7 @@ void RichTextLabel::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("push_list", "type"), &RichTextLabel::push_list);
 	ClassDB::bind_method(D_METHOD("push_meta", "data"), &RichTextLabel::push_meta);
 	ClassDB::bind_method(D_METHOD("push_underline"), &RichTextLabel::push_underline);
+	ClassDB::bind_method(D_METHOD("push_strikethrough"), &RichTextLabel::push_strikethrough);
 	ClassDB::bind_method(D_METHOD("push_table", "columns"), &RichTextLabel::push_table);
 	ClassDB::bind_method(D_METHOD("set_table_column_expand", "column", "expand", "ratio"), &RichTextLabel::set_table_column_expand);
 	ClassDB::bind_method(D_METHOD("push_cell"), &RichTextLabel::push_cell);
@@ -2205,7 +2234,7 @@ void RichTextLabel::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "meta_underlined"), "set_meta_underline", "is_meta_underlined");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "tab_size", PROPERTY_HINT_RANGE, "0,24,1"), "set_tab_size", "get_tab_size");
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text"), "set_text", "get_text");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text", PROPERTY_HINT_MULTILINE_TEXT), "set_text", "get_text");
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_active"), "set_scroll_active", "is_scroll_active");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_following"), "set_scroll_follow", "is_scroll_following");
@@ -2233,6 +2262,7 @@ void RichTextLabel::_bind_methods() {
 	BIND_ENUM_CONSTANT(ITEM_FONT);
 	BIND_ENUM_CONSTANT(ITEM_COLOR);
 	BIND_ENUM_CONSTANT(ITEM_UNDERLINE);
+	BIND_ENUM_CONSTANT(ITEM_STRIKETHROUGH);
 	BIND_ENUM_CONSTANT(ITEM_ALIGN);
 	BIND_ENUM_CONSTANT(ITEM_INDENT);
 	BIND_ENUM_CONSTANT(ITEM_LIST);

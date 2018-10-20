@@ -29,9 +29,7 @@ def get_opts():
 
 def get_flags():
 
-    return [
-            ("module_mobile_vr_enabled", False),
-    ]
+    return []
 
 
 def configure(env):
@@ -56,7 +54,7 @@ def configure(env):
     ## Compiler configuration
 
     if env['use_llvm']:
-        if ('clang++' not in env['CXX']):
+        if ('clang++' not in os.path.basename(env['CXX'])):
             env["CC"] = "clang"
             env["CXX"] = "clang++"
             env["LINK"] = "clang++"

@@ -70,8 +70,6 @@ struct NativeScriptDesc {
 		String documentation;
 	};
 
-	String documentation;
-
 	Map<StringName, Method> methods;
 	OrderedHashMap<StringName, Property> properties;
 	Map<StringName, Signal> signals_; // QtCreator doesn't like the name signals
@@ -80,6 +78,8 @@ struct NativeScriptDesc {
 	NativeScriptDesc *base_data;
 	godot_instance_create_func create_func;
 	godot_instance_destroy_func destroy_func;
+
+	String documentation;
 
 	const void *type_tag;
 
@@ -277,18 +277,14 @@ public:
 
 	Map<String, Set<NativeScript *> > library_script_users;
 
-	const StringName _init_call_type = "nativescript_init";
-	const StringName _init_call_name = "nativescript_init";
-
-	const StringName _terminate_call_name = "nativescript_terminate";
-
-	const StringName _noarg_call_type = "nativescript_no_arg";
-
-	const StringName _frame_call_name = "nativescript_frame";
-
+	StringName _init_call_type;
+	StringName _init_call_name;
+	StringName _terminate_call_name;
+	StringName _noarg_call_type;
+	StringName _frame_call_name;
 #ifndef NO_THREADS
-	const StringName _thread_enter_call_name = "nativescript_thread_enter";
-	const StringName _thread_exit_call_name = "nativescript_thread_exit";
+	StringName _thread_enter_call_name;
+	StringName _thread_exit_call_name;
 #endif
 
 	NativeScriptLanguage();
@@ -372,11 +368,14 @@ inline NativeScriptDesc *NativeScript::get_script_desc() const {
 
 class NativeReloadNode : public Node {
 	GDCLASS(NativeReloadNode, Node)
-	bool unloaded = false;
+	bool unloaded;
 
 public:
 	static void _bind_methods();
 	void _notification(int p_what);
+
+	NativeReloadNode() :
+			unloaded(false) {}
 };
 
 class ResourceFormatLoaderNativeScript : public ResourceFormatLoader {

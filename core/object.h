@@ -116,6 +116,7 @@ enum PropertyUsageFlags {
 	PROPERTY_USAGE_NIL_IS_VARIANT = 1 << 19,
 	PROPERTY_USAGE_INTERNAL = 1 << 20,
 	PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE = 1 << 21, // If the object is duplicated also this property will be duplicated
+	PROPERTY_USAGE_HIGH_END_GFX = 1 << 22,
 
 	PROPERTY_USAGE_DEFAULT = PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_NETWORK,
 	PROPERTY_USAGE_DEFAULT_INTL = PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_NETWORK | PROPERTY_USAGE_INTERNATIONALIZED,
@@ -187,11 +188,11 @@ Array convert_property_list(const List<PropertyInfo> *p_list);
 struct MethodInfo {
 
 	String name;
-	List<PropertyInfo> arguments;
-	Vector<Variant> default_arguments;
 	PropertyInfo return_val;
 	uint32_t flags;
 	int id;
+	List<PropertyInfo> arguments;
+	Vector<Variant> default_arguments;
 
 	inline bool operator==(const MethodInfo &p_method) const { return id == p_method.id; }
 	inline bool operator<(const MethodInfo &p_method) const { return id == p_method.id ? (name < p_method.name) : (id < p_method.id); }
@@ -317,7 +318,7 @@ protected:                                                                      
 	virtual void _initialize_classv() {                                                                                                 \
 		initialize_class();                                                                                                             \
 	}                                                                                                                                   \
-	_FORCE_INLINE_ bool (Object::*(_get_get() const))(const StringName &p_name, Variant &) const {                                      \
+	_FORCE_INLINE_ bool (Object::*_get_get() const)(const StringName &p_name, Variant &) const {                                        \
 		return (bool (Object::*)(const StringName &, Variant &) const) & m_class::_get;                                                 \
 	}                                                                                                                                   \
 	virtual bool _getv(const StringName &p_name, Variant &r_ret) const {                                                                \
@@ -327,7 +328,7 @@ protected:                                                                      
 		}                                                                                                                               \
 		return m_inherits::_getv(p_name, r_ret);                                                                                        \
 	}                                                                                                                                   \
-	_FORCE_INLINE_ bool (Object::*(_get_set() const))(const StringName &p_name, const Variant &p_property) {                            \
+	_FORCE_INLINE_ bool (Object::*_get_set() const)(const StringName &p_name, const Variant &p_property) {                              \
 		return (bool (Object::*)(const StringName &, const Variant &)) & m_class::_set;                                                 \
 	}                                                                                                                                   \
 	virtual bool _setv(const StringName &p_name, const Variant &p_property) {                                                           \
@@ -337,7 +338,7 @@ protected:                                                                      
 		}                                                                                                                               \
 		return false;                                                                                                                   \
 	}                                                                                                                                   \
-	_FORCE_INLINE_ void (Object::*(_get_get_property_list() const))(List<PropertyInfo> * p_list) const {                                \
+	_FORCE_INLINE_ void (Object::*_get_get_property_list() const)(List<PropertyInfo> * p_list) const {                                  \
 		return (void (Object::*)(List<PropertyInfo> *) const) & m_class::_get_property_list;                                            \
 	}                                                                                                                                   \
 	virtual void _get_property_listv(List<PropertyInfo> *p_list, bool p_reversed) const {                                               \
@@ -356,7 +357,7 @@ protected:                                                                      
 			m_inherits::_get_property_listv(p_list, p_reversed);                                                                        \
 		}                                                                                                                               \
 	}                                                                                                                                   \
-	_FORCE_INLINE_ void (Object::*(_get_notification() const))(int) {                                                                   \
+	_FORCE_INLINE_ void (Object::*_get_notification() const)(int) {                                                                     \
 		return (void (Object::*)(int)) & m_class::_notification;                                                                        \
 	}                                                                                                                                   \
 	virtual void _notificationv(int p_notification, bool p_reversed) {                                                                  \
@@ -421,7 +422,7 @@ private:
 	};
 
 #ifdef DEBUG_ENABLED
-	friend class _ObjectDebugLock;
+	friend struct _ObjectDebugLock;
 #endif
 	friend bool predelete_handler(Object *);
 	friend void postinitialize_handler(Object *);
@@ -513,16 +514,16 @@ protected:
 	_FORCE_INLINE_ static void (*_get_bind_methods())() {
 		return &Object::_bind_methods;
 	}
-	_FORCE_INLINE_ bool (Object::*(_get_get() const))(const StringName &p_name, Variant &r_ret) const {
+	_FORCE_INLINE_ bool (Object::*_get_get() const)(const StringName &p_name, Variant &r_ret) const {
 		return &Object::_get;
 	}
-	_FORCE_INLINE_ bool (Object::*(_get_set() const))(const StringName &p_name, const Variant &p_property) {
+	_FORCE_INLINE_ bool (Object::*_get_set() const)(const StringName &p_name, const Variant &p_property) {
 		return &Object::_set;
 	}
-	_FORCE_INLINE_ void (Object::*(_get_get_property_list() const))(List<PropertyInfo> *p_list) const {
+	_FORCE_INLINE_ void (Object::*_get_get_property_list() const)(List<PropertyInfo> *p_list) const {
 		return &Object::_get_property_list;
 	}
-	_FORCE_INLINE_ void (Object::*(_get_notification() const))(int) {
+	_FORCE_INLINE_ void (Object::*_get_notification() const)(int) {
 		return &Object::_notification;
 	}
 	static void get_valid_parents_static(List<String> *p_parents);

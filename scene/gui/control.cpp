@@ -769,7 +769,7 @@ void Control::force_drag(const Variant &p_data, Control *p_control) {
 void Control::set_drag_preview(Control *p_control) {
 
 	ERR_FAIL_COND(!is_inside_tree());
-	ERR_FAIL_COND(get_viewport()->gui_is_dragging());
+	ERR_FAIL_COND(!get_viewport()->gui_is_dragging());
 	get_viewport()->_gui_set_drag_preview(this, p_control);
 }
 
@@ -1079,7 +1079,7 @@ bool Control::has_constant_override(const StringName &p_name) const {
 bool Control::has_icon(const StringName &p_name, const StringName &p_type) const {
 
 	if (p_type == StringName() || p_type == "") {
-		if (has_icon_override(p_name) == true)
+		if (has_icon_override(p_name))
 			return true;
 	}
 
@@ -1113,7 +1113,7 @@ bool Control::has_icon(const StringName &p_name, const StringName &p_type) const
 bool Control::has_shader(const StringName &p_name, const StringName &p_type) const {
 
 	if (p_type == StringName() || p_type == "") {
-		if (has_shader_override(p_name) == true)
+		if (has_shader_override(p_name))
 			return true;
 	}
 
@@ -1146,7 +1146,7 @@ bool Control::has_shader(const StringName &p_name, const StringName &p_type) con
 bool Control::has_stylebox(const StringName &p_name, const StringName &p_type) const {
 
 	if (p_type == StringName() || p_type == "") {
-		if (has_stylebox_override(p_name) == true)
+		if (has_stylebox_override(p_name))
 			return true;
 	}
 
@@ -1179,7 +1179,7 @@ bool Control::has_stylebox(const StringName &p_name, const StringName &p_type) c
 bool Control::has_font(const StringName &p_name, const StringName &p_type) const {
 
 	if (p_type == StringName() || p_type == "") {
-		if (has_font_override(p_name) == true)
+		if (has_font_override(p_name))
 			return true;
 	}
 
@@ -1213,7 +1213,7 @@ bool Control::has_font(const StringName &p_name, const StringName &p_type) const
 bool Control::has_color(const StringName &p_name, const StringName &p_type) const {
 
 	if (p_type == StringName() || p_type == "") {
-		if (has_color_override(p_name) == true)
+		if (has_color_override(p_name))
 			return true;
 	}
 
@@ -1247,7 +1247,7 @@ bool Control::has_color(const StringName &p_name, const StringName &p_type) cons
 bool Control::has_constant(const StringName &p_name, const StringName &p_type) const {
 
 	if (p_type == StringName() || p_type == "") {
-		if (has_constant_override(p_name) == true)
+		if (has_constant_override(p_name))
 			return true;
 	}
 
@@ -1993,7 +1993,7 @@ Control *Control::find_prev_valid_focus() const {
 
 				if (!from) {
 
-					ERR_EXPLAIN("Prev focus node is not a control: " + n->get_name());
+					ERR_EXPLAIN("Previous focus node is not a control: " + n->get_name());
 					ERR_FAIL_V(NULL);
 				}
 			} else {
@@ -2235,13 +2235,13 @@ String Control::_get_tooltip() const {
 
 void Control::set_focus_neighbour(Margin p_margin, const NodePath &p_neighbour) {
 
-	ERR_FAIL_INDEX(p_margin, 4);
+	ERR_FAIL_INDEX((int)p_margin, 4);
 	data.focus_neighbour[p_margin] = p_neighbour;
 }
 
 NodePath Control::get_focus_neighbour(Margin p_margin) const {
 
-	ERR_FAIL_INDEX_V(p_margin, 4, NodePath());
+	ERR_FAIL_INDEX_V((int)p_margin, 4, NodePath());
 	return data.focus_neighbour[p_margin];
 }
 

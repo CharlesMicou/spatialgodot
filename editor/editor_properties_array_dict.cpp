@@ -337,7 +337,7 @@ void EditorPropertyArray::update_property() {
 				} break;
 				case Variant::INT: {
 					EditorPropertyInteger *editor = memnew(EditorPropertyInteger);
-					editor->setup(-100000, 100000, true, true);
+					editor->setup(-100000, 100000, 1, true, true);
 					prop = editor;
 
 				} break;
@@ -744,7 +744,7 @@ void EditorPropertyDictionary::update_property() {
 			page->connect("value_changed", this, "_page_changed");
 		} else {
 			// Queue childs for deletion, delete immediately might cause errors.
-			for (size_t i = 1; i < vbox->get_child_count(); i++) {
+			for (int i = 1; i < vbox->get_child_count(); i++) {
 				vbox->get_child(i)->queue_delete();
 			}
 		}
@@ -800,7 +800,7 @@ void EditorPropertyDictionary::update_property() {
 				} break;
 				case Variant::INT: {
 					EditorPropertyInteger *editor = memnew(EditorPropertyInteger);
-					editor->setup(-100000, 100000, true, true);
+					editor->setup(-100000, 100000, 1, true, true);
 					prop = editor;
 
 				} break;
@@ -969,7 +969,7 @@ void EditorPropertyDictionary::update_property() {
 				pc->add_child(add_vbox);
 			}
 			prop->set_object_and_property(object.ptr(), prop_name);
-			int change_index;
+			int change_index = 0;
 
 			if (i < amount) {
 				String cs = key.get_construct_string();

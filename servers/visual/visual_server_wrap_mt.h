@@ -271,6 +271,7 @@ public:
 	FUNC2(reflection_probe_set_enable_box_projection, RID, bool)
 	FUNC2(reflection_probe_set_enable_shadows, RID, bool)
 	FUNC2(reflection_probe_set_cull_mask, RID, uint32_t)
+	FUNC2(reflection_probe_set_resolution, RID, int)
 
 	/* BAKED LIGHT API */
 
@@ -607,6 +608,10 @@ public:
 	FUNC1(call_set_use_vsync, bool)
 
 	static void set_use_vsync_callback(bool p_enable);
+
+	virtual bool is_low_end() const {
+		return visual_server->is_low_end();
+	}
 
 	VisualServerWrapMT(VisualServer *p_contained, bool p_create_thread);
 	~VisualServerWrapMT();

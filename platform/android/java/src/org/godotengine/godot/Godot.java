@@ -116,6 +116,7 @@ public class Godot extends Activity implements SensorEventListener, IDownloaderC
 
 	private boolean use_32_bits = false;
 	private boolean use_immersive = false;
+	private boolean use_debug_opengl = false;
 	private boolean mStatePaused;
 	private int mState;
 	private boolean keep_screen_on = true;
@@ -182,6 +183,9 @@ public class Godot extends Activity implements SensorEventListener, IDownloaderC
 		}
 
 		protected void onMainActivityResult(int requestCode, int resultCode, Intent data) {
+		}
+
+		protected void onMainRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
 		}
 
 		protected void onMainPause() {}
@@ -251,6 +255,13 @@ public class Godot extends Activity implements SensorEventListener, IDownloaderC
 		}
 	};
 
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+		for (int i = 0; i < singleton_count; i++) {
+			singletons[i].onMainRequestPermissionsResult(requestCode, permissions, grantResults);
+		}
+	};
+
 	public void onVideoInit() {
 
 		boolean use_gl3 = getGLESVersionCode() >= 0x00030000;
@@ -268,7 +279,7 @@ public class Godot extends Activity implements SensorEventListener, IDownloaderC
 		// ...add to FrameLayout
 		layout.addView(edittext);
 
-		mView = new GodotView(getApplication(), io, use_gl3, use_32_bits, this);
+		mView = new GodotView(getApplication(), io, use_gl3, use_32_bits, use_debug_opengl,this);
 		layout.addView(mView, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 		edittext.setView(mView);
 		io.setEdit(edittext);
@@ -461,6 +472,8 @@ public class Godot extends Activity implements SensorEventListener, IDownloaderC
 				boolean has_extra = i < command_line.length - 1;
 				if (command_line[i].equals("--use_depth_32")) {
 					use_32_bits = true;
+				} else if (command_line[i].equals("--debug_opengl")) {
+					use_debug_opengl = true;
 				} else if (command_line[i].equals("--use_immersive")) {
 					use_immersive = true;
 					if (Build.VERSION.SDK_INT >= 19.0) { // check if the application runs on an android 4.4+

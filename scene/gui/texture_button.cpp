@@ -88,6 +88,9 @@ bool TextureButton::has_point(const Point2 &p_point) const {
 					scale.y = min;
 					ofs -= _texture_region.position / min;
 				} break;
+				default: {
+					// FIXME: Why a switch if we only handle one enum value?
+				}
 			}
 
 			// offset and scale the new point position to adjust it to the bitmask size
@@ -147,6 +150,7 @@ void TextureButton::_notification(int p_what) {
 					} else
 						texdraw = hover;
 				} break;
+				case DRAW_HOVER_PRESSED: break; // Not used in this class
 				case DRAW_DISABLED: {
 
 					if (disabled.is_null()) {

@@ -397,6 +397,7 @@ public:
 	virtual RID reflection_probe_create() = 0;
 
 	virtual void reflection_probe_set_update_mode(RID p_probe, VS::ReflectionProbeUpdateMode p_mode) = 0;
+	virtual void reflection_probe_set_resolution(RID p_probe, int p_resolution) = 0;
 	virtual void reflection_probe_set_intensity(RID p_probe, float p_intensity) = 0;
 	virtual void reflection_probe_set_interior_ambient(RID p_probe, const Color &p_ambient) = 0;
 	virtual void reflection_probe_set_interior_ambient_energy(RID p_probe, float p_energy) = 0;
@@ -1103,8 +1104,11 @@ public:
 	virtual void restore_render_target() = 0;
 	virtual void clear_render_target(const Color &p_color) = 0;
 	virtual void blit_render_target_to_screen(RID p_render_target, const Rect2 &p_screen_rect, int p_screen = 0) = 0;
+	virtual void output_lens_distorted_to_screen(RID p_render_target, const Rect2 &p_screen_rect, float p_k1, float p_k2, const Vector2 &p_eye_center, float p_oversample) = 0;
 	virtual void end_frame(bool p_swap_buffers) = 0;
 	virtual void finalize() = 0;
+
+	virtual bool is_low_end() const = 0;
 
 	virtual ~Rasterizer() {}
 };

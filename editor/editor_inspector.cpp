@@ -36,9 +36,6 @@
 #include "multi_node_edit.h"
 #include "scene/resources/packed_scene.h"
 
-// TODO:
-// arrays and dictionary
-
 Size2 EditorProperty::get_minimum_size() const {
 
 	Size2 ms;
@@ -267,11 +264,6 @@ void EditorProperty::_notification(int p_what) {
 		} else {
 			keying_rect = Rect2();
 		}
-
-		//int vs = get_constant("vseparation", "Tree");
-		Color guide_color = get_color("guide_color", "Tree");
-		int vs_height = get_size().height; // vs / 2;
-		//	draw_line(Point2(0, vs_height), Point2(get_size().width, vs_height), guide_color);
 	}
 }
 
@@ -492,6 +484,17 @@ void EditorProperty::update_reload_status() {
 }
 
 bool EditorProperty::use_keying_next() const {
+	List<PropertyInfo> plist;
+	object->get_property_list(&plist, true);
+
+	for (List<PropertyInfo>::Element *I = plist.front(); I; I = I->next()) {
+		PropertyInfo &p = I->get();
+
+		if (p.name == property) {
+			return p.hint == PROPERTY_HINT_SPRITE_FRAME;
+		}
+	}
+
 	return false;
 }
 void EditorProperty::set_checkable(bool p_checkable) {
@@ -626,6 +629,11 @@ void EditorProperty::_gui_input(const Ref<InputEvent> &p_event) {
 
 		if (keying_rect.has_point(mb->get_position())) {
 			emit_signal("property_keyed", property);
+
+			if (use_keying_next()) {
+				call_deferred("emit_signal", "property_changed", property, object->get(property).operator int64_t() + 1);
+				call_deferred("update_property");
+			}
 		}
 
 		if (revert_rect.has_point(mb->get_position())) {
@@ -1454,6 +1462,9 @@ void EditorInspector::update_tree() {
 		} else if (!(p.usage & PROPERTY_USAGE_EDITOR))
 			continue;
 
+		if (p.usage & PROPERTY_USAGE_HIGH_END_GFX && VS::get_singleton()->is_low_end())
+			continue; //do not show this property in low end gfx
+
 		if (p.name == "script" && (hide_script || bool(object->call("_hide_script_from_inspector")))) {
 			continue;
 		}
@@ -1986,7 +1997,7 @@ void EditorInspector::_property_keyed(const String &p_path) {
 	if (!object)
 		return;
 
-	emit_signal("property_keyed", p_path, object->get(p_path), false); //second param is deprecated
+	emit_signal("property_keyed", p_path, object->get(p_path), true); //second param is deprecated
 }
 
 void EditorInspector::_property_keyed_with_value(const String &p_path, const Variant &p_value) {
@@ -2128,6 +2139,13 @@ void EditorInspector::_notification(int p_what) {
 	}
 
 	if (p_what == EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED) {
+
+		if (use_sub_inspector_bg) {
+			add_style_override("bg", get_stylebox("sub_inspector_bg", "Editor"));
+		} else if (is_inside_tree()) {
+			add_style_override("bg", get_stylebox("bg", "Tree"));
+		}
+
 		update_tree();
 	}
 }

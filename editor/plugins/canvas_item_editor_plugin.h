@@ -195,6 +195,7 @@ private:
 		DRAG_MOVE,
 		DRAG_SCALE_X,
 		DRAG_SCALE_Y,
+		DRAG_SCALE_BOTH,
 		DRAG_ROTATE,
 		DRAG_PIVOT,
 		DRAG_V_GUIDE,
@@ -279,6 +280,10 @@ private:
 		Transform2D xform;
 		float length;
 		uint64_t last_pass;
+
+		BoneList() :
+				length(0.f),
+				last_pass(0) {}
 	};
 
 	uint64_t bone_last_frame;
@@ -364,6 +369,7 @@ private:
 	Ref<ShortCut> multiply_grid_step_shortcut;
 	Ref<ShortCut> divide_grid_step_shortcut;
 
+	bool _is_node_editable(const Node *p_node);
 	void _find_canvas_items_at_pos(const Point2 &p_pos, Node *p_node, Vector<_SelectResult> &r_items, int p_limit = 0, const Transform2D &p_parent_xform = Transform2D(), const Transform2D &p_canvas_xform = Transform2D());
 	void _get_canvas_items_at_pos(const Point2 &p_pos, Vector<_SelectResult> &r_items, int p_limit = 0);
 	void _get_bones_at_pos(const Point2 &p_pos, Vector<_SelectResult> &r_items);
@@ -540,6 +546,8 @@ public:
 	VSplitContainer *get_bottom_split();
 
 	Control *get_viewport_control() { return viewport; }
+
+	void update_viewport();
 
 	Tool get_current_tool() { return tool; }
 

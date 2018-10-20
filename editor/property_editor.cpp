@@ -132,7 +132,7 @@ void CustomPropertyEditor::_menu_option(int p_which) {
 				emit_signal("variant_changed");
 			} else if (hint == PROPERTY_HINT_ENUM) {
 
-				v = p_which;
+				v = menu->get_item_metadata(p_which);
 				emit_signal("variant_changed");
 			}
 		} break;
@@ -427,12 +427,14 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 			} else if (hint == PROPERTY_HINT_ENUM) {
 
 				Vector<String> options = hint_text.split(",");
+				int current_val = 0;
 				for (int i = 0; i < options.size(); i++) {
-					if (options[i].find(":") != -1) {
-						menu->add_item(options[i].get_slicec(':', 0), options[i].get_slicec(':', 1).to_int());
-					} else {
-						menu->add_item(options[i], i);
-					}
+					Vector<String> text_split = options[i].split(":");
+					if (text_split.size() != 1)
+						current_val = text_split[1].to_int();
+					menu->add_item(text_split[0]);
+					menu->set_item_metadata(i, current_val);
+					current_val += 1;
 				}
 				menu->set_position(get_position());
 				menu->popup();
@@ -1990,61 +1992,4 @@ CustomPropertyEditor::CustomPropertyEditor() {
 
 	create_dialog = NULL;
 	property_select = NULL;
-}
-
-/////////////////////////////
-
-double PropertyValueEvaluator::eval(const String &p_text) {
-
-	// If range value contains a comma replace it with dot (issue #6028)
-	const String &p_new_text = p_text.replace(",", ".");
-
-	if (!obj || !script_language)
-		return _default_eval(p_new_text);
-
-	Ref<Script> script = Ref<Script>(script_language->create_script());
-	script->set_source_code(_build_script(p_new_text));
-	Error err = script->reload();
-	if (err) {
-		ERR_PRINTS("PropertyValueEvaluator: Error loading script for expression: " + p_new_text);
-		return _default_eval(p_new_text);
-	}
-
-	Object dummy;
-	ScriptInstance *script_instance = script->instance_create(&dummy);
-	if (!script_instance)
-		return _default_eval(p_new_text);
-
-	Variant::CallError call_err;
-	Variant arg = obj;
-	const Variant *args[] = { &arg };
-	double result = script_instance->call("eval", args, 1, call_err);
-	if (call_err.error == Variant::CallError::CALL_OK) {
-		return result;
-	}
-	ERR_PRINTS("PropertyValueEvaluator: Eval failed, error code: " + itos(call_err.error));
-
-	return _default_eval(p_new_text);
-}
-
-void PropertyValueEvaluator::edit(Object *p_obj) {
-	obj = p_obj;
-}
-
-String PropertyValueEvaluator::_build_script(const String &p_text) {
-	String script_text = "tool\nextends Object\nfunc eval(s):\n\tself = s\n\treturn " + p_text.strip_edges() + "\n";
-	return script_text;
-}
-
-PropertyValueEvaluator::PropertyValueEvaluator() {
-	script_language = NULL;
-
-	for (int i = 0; i < ScriptServer::get_language_count(); i++) {
-		if (ScriptServer::get_language(i)->get_name() == "GDScript") {
-			script_language = ScriptServer::get_language(i);
-		}
-	}
-}
-
-PropertyValueEvaluator::~PropertyValueEvaluator() {
 }

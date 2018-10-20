@@ -471,10 +471,6 @@ static float rand_from_seed(uint32_t &seed) {
 	return float(seed % uint32_t(65536)) / 65535.0;
 }
 
-static float rand_from_seed_m1_p1(uint32_t &seed) {
-	return rand_from_seed(seed) * 2.0 - 1.0;
-}
-
 void CPUParticles::_particles_process(float p_delta) {
 
 	p_delta *= speed_scale;
@@ -596,7 +592,7 @@ void CPUParticles::_particles_process(float p_delta) {
 
 				Vector3 direction_xz = Vector3(Math::sin(angle1_rad), 0, Math::cos(angle1_rad));
 				Vector3 direction_yz = Vector3(0, Math::sin(angle2_rad), Math::cos(angle2_rad));
-				direction_yz.z = direction_yz.z / Math::sqrt(direction_yz.z); //better uniform distribution
+				direction_yz.z = direction_yz.z / MAX(0.0001, Math::sqrt(ABS(direction_yz.z))); //better uniform distribution
 				Vector3 direction = Vector3(direction_xz.x * direction_yz.z, direction_yz.y, direction_xz.z * direction_yz.z);
 				direction.normalize();
 				p.velocity = direction * parameters[PARAM_INITIAL_LINEAR_VELOCITY] * Math::lerp(1.0f, float(Math::randf()), randomness[PARAM_INITIAL_LINEAR_VELOCITY]);
@@ -981,6 +977,8 @@ void CPUParticles::_update_particle_data_buffer() {
 
 			ptr += 17;
 		}
+
+		can_update = true;
 	}
 
 #ifndef NO_THREADS
@@ -993,8 +991,10 @@ void CPUParticles::_update_render_thread() {
 #ifndef NO_THREADS
 	update_mutex->lock();
 #endif
-
-	VS::get_singleton()->multimesh_set_as_bulk_array(multimesh, particle_data);
+	if (can_update) {
+		VS::get_singleton()->multimesh_set_as_bulk_array(multimesh, particle_data);
+		can_update = false; //wait for next time
+	}
 
 #ifndef NO_THREADS
 	update_mutex->unlock();
@@ -1036,7 +1036,7 @@ void CPUParticles::_notification(int p_what) {
 
 	if (p_what == NOTIFICATION_INTERNAL_PROCESS) {
 
-		if (particles.size() == 0)
+		if (particles.size() == 0 || !is_visible_in_tree())
 			return;
 
 		float delta = get_process_delta_time();
@@ -1065,6 +1065,8 @@ void CPUParticles::_notification(int p_what) {
 			}
 		}
 
+		bool processed = false;
+
 		if (time == 0 && pre_process_time > 0.0) {
 
 			float frame_time;
@@ -1077,6 +1079,7 @@ void CPUParticles::_notification(int p_what) {
 
 			while (todo >= 0) {
 				_particles_process(frame_time);
+				processed = true;
 				todo -= frame_time;
 			}
 		}
@@ -1095,6 +1098,7 @@ void CPUParticles::_notification(int p_what) {
 
 			while (todo >= frame_time) {
 				_particles_process(frame_time);
+				processed = true;
 				todo -= decr;
 			}
 
@@ -1102,9 +1106,12 @@ void CPUParticles::_notification(int p_what) {
 
 		} else {
 			_particles_process(delta);
+			processed = true;
 		}
 
-		_update_particle_data_buffer();
+		if (processed) {
+			_update_particle_data_buffer();
+		}
 	}
 }
 
@@ -1427,6 +1434,8 @@ CPUParticles::CPUParticles() {
 	for (int i = 0; i < FLAG_MAX; i++) {
 		flags[i] = false;
 	}
+
+	can_update = false;
 
 	set_color(Color(1, 1, 1, 1));
 

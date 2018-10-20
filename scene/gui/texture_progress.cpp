@@ -59,14 +59,14 @@ Ref<Texture> TextureProgress::get_over_texture() const {
 }
 
 void TextureProgress::set_stretch_margin(Margin p_margin, int p_size) {
-	ERR_FAIL_INDEX(p_margin, 4);
+	ERR_FAIL_INDEX((int)p_margin, 4);
 	stretch_margin[p_margin] = p_size;
 	update();
 	minimum_size_changed();
 }
 
 int TextureProgress::get_stretch_margin(Margin p_margin) const {
-	ERR_FAIL_INDEX_V(p_margin, 4, 0);
+	ERR_FAIL_INDEX_V((int)p_margin, 4, 0);
 	return stretch_margin[p_margin];
 }
 
@@ -148,9 +148,9 @@ Point2 TextureProgress::unit_val_to_uv(float val) {
 	float angle = (val * Math_TAU) - Math_PI * 0.5;
 	Point2 dir = Vector2(Math::cos(angle), Math::sin(angle));
 	float t1 = 1.0;
-	float cp;
-	float cq;
-	float cr;
+	float cp = 0;
+	float cq = 0;
+	float cr = 0;
 	float edgeLeft = 0.0;
 	float edgeRight = 1.0;
 	float edgeBottom = 0.0;
@@ -229,6 +229,17 @@ void TextureProgress::draw_nine_patch_stretched(const Ref<Texture> &p_texture, F
 				first_section_size = topleft.y;
 				last_section_size = bottomright.y;
 			} break;
+			case FILL_BILINEAR_LEFT_AND_RIGHT: {
+				// TODO: Implement
+			} break;
+			case FILL_BILINEAR_TOP_AND_BOTTOM: {
+				// TODO: Implement
+			} break;
+			case FILL_CLOCKWISE:
+			case FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE:
+			case FILL_COUNTER_CLOCKWISE: {
+				// Those modes are circular, not relevant for nine patch
+			} break;
 		}
 
 		double width_filled = width_total * p_ratio;
@@ -262,6 +273,17 @@ void TextureProgress::draw_nine_patch_stretched(const Ref<Texture> &p_texture, F
 				dst_rect.position.y += width_total - width_filled;
 				dst_rect.size.y = width_filled;
 				topleft.y = last_section_size;
+			} break;
+			case FILL_BILINEAR_LEFT_AND_RIGHT: {
+				// TODO: Implement
+			} break;
+			case FILL_BILINEAR_TOP_AND_BOTTOM: {
+				// TODO: Implement
+			} break;
+			case FILL_CLOCKWISE:
+			case FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE:
+			case FILL_COUNTER_CLOCKWISE: {
+				// Those modes are circular, not relevant for nine patch
 			} break;
 		}
 	}

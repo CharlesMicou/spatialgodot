@@ -1197,6 +1197,9 @@ void SceneTree::_update_root_rect() {
 	}
 
 	switch (stretch_mode) {
+		case STRETCH_MODE_DISABLED: {
+			// Already handled above
+		} break;
 		case STRETCH_MODE_2D: {
 
 			root->set_size((screen_size / stretch_shrink).floor());
@@ -1602,7 +1605,7 @@ void SceneTree::_live_edit_duplicate_node_func(const NodePath &p_at, const Strin
 			continue;
 		Node *n2 = n->get_node(p_at);
 
-		Node *dup = n2->duplicate(true);
+		Node *dup = n2->duplicate(Node::DUPLICATE_SIGNALS | Node::DUPLICATE_GROUPS | Node::DUPLICATE_SCRIPTS);
 
 		if (!dup)
 			continue;

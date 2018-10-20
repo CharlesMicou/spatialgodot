@@ -37,6 +37,7 @@
 #include "scene/gui/graph_edit.h"
 #include "visual_script.h"
 #include "visual_script_property_selector.h"
+
 class VisualScriptEditorSignalEdit;
 class VisualScriptEditorVariableEdit;
 
@@ -159,8 +160,6 @@ class VisualScriptEditor : public ScriptEditorBase {
 	MemberType member_type;
 	String member_name;
 
-	bool seq_connect = false;
-
 	PortAction port_action;
 	int port_action_node;
 	int port_action_output;
@@ -238,7 +237,7 @@ class VisualScriptEditor : public ScriptEditorBase {
 	void _selected_method(const String &p_method, const String &p_type);
 
 	void _draw_color_over_button(Object *obj, Color p_color);
-	void _button_resource_previewed(const String &p_path, const Ref<Texture> &p_preview, Variant p_ud);
+	void _button_resource_previewed(const String &p_path, const Ref<Texture> &p_preview, const Ref<Texture> &p_small_preview, Variant p_ud);
 
 	VisualScriptNode::TypeGuess _guess_output_type(int p_port_action_node, int p_port_action_output, Set<int> &visited_nodes);
 

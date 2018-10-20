@@ -458,7 +458,7 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 					*/
 				}
 
-				if (window_has_focus && main_loop)
+				if (window_has_focus && main_loop && mm->get_relative() != Vector2())
 					input->parse_input_event(mm);
 			}
 			delete[] lpb;
@@ -697,7 +697,7 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			last_button_state = mb->get_button_mask();
 			mb->set_position(Vector2(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)));
 
-			if (mouse_mode == MOUSE_MODE_CAPTURED) {
+			if (mouse_mode == MOUSE_MODE_CAPTURED && !use_raw_input) {
 
 				mb->set_position(Vector2(old_x, old_y));
 			}
@@ -1204,7 +1204,14 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 
 	AdjustWindowRectEx(&WindowRect, dwStyle, FALSE, dwExStyle);
 
-	char *windowid = getenv("GODOT_WINDOWID");
+	char *windowid;
+#ifdef MINGW_ENABLED
+	windowid = getenv("GODOT_WINDOWID");
+#else
+	size_t len;
+	_dupenv_s(&windowid, &len, "GODOT_WINDOWID");
+#endif
+
 	if (windowid) {
 
 // strtoull on mingw
@@ -1213,6 +1220,7 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 #else
 		hWnd = (HWND)_strtoui64(windowid, NULL, 0);
 #endif
+		free(windowid);
 		SetLastError(0);
 		user_proc = (WNDPROC)GetWindowLongPtr(hWnd, GWLP_WNDPROC);
 		SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)(WNDPROC)::WndProc);
@@ -1744,7 +1752,7 @@ void OS_Windows::set_window_size(const Size2 p_size) {
 	RECT rect;
 	GetWindowRect(hWnd, &rect);
 
-	if (video_mode.borderless_window == false) {
+	if (!video_mode.borderless_window) {
 		RECT crect;
 		GetClientRect(hWnd, &crect);
 
@@ -2546,7 +2554,16 @@ void OS_Windows::set_icon(const Ref<Image> &p_icon) {
 
 bool OS_Windows::has_environment(const String &p_var) const {
 
+#ifdef MINGW_ENABLED
 	return _wgetenv(p_var.c_str()) != NULL;
+#else
+	wchar_t *env;
+	size_t len;
+	_wdupenv_s(&env, &len, p_var.c_str());
+	const bool has_env = env != NULL;
+	free(env);
+	return has_env;
+#endif
 };
 
 String OS_Windows::get_environment(const String &p_var) const {
@@ -2737,7 +2754,7 @@ void OS_Windows::run() {
 	while (!force_quit) {
 
 		process_events(); // get rid of pending events
-		if (Main::iteration() == true)
+		if (Main::iteration())
 			break;
 	};
 
@@ -2926,7 +2943,7 @@ bool OS_Windows::is_disable_crash_handler() const {
 Error OS_Windows::move_to_trash(const String &p_path) {
 	SHFILEOPSTRUCTW sf;
 	WCHAR *from = new WCHAR[p_path.length() + 2];
-	wcscpy(from, p_path.c_str());
+	wcscpy_s(from, p_path.length() + 1, p_path.c_str());
 	from[p_path.length() + 1] = 0;
 
 	sf.hwnd = hWnd;

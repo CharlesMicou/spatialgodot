@@ -2283,7 +2283,7 @@ void VisualServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(GLOW_BLEND_MODE_REPLACE);
 
 	BIND_ENUM_CONSTANT(ENV_TONE_MAPPER_LINEAR);
-	BIND_ENUM_CONSTANT(ENV_TONE_MAPPER_REINHARDT);
+	BIND_ENUM_CONSTANT(ENV_TONE_MAPPER_REINHARD);
 	BIND_ENUM_CONSTANT(ENV_TONE_MAPPER_FILMIC);
 	BIND_ENUM_CONSTANT(ENV_TONE_MAPPER_ACES);
 
@@ -2393,6 +2393,10 @@ VisualServer::VisualServer() {
 
 	GLOBAL_DEF("rendering/quality/shading/force_vertex_shading", false);
 	GLOBAL_DEF("rendering/quality/shading/force_vertex_shading.mobile", true);
+	GLOBAL_DEF("rendering/quality/shading/force_lambert_over_burley", false);
+	GLOBAL_DEF("rendering/quality/shading/force_lambert_over_burley.mobile", true);
+	GLOBAL_DEF("rendering/quality/shading/force_blinn_over_ggx", false);
+	GLOBAL_DEF("rendering/quality/shading/force_blinn_over_ggx.mobile", true);
 
 	GLOBAL_DEF("rendering/quality/depth_prepass/enable", true);
 	GLOBAL_DEF("rendering/quality/depth_prepass/disable_for_vendors", "PowerVR,Mali,Adreno");

@@ -507,10 +507,6 @@ static float rand_from_seed(uint32_t &seed) {
 	return float(seed % uint32_t(65536)) / 65535.0;
 }
 
-static float rand_from_seed_m1_p1(uint32_t &seed) {
-	return rand_from_seed(seed) * 2.0 - 1.0;
-}
-
 void CPUParticles2D::_particles_process(float p_delta) {
 
 	p_delta *= speed_scale;
@@ -989,7 +985,7 @@ void CPUParticles2D::_notification(int p_what) {
 
 	if (p_what == NOTIFICATION_INTERNAL_PROCESS) {
 
-		if (particles.size() == 0)
+		if (particles.size() == 0 || !is_visible_in_tree())
 			return;
 
 		float delta = get_process_delta_time();

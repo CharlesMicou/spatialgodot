@@ -569,6 +569,10 @@ void TileSetEditor::_on_textures_added(const PoolStringArray &p_paths) {
 	int invalid_count = 0;
 	for (int i = 0; i < p_paths.size(); i++) {
 		Ref<Texture> t = Ref<Texture>(ResourceLoader::load(p_paths[i]));
+
+		ERR_EXPLAIN("'" + p_paths[i] + "' is not a valid texture.");
+		ERR_CONTINUE(!t.is_valid());
+
 		if (texture_map.has(t->get_rid())) {
 			invalid_count++;
 		} else {
@@ -577,9 +581,13 @@ void TileSetEditor::_on_textures_added(const PoolStringArray &p_paths) {
 			texture_list->set_item_metadata(texture_list->get_item_count() - 1, t->get_rid());
 		}
 	}
-	update_texture_list_icon();
-	texture_list->select(texture_list->get_item_count() - 1);
-	_on_texture_list_selected(texture_list->get_item_count() - 1);
+
+	if (texture_list->get_item_count() > 0) {
+		update_texture_list_icon();
+		texture_list->select(texture_list->get_item_count() - 1);
+		_on_texture_list_selected(texture_list->get_item_count() - 1);
+	}
+
 	if (invalid_count > 0) {
 		err_dialog->set_text(vformat(TTR("%s file(s) were not added because was already on the list."), String::num(invalid_count, 0)));
 		err_dialog->popup_centered(Size2(300, 60));
@@ -795,6 +803,7 @@ void TileSetEditor::_on_workspace_draw() {
 				spin_priority->set_suffix(" / " + String::num(total, 0));
 				draw_highlight_subtile(edited_shape_coord, queue_others);
 			} break;
+			default: {}
 		}
 
 		draw_tile_subdivision(get_current_tile(), Color(0.347214, 0.722656, 0.617063));
@@ -1365,6 +1374,7 @@ void TileSetEditor::_on_workspace_input(const Ref<InputEvent> &p_ie) {
 						}
 					}
 				} break;
+				default: {}
 			}
 		}
 	}
@@ -1434,6 +1444,7 @@ void TileSetEditor::_on_tool_clicked(int p_tool) {
 						workspace->update();
 					}
 				} break;
+				default: {}
 			}
 		}
 	} else if (p_tool == ZOOM_OUT) {
@@ -1862,6 +1873,7 @@ void TileSetEditor::draw_polygon_shapes() {
 				}
 			}
 		} break;
+		default: {}
 	}
 	if (creating_shape) {
 		for (int j = 0; j < current_shape.size() - 1; j++) {

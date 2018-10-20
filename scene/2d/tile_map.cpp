@@ -257,7 +257,6 @@ void TileMap::update_dirty_quadrants() {
 	VisualServer *vs = VisualServer::get_singleton();
 	Physics2DServer *ps = Physics2DServer::get_singleton();
 	Vector2 tofs = get_cell_draw_offset();
-	Vector2 tcenter = cell_size / 2;
 	Transform2D nav_rel;
 	if (navigation)
 		nav_rel = get_relative_transform_to_parent(navigation);
@@ -305,7 +304,7 @@ void TileMap::update_dirty_quadrants() {
 		}
 		q.occluder_instances.clear();
 		Ref<ShaderMaterial> prev_material;
-		int prev_z_index;
+		int prev_z_index = 0;
 		RID prev_canvas_item;
 		RID prev_debug_canvas_item;
 
@@ -594,7 +593,7 @@ void TileMap::update_dirty_quadrants() {
 
 	if (quadrant_order_dirty) {
 
-		int index = -0x80000000; //always must be drawn below children
+		int index = -(int64_t)0x80000000; //always must be drawn below children
 		for (Map<PosKey, Quadrant>::Element *E = quadrant_map.front(); E; E = E->next()) {
 
 			Quadrant &q = E->get();

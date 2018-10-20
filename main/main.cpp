@@ -34,6 +34,7 @@
 #include "core/io/file_access_network.h"
 #include "core/io/file_access_pack.h"
 #include "core/io/file_access_zip.h"
+#include "core/io/image_loader.h"
 #include "core/io/ip.h"
 #include "core/io/resource_loader.h"
 #include "core/io/stream_peer_ssl.h"
@@ -114,9 +115,11 @@ static bool editor = false;
 static bool project_manager = false;
 static String locale;
 static bool show_help = false;
-static bool auto_build_solutions = false;
 static bool auto_quit = false;
 static OS::ProcessID allow_focus_steal_pid = 0;
+#ifdef TOOLS_ENABLED
+static bool auto_build_solutions = false;
+#endif
 
 // Display
 
@@ -129,7 +132,6 @@ static bool init_always_on_top = false;
 static bool init_use_custom_pos = false;
 static Vector2 init_custom_pos;
 static bool force_lowdpi = false;
-static bool use_vsync = true;
 
 // Debug
 
@@ -727,7 +729,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 #ifdef TOOLS_ENABLED
 		editor = false;
 #else
-		OS::get_singleton()->print("Error: Could not load game path '%s'.\n", project_path.ascii().get_data());
+		String error_msg = "Error: Could not load game data at path '" + project_path + "'. Is the .pck file missing?\n";
+		OS::get_singleton()->print(error_msg.ascii().get_data());
+		OS::get_singleton()->alert(error_msg);
 
 		goto error;
 #endif
@@ -871,13 +875,17 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/driver/driver_fallback", PropertyInfo(Variant::STRING, "rendering/quality/driver/driver_fallback", PROPERTY_HINT_ENUM, "Best,Never"));
 
 	GLOBAL_DEF("display/window/size/width", 1024);
+	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/width", PropertyInfo(Variant::INT, "display/window/size/width", PROPERTY_HINT_RANGE, "0,7680,or_greater")); // 8K resolution
 	GLOBAL_DEF("display/window/size/height", 600);
+	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/height", PropertyInfo(Variant::INT, "display/window/size/height", PROPERTY_HINT_RANGE, "0,4320,or_greater")); // 8K resolution
 	GLOBAL_DEF("display/window/size/resizable", true);
 	GLOBAL_DEF("display/window/size/borderless", false);
 	GLOBAL_DEF("display/window/size/fullscreen", false);
 	GLOBAL_DEF("display/window/size/always_on_top", false);
 	GLOBAL_DEF("display/window/size/test_width", 0);
+	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/test_width", PropertyInfo(Variant::INT, "display/window/size/test_width", PROPERTY_HINT_RANGE, "0,7680,or_greater")); // 8K resolution
 	GLOBAL_DEF("display/window/size/test_height", 0);
+	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/test_height", PropertyInfo(Variant::INT, "display/window/size/test_height", PROPERTY_HINT_RANGE, "0,4320,or_greater")); // 8K resolution
 
 	if (use_custom_res) {
 
@@ -1125,9 +1133,8 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 		boot_logo_path = boot_logo_path.strip_edges();
 
 		if (boot_logo_path != String()) {
-			print_line("Boot splash path: " + boot_logo_path);
 			boot_logo.instance();
-			Error err = boot_logo->load(boot_logo_path);
+			Error err = ImageLoader::load_image(boot_logo_path, boot_logo);
 			if (err)
 				ERR_PRINTS("Non-existing or invalid boot splash at: " + boot_logo_path + ". Loading default splash.");
 		}
@@ -1708,7 +1715,7 @@ bool Main::start() {
 				if (iconpath != "") {
 					Ref<Image> icon;
 					icon.instance();
-					if (icon->load(iconpath) == OK) {
+					if (ImageLoader::load_image(iconpath, icon) == OK) {
 						OS::get_singleton()->set_icon(icon);
 						hasicon = true;
 					}

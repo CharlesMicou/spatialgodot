@@ -527,7 +527,7 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 
 void LineEdit::set_align(Align p_align) {
 
-	ERR_FAIL_INDEX(p_align, 4);
+	ERR_FAIL_INDEX((int)p_align, 4);
 	align = p_align;
 	update();
 }
@@ -1608,6 +1608,8 @@ LineEdit::LineEdit() {
 	text_changed_dirty = false;
 	placeholder_alpha = 0.6;
 	clear_button_enabled = false;
+	clear_button_status.press_attempt = false;
+	clear_button_status.pressing_inside = false;
 
 	deselect();
 	set_focus_mode(FOCUS_ALL);
