@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+
+Import('env')
+
+module_env = env.Clone()
+
+# Godot's setup for what constitutes sources
+src_list = ["spatialos.cpp", "register_types.cpp"]
+module_env.add_source_files(env.modules_sources, src_list)
+
+# Schema dependencies
+module_env.Append(CPPPATH="generated_code/cpp")
+module_env.Append(CPPPATH="generated_code/cpp/improbable")
+module_env.Append(CPPPATH="generated_code/cpp/spellcrest")
+
+# Set compiler options as the worker sdk requires c++11
+module_env.Append(CXXFLAGS=['-O2', '-std=c++11'])
+
+# Worker SDK dependencies
+module_env.Append(CPPPATH="worker_sdk/cpp/include")
+env.Append(LIBPATH=["worker_sdk/cpp/lib"])
+env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.a"))
+
+# Build schema into a static library
+improbable_schema = Glob("generated_code/cpp/improbable/*.h", strings=True) + Glob("generated_code/cpp/improbable/*.cc", strings=True)
+spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.h", strings=True) + Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
+schemaLib = module_env.Library(target='#bin/schema', source=(improbable_schema + spellcrest_schema))
+shim = schemaLib[0].name.rsplit('.', 1)[0]
+env.Append(LIBS=[shim])
+env.Append(LIBPATH=['#bin'])
+
+Export('env')
