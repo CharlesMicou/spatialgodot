@@ -1,8 +1,8 @@
-/* spatialos.h */
 #ifndef SPATIALOS_H
 #define SPATIALOS_H
 
 #include "editor_node.h"
+#include "core/ustring.h"
 #include <improbable/worker.h>
 
 class Spatialos : public Node {
@@ -19,6 +19,7 @@ public:
     void joinGame();
     void processOps();
     void setPosition(std::int64_t entityId, double x, double y);
+    void sendInfoMessage(const String &msg);
 
     Spatialos();
 };

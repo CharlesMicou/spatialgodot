@@ -1,6 +1,5 @@
-/* spatialos.cpp */
-
 #include "spatialos.h"
+#include "core/ustring.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <iostream>
@@ -32,7 +31,7 @@ void Spatialos::joinGame() {
 
     connection.reset(new worker::Connection{ConnectWithReceptionist(kReceptionistIp, kReceptionistPort, id, parameters)});
 
-    connection->SendLogMessage(worker::LogLevel::kInfo, "godot_logger", "Hello from Godot!");
+    connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", "Hello from Godot!");
     
     dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
 
@@ -46,7 +45,7 @@ void Spatialos::joinGame() {
         worker::EntityId entityId = op.EntityId;
         std::string entityAddedMsg = "got entity add for ";
         entityAddedMsg += std::to_string(entityId);
-        connection->SendLogMessage(worker::LogLevel::kInfo, "godot_logger", entityAddedMsg);
+        connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", entityAddedMsg);
     });
 }
 
@@ -67,14 +66,28 @@ void Spatialos::setPosition(std::int64_t entityId, double x, double y) {
         oEntityId, improbable::Position::Update{}.set_coords(coordinates));
 }
 
+std::string strConvert(const String &godotString) {
+    std::wstring wide(godotString.ptr());
+    std::string s(wide.begin(), wide.end());
+    return s;
+}
+
+
+void Spatialos::sendInfoMessage(const String &msg) {
+    if (!isConnected) {
+        return;
+    }
+    connection->SendLogMessage(worker::LogLevel::kInfo, "godot_user", strConvert(msg));
+}
+
 void Spatialos::_bind_methods() {
     ClassDB::bind_method(D_METHOD("join_game"), &Spatialos::joinGame);
     ClassDB::bind_method(D_METHOD("process_ops"), &Spatialos::processOps);
     ClassDB::bind_method(D_METHOD("set_position", "entityId", "x", "y"), &Spatialos::setPosition);
+    ClassDB::bind_method(D_METHOD("send_log", "msg"), &Spatialos::sendInfoMessage);
 }
 
 Spatialos::Spatialos() {
     workerId = 0;
     isConnected = false;
 }
-
