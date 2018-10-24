@@ -1,0 +1,3 @@
+# Ignore files that should be dumped here by the build
+generated_code/
+worker_sdk/
