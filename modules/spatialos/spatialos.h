@@ -18,7 +18,7 @@ protected:
 public:
     void joinGame();
     void processOps();
-    void setPosition(double x, double y);
+    void setPosition(std::int64_t entityId, double x, double y);
 
     Spatialos();
 };

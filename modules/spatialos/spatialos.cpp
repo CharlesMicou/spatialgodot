@@ -57,21 +57,20 @@ void Spatialos::processOps() {
     dispatcher->Process(connection->GetOpList(100));
 }
 
-void Spatialos::setPosition(double x, double y) {
+void Spatialos::setPosition(std::int64_t entityId, double x, double y) {
     if (!isConnected) {
         return;
     }
-    worker::EntityId entityId = 1;
+    worker::EntityId oEntityId = entityId;
     improbable::Coordinates coordinates = improbable::Coordinates(x, 0, y);
-    //improbable::PositionData positionData = improbable::PositionData(coordinates);
     connection->SendComponentUpdate<improbable::Position>(
-        entityId, improbable::Position::Update{}.set_coords(coordinates));
+        oEntityId, improbable::Position::Update{}.set_coords(coordinates));
 }
 
 void Spatialos::_bind_methods() {
     ClassDB::bind_method(D_METHOD("join_game"), &Spatialos::joinGame);
     ClassDB::bind_method(D_METHOD("process_ops"), &Spatialos::processOps);
-    ClassDB::bind_method(D_METHOD("set_position", "x", "y"), &Spatialos::setPosition);
+    ClassDB::bind_method(D_METHOD("set_position", "entityId", "x", "y"), &Spatialos::setPosition);
 }
 
 Spatialos::Spatialos() {
