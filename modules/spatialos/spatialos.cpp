@@ -6,6 +6,8 @@
 
 using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata>;
 
+const std::string kLocatorHost = "locator.improbable.io";
+
 worker::Connection ConnectWithReceptionist(const std::string hostname,
                                            const std::uint16_t port,
                                            const std::string& worker_id,
@@ -14,13 +16,45 @@ worker::Connection ConnectWithReceptionist(const std::string hostname,
     return future.Get();
 }
 
+worker::Connection ConnectWithLocator(
+    const std::string& deployment_name,
+    const std::string& project_name,
+    const std::string& login_token,
+    const worker::ConnectionParameters& connection_parameters) {
+    worker::LocatorParameters locatorParams;
+    locatorParams.LoginToken = worker::LoginTokenCredentials{login_token};
+    locatorParams.EnableLogging = false;
+    locatorParams.ProjectName = project_name;
+    locatorParams.CredentialsType = worker::LocatorCredentialsType::kLoginToken;
+
+    worker::Locator locator = worker::Locator("locator.improbable.io", locatorParams);
+    auto future = locator.ConnectAsync(
+        ComponentRegistry{},
+        deployment_name,
+        connection_parameters,
+        [](worker::QueueStatus queueStatus) -> bool {return false;}); // Never retry the queue
+    std::cout << "Blocking on locator connection." << std::endl;
+    worker::Connection result = future.Get();
+    std::cout << "Locator result complete." << std::endl;
+    return result;
+}
+
 std::string strConvert(const String &godotString) {
     std::wstring wide(godotString.ptr());
     std::string s(wide.begin(), wide.end());
     return s;
 }
 
-void Spatialos::joinGame(const String &receptionistIp, const int receptionistPort, const String &id, const String &type) {
+String toGodotString(const std::string &regularString) {
+    String s(regularString.c_str());
+    return s;
+}
+
+void Spatialos::blockingConnectReceptionist(
+    const String &receptionistIp,
+    const int receptionistPort,
+    const String &id,
+    const String &type) {
     workerId = id;
     workerType = type;
     worker::ConnectionParameters parameters;
@@ -30,8 +64,26 @@ void Spatialos::joinGame(const String &receptionistIp, const int receptionistPor
 
     connection.reset(new worker::Connection{ConnectWithReceptionist(strConvert(receptionistIp), receptionistPort, strConvert(workerId), parameters)});
 
+    postConnection();
+}
+
+void Spatialos::blockingConnectLocator(
+    const String &type,
+    const String &dplName,
+    const String &projectName,
+    const String &loginToken) {
+    workerType = type;
+    worker::ConnectionParameters parameters;
+    parameters.WorkerType = strConvert(workerType);
+    parameters.Network.ConnectionType = worker::NetworkConnectionType::kTcp;
+    parameters.Network.UseExternalIp = false;
+    connection.reset(new worker::Connection{ConnectWithLocator(strConvert(dplName), strConvert(projectName), strConvert(loginToken), parameters)});
+    workerId = toGodotString(connection->GetWorkerId());
+    postConnection();
+}
+
+void Spatialos::postConnection() {
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", "Hello from Godot!");
-    
     dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
 
     isConnected = true;
@@ -73,7 +125,8 @@ void Spatialos::sendInfoMessage(const String &msg) {
 }
 
 void Spatialos::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("join_game", "receptionist_host", "receptionist_port", "worker_id", "worker_type"), &Spatialos::joinGame);
+    ClassDB::bind_method(D_METHOD("connect_receptionist", "receptionist_host", "receptionist_port", "worker_id", "worker_type"), &Spatialos::blockingConnectReceptionist);
+    ClassDB::bind_method(D_METHOD("connect_locator", "worker_type", "deployment_name", "project_name", "login_token"), &Spatialos::blockingConnectLocator);
     ClassDB::bind_method(D_METHOD("process_ops"), &Spatialos::processOps);
     ClassDB::bind_method(D_METHOD("set_position", "entityId", "x", "y"), &Spatialos::setPosition);
     ClassDB::bind_method(D_METHOD("send_log", "msg"), &Spatialos::sendInfoMessage);
