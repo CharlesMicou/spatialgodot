@@ -26,13 +26,12 @@ worker::Connection ConnectWithLocator(
     locatorParams.EnableLogging = false;
     locatorParams.ProjectName = project_name;
     locatorParams.CredentialsType = worker::LocatorCredentialsType::kLoginToken;
-
-    worker::Locator locator = worker::Locator("locator.improbable.io", locatorParams);
+    worker::Locator locator = worker::Locator(kLocatorHost, locatorParams);
     auto future = locator.ConnectAsync(
         ComponentRegistry{},
         deployment_name,
         connection_parameters,
-        [](worker::QueueStatus queueStatus) -> bool {return false;}); // Never retry the queue
+        [](worker::QueueStatus queueStatus) -> bool {return true;}); // Indefinitely retry the queue
     std::cout << "Blocking on locator connection." << std::endl;
     worker::Connection result = future.Get();
     std::cout << "Locator result complete." << std::endl;
@@ -76,7 +75,7 @@ void Spatialos::blockingConnectLocator(
     worker::ConnectionParameters parameters;
     parameters.WorkerType = strConvert(workerType);
     parameters.Network.ConnectionType = worker::NetworkConnectionType::kTcp;
-    parameters.Network.UseExternalIp = false;
+    parameters.Network.UseExternalIp = true;
     connection.reset(new worker::Connection{ConnectWithLocator(strConvert(dplName), strConvert(projectName), strConvert(loginToken), parameters)});
     workerId = toGodotString(connection->GetWorkerId());
     postConnection();
