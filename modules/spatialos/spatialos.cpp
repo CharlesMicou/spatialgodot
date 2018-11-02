@@ -2,9 +2,10 @@
 #include "core/ustring.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
+#include <godotcore/godot_position2d.h>
 #include <iostream>
 
-using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata>;
+using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata, godotcore::GodotPosition2D>;
 
 const std::string kLocatorHost = "locator.improbable.io";
 
@@ -114,6 +115,14 @@ void Spatialos::setPosition(std::int64_t entityId, double x, double y) {
     improbable::Coordinates coordinates = improbable::Coordinates(x, 0, y);
     connection->SendComponentUpdate<improbable::Position>(
         oEntityId, improbable::Position::Update{}.set_coords(coordinates));
+}
+
+template <class ComponentUpdate>
+void Spatialos::sendComponentUpdate(const worker::EntityId entity_id, const ComponentUpdate& update) {
+    if (!isConnected) {
+        return;
+    }
+    connection->SendComponentUpdate<ComponentUpdate>(entity_id, update);
 }
 
 void Spatialos::sendInfoMessage(const String &msg) {

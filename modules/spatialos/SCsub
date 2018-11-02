@@ -12,6 +12,7 @@ module_env.add_source_files(env.modules_sources, src_list)
 module_env.Append(CPPPATH="generated_code/cpp")
 module_env.Append(CPPPATH="generated_code/cpp/improbable")
 module_env.Append(CPPPATH="generated_code/cpp/spellcrest")
+module_env.Append(CPPPATH="generated_code/cpp/godotcore")
 
 # Set compiler options as the worker sdk requires c++11
 module_env.Append(CXXFLAGS=['-O2', '-std=c++11'])
@@ -24,7 +25,8 @@ env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.a"))
 # Build schema into a static library
 improbable_schema = Glob("generated_code/cpp/improbable/*.h", strings=True) + Glob("generated_code/cpp/improbable/*.cc", strings=True)
 spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.h", strings=True) + Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
-schemaLib = module_env.Library(target='#bin/schema', source=(improbable_schema + spellcrest_schema))
+godotcore_schema = Glob("generated_code/cpp/godotcore/*.h", strings=True) + Glob("generated_code/cpp/godotcore/*.cc", strings=True)
+schemaLib = module_env.Library(target='#bin/schema', source=(improbable_schema + spellcrest_schema + godotcore_schema))
 shim = schemaLib[0].name.rsplit('.', 1)[0]
 env.Append(LIBS=[shim])
 env.Append(LIBPATH=['#bin'])

@@ -23,6 +23,8 @@ public:
     void processOps();
     void setPosition(std::int64_t entityId, double x, double y);
     void sendInfoMessage(const String &msg);
+    template <class ComponentUpdate>
+    void sendComponentUpdate(const worker::EntityId entity_id, const ComponentUpdate& update);
 
     Spatialos();
 };
