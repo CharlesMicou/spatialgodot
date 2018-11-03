@@ -14,7 +14,7 @@ class Spatialos : public Node {
     std::unique_ptr<worker::Connection> connection;
     WorldView* world_view;
     bool isConnected;
-    void postConnection();
+    void setupDispatcher();
 
 protected:
     static void _bind_methods();
@@ -27,6 +27,8 @@ public:
     void sendInfoMessage(const String &msg);
     template <class ComponentUpdate>
     void sendComponentUpdate(const worker::EntityId entity_id, const ComponentUpdate& update);
+
+    String get_configuration_warning() const;
 
     Spatialos();
 };

@@ -4,10 +4,12 @@
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 #include <iostream>
+#include "editor_node.h"
 
 using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata, godotcore::GodotPosition2D>;
 
 const std::string kLocatorHost = "locator.improbable.io";
+const int kOpsPerFrame = 1000;
 
 worker::Connection ConnectWithReceptionist(const std::string hostname,
                                            const std::uint16_t port,
@@ -64,7 +66,7 @@ void Spatialos::blockingConnectReceptionist(
 
     connection.reset(new worker::Connection{ConnectWithReceptionist(strConvert(receptionistIp), receptionistPort, strConvert(workerId), parameters)});
 
-    postConnection();
+    setupDispatcher();
 }
 
 void Spatialos::blockingConnectLocator(
@@ -79,26 +81,43 @@ void Spatialos::blockingConnectLocator(
     parameters.Network.UseExternalIp = true;
     connection.reset(new worker::Connection{ConnectWithLocator(strConvert(dplName), strConvert(projectName), strConvert(loginToken), parameters)});
     workerId = toGodotString(connection->GetWorkerId());
-    postConnection();
+    setupDispatcher();
 }
 
-void Spatialos::postConnection() {
+void Spatialos::setupDispatcher() {
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", "Hello from Godot!");
     dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
     isConnected = true;
 
-    world_view = memnew(WorldView);
+    // Super hacky but hey
+    NodePath path = NodePath("WorldView");
+    world_view = dynamic_cast<WorldView*>(get_node(path));
 
+    // World view connections
     dispatcher->OnAddEntity([&](const worker::AddEntityOp& op) {
         world_view->addEntity(op);
     });
-    dispatcher->OnRemoveEntity([&](const worker::RemoveEntityOp op) {
+    dispatcher->OnRemoveEntity([&](const worker::RemoveEntityOp& op) {
         world_view->removeEntity(op);
     });
-    // more dispatcher setup here
+    dispatcher->OnAuthorityChange([&](const worker::AuthorityChangeOp& op) {
+        world_view->authorityChange(op);
+    });
+    dispatcher->OnAddComponent([&](const worker::AddComponentOp& op) {
+        world_view->addComponent(op);
+    });
+    dispatcher->OnRemoveComponent([&](const worker::RemoveComponentOp& op) {
+        world_view->removeComponent(op);
+    });
+    dispatcher->OnComponentUpdate([&](const worker::ComponentUpdateOp& op) {
+        world_view->updateComponent(op);
+    });
 
-    add_child(world_view);
+    // Todo: command responses
+    // Todo: command requests
+    // Todo: log messages, flags, queries, and all the others.
 
+    // Misc. Dispatcher
     dispatcher->OnDisconnect([&](const worker::DisconnectOp& op) {
         std::cerr << "[disconnect] " << op.Reason << std::endl;
         isConnected = false;
@@ -109,7 +128,7 @@ void Spatialos::processOps() {
     if (!isConnected) {
         return;
     }
-    dispatcher->Process(connection->GetOpList(100));
+    dispatcher->Process(connection->GetOpList(kOpsPerFrame));
 }
 
 void Spatialos::setPosition(std::int64_t entityId, double x, double y) {
@@ -135,6 +154,17 @@ void Spatialos::sendInfoMessage(const String &msg) {
         return;
     }
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_user", strConvert(msg));
+}
+
+String Spatialos::get_configuration_warning() const {
+	String warning = Node::get_configuration_warning();
+	if (world_view == NULL) {
+		if (warning == String()) {
+			warning += "\n";
+		}
+		warning += TTR("This node requires a WorldView child to work properly.");
+	}
+	return warning;
 }
 
 void Spatialos::_bind_methods() {

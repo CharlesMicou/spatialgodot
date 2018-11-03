@@ -18,7 +18,7 @@ module_env.Append(CPPPATH="generated_code/cpp/spellcrest")
 module_env.Append(CPPPATH="generated_code/cpp/godotcore")
 
 # Set compiler options as the worker sdk requires c++11
-module_env.Append(CXXFLAGS=['-O2', '-std=c++11'])
+module_env.Append(CXXFLAGS=['-O2', '-std=c++11', '-g'])
 
 # Worker SDK dependencies
 module_env.Append(CPPPATH="worker_sdk/cpp/include")
