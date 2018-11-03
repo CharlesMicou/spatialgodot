@@ -85,18 +85,23 @@ void Spatialos::blockingConnectLocator(
 void Spatialos::postConnection() {
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", "Hello from Godot!");
     dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
-
     isConnected = true;
+
+    world_view = memnew(WorldView);
+
+    dispatcher->OnAddEntity([&](const worker::AddEntityOp& op) {
+        world_view->addEntity(op);
+    });
+    dispatcher->OnRemoveEntity([&](const worker::RemoveEntityOp op) {
+        world_view->removeEntity(op);
+    });
+    // more dispatcher setup here
+
+    add_child(world_view);
+
     dispatcher->OnDisconnect([&](const worker::DisconnectOp& op) {
         std::cerr << "[disconnect] " << op.Reason << std::endl;
         isConnected = false;
-    });
-
-    dispatcher->OnAddEntity([&](const worker::AddEntityOp& op) {
-        worker::EntityId entityId = op.EntityId;
-        std::string entityAddedMsg = "got entity add for ";
-        entityAddedMsg += std::to_string(entityId);
-        connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", entityAddedMsg);
     });
 }
 

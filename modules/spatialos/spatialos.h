@@ -4,6 +4,7 @@
 #include "editor_node.h"
 #include "core/ustring.h"
 #include <improbable/worker.h>
+#include "world_view.h"
 
 class Spatialos : public Node {
     GDCLASS(Spatialos, Node);
@@ -11,6 +12,7 @@ class Spatialos : public Node {
     String workerType;
     std::unique_ptr<worker::Dispatcher> dispatcher;
     std::unique_ptr<worker::Connection> connection;
+    WorldView* world_view;
     bool isConnected;
     void postConnection();
 
