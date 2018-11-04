@@ -7,6 +7,8 @@ module_env = env.Clone()
 # Godot's setup for what constitutes sources
 src_list = [
     "world_view.cpp",
+    "entity_view.cpp",
+    "component_view.cpp",
     "spatialos.cpp",
     "register_types.cpp"]
 module_env.add_source_files(env.modules_sources, src_list)

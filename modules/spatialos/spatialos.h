@@ -15,6 +15,8 @@ class Spatialos : public Node {
     WorldView* world_view;
     bool isConnected;
     void setupDispatcher();
+    template <typename Metaclass>
+    void setupDispatcherForComponentMetaclass();
 
 protected:
     static void _bind_methods();

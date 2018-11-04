@@ -84,6 +84,24 @@ void Spatialos::blockingConnectLocator(
     setupDispatcher();
 }
 
+template <typename Metaclass>
+void Spatialos::setupDispatcherForComponentMetaclass() {
+    dispatcher->OnAuthorityChange<Metaclass>([&](const worker::AuthorityChangeOp& op) {
+        worker::ComponentId componentId = Metaclass::ComponentId;
+        world_view->authorityChange(op.EntityId, componentId, op.Authority);
+    });
+    dispatcher->OnAddComponent<Metaclass>([&](const worker::AddComponentOp<Metaclass>& op) {
+        world_view->addComponent<Metaclass>(op);
+    });
+    dispatcher->OnRemoveComponent<Metaclass>([&](const worker::RemoveComponentOp& op) {
+        worker::ComponentId componentId = Metaclass::ComponentId;
+        world_view->removeComponent(op.EntityId, componentId);
+    });
+    dispatcher->OnComponentUpdate<Metaclass>([&](const worker::ComponentUpdateOp<Metaclass>& op) {
+        world_view->updateComponent<Metaclass>(op);
+    });
+}
+
 void Spatialos::setupDispatcher() {
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", "Hello from Godot!");
     dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
@@ -93,6 +111,8 @@ void Spatialos::setupDispatcher() {
     NodePath path = NodePath("WorldView");
     world_view = dynamic_cast<WorldView*>(get_node(path));
 
+    setupDispatcherForComponentMetaclass<improbable::Position>();
+
     // World view connections
     dispatcher->OnAddEntity([&](const worker::AddEntityOp& op) {
         world_view->addEntity(op);
@@ -100,18 +120,8 @@ void Spatialos::setupDispatcher() {
     dispatcher->OnRemoveEntity([&](const worker::RemoveEntityOp& op) {
         world_view->removeEntity(op);
     });
-    dispatcher->OnAuthorityChange([&](const worker::AuthorityChangeOp& op) {
-        world_view->authorityChange(op);
-    });
-    dispatcher->OnAddComponent([&](const worker::AddComponentOp& op) {
-        world_view->addComponent(op);
-    });
-    dispatcher->OnRemoveComponent([&](const worker::RemoveComponentOp& op) {
-        world_view->removeComponent(op);
-    });
-    dispatcher->OnComponentUpdate([&](const worker::ComponentUpdateOp& op) {
-        world_view->updateComponent(op);
-    });
+
+    
 
     // Todo: command responses
     // Todo: command requests
