@@ -24,8 +24,8 @@ void WorldView::addEntity(const worker::AddEntityOp& add) {
 void WorldView::removeEntity(const worker::RemoveEntityOp& remove) {
     std::cout << "Received a remove entity" << std::endl;
     emit_signal("entity_removed", entities[remove.EntityId]);
-    entities.erase(remove.EntityId);
     remove_child(entities[remove.EntityId]);
+    entities.erase(remove.EntityId);
 }
 
 void WorldView::authorityChange(const worker::EntityId entity_id, worker::ComponentId component_id, const worker::Authority& authority) {

@@ -4,10 +4,8 @@
 #include "editor_node.h"
 #include <improbable/worker.h>
 
-template <class T>
 class ComponentView : public Node {
     GDCLASS(ComponentView, Node);
-    worker::ComponentId componentId;
     bool authoritative;
     bool data; // todo(figure out how to represent schema)
 
@@ -16,8 +14,11 @@ protected:
 
 public:
     void authorityChange(const worker::Authority& authority);
+    template <class T>
     void updateComponent(const worker::ComponentUpdateOp<T>& update);
     void removeComponent();
+    // todo: make this private because this is crazy dangerous
+    worker::ComponentId componentId;
     ComponentView();
 };
 

@@ -12,9 +12,7 @@ void register_spatialos_types() {
         ClassDB::register_class<Spatialos>();
         ClassDB::register_class<WorldView>();
         ClassDB::register_class<EntityView>();
-
-        // Explicitly declare schema stuff here
-        ClassDB::register_class<ComponentView<improbable::Position>>();
+        ClassDB::register_class<ComponentView>();
 }
 
 void unregister_spatialos_types() {

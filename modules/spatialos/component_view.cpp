@@ -3,28 +3,29 @@
 #include <improbable/standard_library.h>
 #include <iostream>
 
-template <class T>
-void ComponentView<T>::_bind_methods() {
+void ComponentView::_bind_methods() {
+    // Note(charlie): literally just refs until I figure this out
+    ADD_SIGNAL(MethodInfo("component_updated", PropertyInfo(Variant::OBJECT, "component_update", PROPERTY_HINT_RESOURCE_TYPE, "Reference")));
+    ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
+}
+
+void ComponentView::authorityChange(const worker::Authority& authority) {
+    bool prev = authoritative;
+    authoritative = (authority == worker::Authority::kAuthoritative);
+    if (authoritative != prev) {
+        emit_signal("authority_changed", authoritative);
+    }
 }
 
 template <class T>
-void ComponentView<T>::authorityChange(const worker::Authority& authority) {
+void ComponentView::updateComponent(const worker::ComponentUpdateOp<T>& update) {
+    // todo emit update signal
 
 }
 
-template <class T>
-void ComponentView<T>::updateComponent(const worker::ComponentUpdateOp<T>& update) {
 
-}
-
-template <class T>
-void ComponentView<T>::removeComponent() {
-
-}
-
-template <class T>
-ComponentView<T>::ComponentView() {
+ComponentView::ComponentView() {
 }
 
 // Force generation so that linking works
-template class ComponentView<improbable::Position>;
+template void ComponentView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
