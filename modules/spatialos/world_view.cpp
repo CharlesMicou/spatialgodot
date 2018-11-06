@@ -65,7 +65,6 @@ WorldView::WorldView() {
 }
 
 WorldView::~WorldView() {
-    std::cout << "Destroying world view" << std::endl;
 }
 
 // Force generation so that linking works

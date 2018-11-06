@@ -5,6 +5,7 @@
 #include <godotcore/godot_position2d.h>
 #include <iostream>
 #include "editor_node.h"
+#include "spatial_util.h"
 
 using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata, godotcore::GodotPosition2D>;
 
@@ -41,17 +42,6 @@ worker::Connection ConnectWithLocator(
     return result;
 }
 
-std::string strConvert(const String &godotString) {
-    std::wstring wide(godotString.ptr());
-    std::string s(wide.begin(), wide.end());
-    return s;
-}
-
-String toGodotString(const std::string &regularString) {
-    String s(regularString.c_str());
-    return s;
-}
-
 void Spatialos::blockingConnectReceptionist(
     const String &receptionistIp,
     const int receptionistPort,
@@ -60,11 +50,11 @@ void Spatialos::blockingConnectReceptionist(
     workerId = id;
     workerType = type;
     worker::ConnectionParameters parameters;
-    parameters.WorkerType = strConvert(workerType);
+    parameters.WorkerType = fromGodotString(workerType);
     parameters.Network.ConnectionType = worker::NetworkConnectionType::kTcp;
     parameters.Network.UseExternalIp = false;
 
-    connection.reset(new worker::Connection{ConnectWithReceptionist(strConvert(receptionistIp), receptionistPort, strConvert(workerId), parameters)});
+    connection.reset(new worker::Connection{ConnectWithReceptionist(fromGodotString(receptionistIp), receptionistPort, fromGodotString(workerId), parameters)});
 
     setupDispatcher();
 }
@@ -76,10 +66,10 @@ void Spatialos::blockingConnectLocator(
     const String &loginToken) {
     workerType = type;
     worker::ConnectionParameters parameters;
-    parameters.WorkerType = strConvert(workerType);
+    parameters.WorkerType = fromGodotString(workerType);
     parameters.Network.ConnectionType = worker::NetworkConnectionType::kTcp;
     parameters.Network.UseExternalIp = true;
-    connection.reset(new worker::Connection{ConnectWithLocator(strConvert(dplName), strConvert(projectName), strConvert(loginToken), parameters)});
+    connection.reset(new worker::Connection{ConnectWithLocator(fromGodotString(dplName), fromGodotString(projectName), fromGodotString(loginToken), parameters)});
     workerId = toGodotString(connection->GetWorkerId());
     setupDispatcher();
 }
@@ -146,9 +136,9 @@ void Spatialos::setPosition(std::int64_t entityId, double x, double y) {
         return;
     }
     worker::EntityId oEntityId = entityId;
-    improbable::Coordinates coordinates = improbable::Coordinates(x, 0, y);
+    godotcore::GodotPosition2DData asGodotData = godotcore::GodotPosition2DData(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y), godotcore::GodotVector2D());
     connection->SendComponentUpdate<improbable::Position>(
-        oEntityId, improbable::Position::Update{}.set_coords(coordinates));
+        oEntityId, improbable::Position::Update{}.FromInitialData(fromGodotPosition(asGodotData)));
 }
 
 template <class ComponentUpdate>
@@ -163,7 +153,7 @@ void Spatialos::sendInfoMessage(const String &msg) {
     if (!isConnected) {
         return;
     }
-    connection->SendLogMessage(worker::LogLevel::kInfo, "godot_user", strConvert(msg));
+    connection->SendLogMessage(worker::LogLevel::kInfo, "godot_user", fromGodotString(msg));
 }
 
 String Spatialos::get_configuration_warning() const {
