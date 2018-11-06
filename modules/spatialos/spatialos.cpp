@@ -101,8 +101,6 @@ void Spatialos::setupDispatcher() {
     NodePath path = NodePath("WorldView");
     world_view = dynamic_cast<WorldView*>(get_node(path));
 
-    setupDispatcherForComponentMetaclass<improbable::Position>();
-
     // World view connections
     dispatcher->OnAddEntity([&](const worker::AddEntityOp& op) {
         world_view->addEntity(op);
@@ -111,7 +109,8 @@ void Spatialos::setupDispatcher() {
         world_view->removeEntity(op);
     });
 
-    
+    // Components
+    setupDispatcherForComponentMetaclass<improbable::Position>();
 
     // Todo: command responses
     // Todo: command requests

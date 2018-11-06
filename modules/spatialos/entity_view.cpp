@@ -21,7 +21,7 @@ void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
     // if this happens within a critical section no one will hear it.
     // instead, they'll receive a complete entity.
     // this is fine.
-    //components.insert({{T::ComponentId, newComponent}});
+    components.insert({{T::ComponentId, newComponent}});
     add_child(newComponent);
     emit_signal("component_added", newComponent);
 }
@@ -29,16 +29,14 @@ void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
 template <typename T>
 void EntityView::updateComponent(const worker::ComponentUpdateOp<T>& update) {
     printf("Handling component update for component id %d\n", T::ComponentId);
-    //components[T::ComponentId]->updateComponent(update);
-    //printf("There are %ld components in the map\n", components.size());
-    std::cout << "Received an update component" << std::endl;
+    components[T::ComponentId]->updateComponent(update);
 }
 
 void EntityView::removeComponent(const worker::ComponentId component_id) {
     std::cout << "Received a remove component" << std::endl;
     emit_signal("component_removed", components[component_id]);
     remove_child(components[component_id]);
-    //components.erase(component_id);
+    components.erase(component_id);
 }
 
 EntityView::EntityView() {
