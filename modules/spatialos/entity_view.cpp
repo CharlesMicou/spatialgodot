@@ -28,7 +28,6 @@ void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
 
 template <typename T>
 void EntityView::updateComponent(const worker::ComponentUpdateOp<T>& update) {
-    printf("Handling component update for component id %d\n", T::ComponentId);
     components[T::ComponentId]->updateComponent(update);
 }
 

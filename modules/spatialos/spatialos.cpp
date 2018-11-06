@@ -137,7 +137,7 @@ void Spatialos::setPosition(std::int64_t entityId, double x, double y) {
     worker::EntityId oEntityId = entityId;
     godotcore::GodotPosition2DData asGodotData = godotcore::GodotPosition2DData(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y), godotcore::GodotVector2D());
     connection->SendComponentUpdate<improbable::Position>(
-        oEntityId, improbable::Position::Update{}.FromInitialData(fromGodotPosition(asGodotData)));
+        oEntityId, improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
 }
 
 template <class ComponentUpdate>
