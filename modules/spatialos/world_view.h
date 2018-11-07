@@ -29,7 +29,6 @@ public:
     void handleCriticalSection(const worker::CriticalSectionOp& section);
     
     WorldView();
-    ~WorldView();
 };
 
 #endif

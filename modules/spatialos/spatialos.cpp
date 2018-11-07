@@ -102,6 +102,9 @@ void Spatialos::setupDispatcher() {
     world_view = dynamic_cast<WorldView*>(get_node(path));
 
     // World view connections
+    dispatcher->OnCriticalSection([&](const worker::CriticalSectionOp& op) {
+        world_view->handleCriticalSection(op);
+    });
     dispatcher->OnAddEntity([&](const worker::AddEntityOp& op) {
         world_view->addEntity(op);
     });

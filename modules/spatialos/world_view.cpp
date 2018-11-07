@@ -9,12 +9,12 @@ void WorldView::_bind_methods() {
 }
 
 void WorldView::addEntity(const worker::AddEntityOp& add) {
-    std::cout << "Received an add entity" << std::endl;
     EntityView* newView = memnew(EntityView);
     entities.insert({{add.EntityId, newView}});
 
     // don't add the entity in the middle of a critical section
     if (inCriticalSection) {
+        std::cout << "Received an add entity, but inside a critical section." << std::endl;
         pendingSceneEntities.push(add.EntityId);
     } else {
         addEntityToScene(add.EntityId);
@@ -22,7 +22,7 @@ void WorldView::addEntity(const worker::AddEntityOp& add) {
 }
 
 void WorldView::removeEntity(const worker::RemoveEntityOp& remove) {
-    std::cout << "Received a remove entity" << std::endl;
+    std::cout << "Emitting a remove entity signal" << std::endl;
     emit_signal("entity_removed", entities[remove.EntityId]);
     remove_child(entities[remove.EntityId]);
     entities.erase(remove.EntityId);
@@ -58,13 +58,12 @@ void WorldView::handleCriticalSection(const worker::CriticalSectionOp& section) 
 
 void WorldView::addEntityToScene(worker::EntityId entity_id) {
     add_child(entities[entity_id]);
+    std::cout << "Emitting an add entity signal" << std::endl;
     emit_signal("entity_added", entities[entity_id]);
 }
 
 WorldView::WorldView() {
-}
-
-WorldView::~WorldView() {
+    inCriticalSection = false;
 }
 
 // Force generation so that linking works

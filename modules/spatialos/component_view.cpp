@@ -41,6 +41,16 @@ void ComponentView::updateComponent(const worker::ComponentUpdateOp<T>& update) 
     // todo emit update signal once schema types are properly exposed
 }
 
+template <class DataT>
+void ComponentView::populateComponent(const DataT& initial) {
+    // only works for position for now
+    const improbable::Coordinates& coords = initial.coords();
+    godotcore::GodotPosition2DData global = toGodotPosition(coords);
+    std::pair<float, float> local_positon = toLocalGodotPosition(global, 0, 0);
+    syncedPos.x = local_positon.first;
+    syncedPos.y = local_positon.second;
+}
+
 Vector2 ComponentView::getPosition() {
     return syncedPos;
 }
@@ -50,3 +60,4 @@ ComponentView::ComponentView() {
 
 // Force generation so that linking works
 template void ComponentView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
+template void ComponentView::populateComponent<improbable::Position::Data>(const improbable::Position::Data&);

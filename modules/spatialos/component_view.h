@@ -21,6 +21,8 @@ public:
 
     // This is temporary while I figure out spawning and stuff.
     Vector2 getPosition();
+    template <class DataT>
+    void populateComponent(const DataT& initial);
 
     // todo: make this private because this is crazy dangerous
     worker::ComponentId componentId;
