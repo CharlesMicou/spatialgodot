@@ -18,6 +18,7 @@ void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
     std::cout << "Received an add component" << std::endl;
     ComponentView* newComponent = memnew(ComponentView);
     newComponent->componentId = T::ComponentId;
+    // todo: pass in add.Data as initial data
     // if this happens within a critical section no one will hear it.
     // instead, they'll receive a complete entity.
     // this is fine.

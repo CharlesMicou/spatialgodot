@@ -8,10 +8,13 @@
 const worker::ComponentId kPositionId = 54;
 
 void ComponentView::_bind_methods() {
-    // Note(charlie): literally just refs until I figure this out
+    // Note(charlie): literally just refs until I figure this out. could also be a void.
     ADD_SIGNAL(MethodInfo("component_updated", PropertyInfo(Variant::OBJECT, "component_update", PROPERTY_HINT_NONE, "Reference")));
     ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
+
+    // Yolo position hacks while flows get figured out
     ADD_SIGNAL(MethodInfo("yolo_position_update", PropertyInfo(Variant::REAL, "x"), PropertyInfo(Variant::REAL, "y")));
+    ClassDB::bind_method(D_METHOD("get_position"), &ComponentView::getPosition);
 }
 
 void ComponentView::authorityChange(const worker::Authority& authority) {
@@ -30,12 +33,17 @@ void ComponentView::updateComponent(const worker::ComponentUpdateOp<T>& update) 
             const improbable::Coordinates& coords = *update.Update.coords();
             godotcore::GodotPosition2DData global = toGodotPosition(coords);
             std::pair<float, float> local_positon = toLocalGodotPosition(global, 0, 0);
+            syncedPos.x = local_positon.first;
+            syncedPos.y = local_positon.second;
             emit_signal("yolo_position_update", local_positon.first, local_positon.second);
         }
     }
     // todo emit update signal once schema types are properly exposed
 }
 
+Vector2 ComponentView::getPosition() {
+    return syncedPos;
+}
 
 ComponentView::ComponentView() {
 }
