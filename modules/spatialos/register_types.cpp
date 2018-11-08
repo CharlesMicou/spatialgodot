@@ -12,7 +12,7 @@ void register_spatialos_types() {
         ClassDB::register_class<Spatialos>();
         ClassDB::register_class<WorldView>();
         ClassDB::register_class<EntityView>();
-        ClassDB::register_class<ComponentView>();
+        ClassDB::register_class<ComponentView<improbable::Position>>();
 }
 
 void unregister_spatialos_types() {

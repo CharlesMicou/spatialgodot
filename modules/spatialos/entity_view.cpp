@@ -16,10 +16,8 @@ void EntityView::authorityChange(const worker::ComponentId component_id, const w
 template <typename T>
 void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
     std::cout << "Received an add component" << std::endl;
-    ComponentView* newComponent = memnew(ComponentView);
-    newComponent->componentId = T::ComponentId;
-    // todo: pass in add.Data as initial data. T::Data
-    newComponent->populateComponent(add.Data);
+    ComponentView<T>* newComponent = memnew(ComponentView<T>);
+    newComponent->init(T::ComponentId, add.Data);
     // if this happens within a critical section no one will hear it.
     // instead, they'll receive a complete entity.
     // this is fine.
@@ -30,7 +28,7 @@ void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
 
 template <typename T>
 void EntityView::updateComponent(const worker::ComponentUpdateOp<T>& update) {
-    components[T::ComponentId]->updateComponent(update);
+    dynamic_cast<ComponentView<T>*>(components[T::ComponentId])->updateComponent(update);
 }
 
 void EntityView::removeComponent(const worker::ComponentId component_id) {

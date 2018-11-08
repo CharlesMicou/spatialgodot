@@ -7,7 +7,8 @@
 
 const worker::ComponentId kPositionId = 54;
 
-void ComponentView::_bind_methods() {
+template <typename T>
+void ComponentView<T>::_bind_methods() {
     // Note(charlie): literally just refs until I figure this out. could also be a void.
     ADD_SIGNAL(MethodInfo("component_updated", PropertyInfo(Variant::OBJECT, "component_update", PROPERTY_HINT_NONE, "Reference")));
     ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
@@ -17,7 +18,8 @@ void ComponentView::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_position"), &ComponentView::getPosition);
 }
 
-void ComponentView::authorityChange(const worker::Authority& authority) {
+template <typename T>
+void ComponentView<T>::authorityChange(const worker::Authority& authority) {
     bool prev = authoritative;
     authoritative = (authority == worker::Authority::kAuthoritative);
     if (authoritative != prev) {
@@ -25,8 +27,8 @@ void ComponentView::authorityChange(const worker::Authority& authority) {
     }
 }
 
-template <class T>
-void ComponentView::updateComponent(const worker::ComponentUpdateOp<T>& update) {
+template <typename T>
+void ComponentView<T>::updateComponent(const worker::ComponentUpdateOp<T>& update) {
     if (T::ComponentId == kPositionId) {
         // Note to self: this is an optional
         if (update.Update.coords()) {
@@ -41,23 +43,28 @@ void ComponentView::updateComponent(const worker::ComponentUpdateOp<T>& update) 
     // todo emit update signal once schema types are properly exposed
 }
 
-template <class DataT>
-void ComponentView::populateComponent(const DataT& initial) {
+template <typename T>
+void ComponentView<T>::init(const worker::ComponentId component_id, const typename T::Data& state) {
     // only works for position for now
-    const improbable::Coordinates& coords = initial.coords();
+    if (component_id != 54) {
+        return;
+    }
+    data = state;
+    const improbable::Coordinates& coords = state.coords();
     godotcore::GodotPosition2DData global = toGodotPosition(coords);
     std::pair<float, float> local_positon = toLocalGodotPosition(global, 0, 0);
     syncedPos.x = local_positon.first;
     syncedPos.y = local_positon.second;
 }
 
-Vector2 ComponentView::getPosition() {
+template <typename T>
+Vector2 ComponentView<T>::getPosition() {
     return syncedPos;
 }
 
-ComponentView::ComponentView() {
+template <typename T>
+ComponentView<T>::ComponentView() {
 }
 
 // Force generation so that linking works
-template void ComponentView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
-template void ComponentView::populateComponent<improbable::Position::Data>(const improbable::Position::Data&);
+template class ComponentView<improbable::Position>;

@@ -4,10 +4,17 @@
 #include "editor_node.h"
 #include <improbable/worker.h>
 
-class ComponentView : public Node {
+
+class ComponentViewBase : public Node {
+
+};
+
+template <typename T>
+class ComponentView : public ComponentViewBase {
     GDCLASS(ComponentView, Node);
     bool authoritative;
-    bool data; // todo(figure out how to represent schema)
+    typename T::Data data;
+    worker::ComponentId componentId;
     Vector2 syncedPos;
 
 protected:
@@ -15,17 +22,13 @@ protected:
 
 public:
     void authorityChange(const worker::Authority& authority);
-    template <class T>
     void updateComponent(const worker::ComponentUpdateOp<T>& update);
     void removeComponent();
 
     // This is temporary while I figure out spawning and stuff.
     Vector2 getPosition();
-    template <class DataT>
-    void populateComponent(const DataT& initial);
+    void init(const worker::ComponentId component_id, const typename T::Data& state);
 
-    // todo: make this private because this is crazy dangerous
-    worker::ComponentId componentId;
     ComponentView();
 };
 
