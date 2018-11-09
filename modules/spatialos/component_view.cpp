@@ -66,5 +66,10 @@ template <typename T>
 ComponentView<T>::ComponentView() {
 }
 
+template <typename T>
+const bool ComponentView<T>::hasAuthority() {
+    return authoritative;
+}
+
 // Force generation so that linking works
 template class ComponentView<improbable::Position>;

@@ -2,24 +2,27 @@
 #define POSITION_SYNC_H
 
 #include "editor_node.h"
-#include "node_2d.h"
 #include "spatialos.h"
 #include <improbable/worker.h>
+#include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 
 class PositionSync : public Node {
     GDCLASS(PositionSync, Node);
-    Spatialos& connection;
-    Node2D& sync_node;
     worker::EntityId entity_id;
-    void sync();
+    Spatialos* connection;
+    Node2D* parent;
+    ComponentView<improbable::Position>* position_component;
 
 protected:
     static void _bind_methods();
 
 public:
-    godotcore::GodotPosition2D current_position;
     PositionSync();
+    void sync();
+    void set_entity_id(std::int64_t id);
+    void set_connection(Node* spos);
+    void set_position(Node* ref);
 };
 
 #endif

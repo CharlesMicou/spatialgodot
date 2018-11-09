@@ -7,7 +7,6 @@
 
 class EntityView : public Node {
     GDCLASS(EntityView, Node);
-    worker::EntityId entity_id;
     worker::Map<worker::ComponentId, ComponentViewBase*> components;
 
 protected:
@@ -20,6 +19,8 @@ public:
     template <typename T>
     void updateComponent(const worker::ComponentUpdateOp<T>& update);
     void removeComponent(const worker::ComponentId component_id);
+    std::int64_t get_entity_id();
+    worker::EntityId entity_id;
     // todo: expose a get all component nodes method
     
     EntityView();

@@ -27,8 +27,8 @@ public:
     void processOps();
     void setPosition(std::int64_t entityId, double x, double y);
     void sendInfoMessage(const String &msg);
-    template <class ComponentUpdate>
-    void sendComponentUpdate(const worker::EntityId entity_id, const ComponentUpdate& update);
+    template <typename T>
+    void sendComponentUpdate(const worker::EntityId entity_id, const typename T::Update& update);
 
     String get_configuration_warning() const;
 

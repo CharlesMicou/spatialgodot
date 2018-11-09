@@ -10,6 +10,7 @@ void WorldView::_bind_methods() {
 
 void WorldView::addEntity(const worker::AddEntityOp& add) {
     EntityView* newView = memnew(EntityView);
+    newView->entity_id = add.EntityId;
     entities.insert({{add.EntityId, newView}});
 
     // don't add the entity in the middle of a critical section

@@ -76,19 +76,19 @@ void Spatialos::blockingConnectLocator(
 
 template <typename Metaclass>
 void Spatialos::setupDispatcherForComponentMetaclass() {
+    dispatcher->OnAddComponent<Metaclass>([&](const worker::AddComponentOp<Metaclass>& op) {
+        world_view->addComponent<Metaclass>(op);
+    });
     dispatcher->OnAuthorityChange<Metaclass>([&](const worker::AuthorityChangeOp& op) {
         worker::ComponentId componentId = Metaclass::ComponentId;
         world_view->authorityChange(op.EntityId, componentId, op.Authority);
     });
-    dispatcher->OnAddComponent<Metaclass>([&](const worker::AddComponentOp<Metaclass>& op) {
-        world_view->addComponent<Metaclass>(op);
+    dispatcher->OnComponentUpdate<Metaclass>([&](const worker::ComponentUpdateOp<Metaclass>& op) {
+        world_view->updateComponent<Metaclass>(op);
     });
     dispatcher->OnRemoveComponent<Metaclass>([&](const worker::RemoveComponentOp& op) {
         worker::ComponentId componentId = Metaclass::ComponentId;
         world_view->removeComponent(op.EntityId, componentId);
-    });
-    dispatcher->OnComponentUpdate<Metaclass>([&](const worker::ComponentUpdateOp<Metaclass>& op) {
-        world_view->updateComponent<Metaclass>(op);
     });
 }
 
@@ -143,12 +143,12 @@ void Spatialos::setPosition(std::int64_t entityId, double x, double y) {
         oEntityId, improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
 }
 
-template <class ComponentUpdate>
-void Spatialos::sendComponentUpdate(const worker::EntityId entity_id, const ComponentUpdate& update) {
+template <typename T>
+void Spatialos::sendComponentUpdate(const worker::EntityId entity_id, const typename T::Update& update) {
     if (!isConnected) {
         return;
     }
-    connection->SendComponentUpdate<ComponentUpdate>(entity_id, update);
+    connection->SendComponentUpdate<T>(entity_id, update);
 }
 
 void Spatialos::sendInfoMessage(const String &msg) {
@@ -182,3 +182,5 @@ Spatialos::Spatialos() {
     workerType = "defaultworkertype";
     isConnected = false;
 }
+
+template void Spatialos::sendComponentUpdate<improbable::Position>(const worker::EntityId entity_id, const improbable::Position::Update& update);
