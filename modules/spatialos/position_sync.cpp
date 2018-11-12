@@ -15,14 +15,14 @@ void PositionSync::sync() {
         //std::cout << "Failed to sync position because a ref was not set" << std::endl;
         return;
     }
-    if (!position_component->hasAuthority()) {
-        //std::cout << "Didn't try to sync position because no authority" << std::endl;
-        return;
+    if (position_component->hasAuthority()) {
+        float x = parent->get_position().x;
+        float y = parent->get_position().y;
+        godotcore::GodotPosition2DData asGodotData = godotcore::GodotPosition2DData(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y), godotcore::GodotVector2D());
+        connection->sendComponentUpdate<improbable::Position>(entity_id, improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
+    } else {
+        parent->set_position(position_component->getPosition());
     }
-    float x = parent->get_position().x;
-    float y = parent->get_position().y;
-    godotcore::GodotPosition2DData asGodotData = godotcore::GodotPosition2DData(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y), godotcore::GodotVector2D());
-    connection->sendComponentUpdate<improbable::Position>(entity_id, improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
 }
 
 void PositionSync::set_connection(Node* spos) {
