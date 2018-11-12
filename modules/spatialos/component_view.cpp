@@ -64,6 +64,7 @@ Vector2 ComponentView<T>::getPosition() {
 
 template <typename T>
 ComponentView<T>::ComponentView() {
+    authoritative = false;
 }
 
 template <typename T>
@@ -73,3 +74,4 @@ const bool ComponentView<T>::hasAuthority() {
 
 // Force generation so that linking works
 template class ComponentView<improbable::Position>;
+//template class ComponentView<improbable::Metadata>;

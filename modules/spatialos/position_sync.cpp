@@ -9,19 +9,19 @@ void PositionSync::sync() {
     parent = dynamic_cast<Node2D*>(get_parent());
     if (parent == NULL) {
         std::cout << "PARENT WAS NULL" << std::endl;
+        return;
     }
     if (connection == NULL || position_component == NULL) {
-        std::cout << "Failed to sync position because a ref was not set" << std::endl;
+        //std::cout << "Failed to sync position because a ref was not set" << std::endl;
         return;
     }
     if (!position_component->hasAuthority()) {
-        std::cout << "Didn't try to sync position because no authority" << std::endl;
+        //std::cout << "Didn't try to sync position because no authority" << std::endl;
         return;
     }
     float x = parent->get_position().x;
     float y = parent->get_position().y;
     godotcore::GodotPosition2DData asGodotData = godotcore::GodotPosition2DData(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y), godotcore::GodotVector2D());
-    printf("Trying to sync godot cords %f %f for entity %ld \n", x ,y, entity_id);
     connection->sendComponentUpdate<improbable::Position>(entity_id, improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
 }
 

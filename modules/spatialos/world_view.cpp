@@ -70,3 +70,5 @@ WorldView::WorldView() {
 // Force generation so that linking works
 template void WorldView::addComponent<improbable::Position>(const worker::AddComponentOp<improbable::Position>&);
 template void WorldView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
+//template void WorldView::addComponent<improbable::Metadata>(const worker::AddComponentOp<improbable::Metadata>&);
+//template void WorldView::updateComponent<improbable::Metadata>(const worker::ComponentUpdateOp<improbable::Metadata>&);

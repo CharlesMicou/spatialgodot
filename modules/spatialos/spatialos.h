@@ -25,10 +25,13 @@ public:
     void blockingConnectLocator(const String &type, const String &dplName, const String &projectName, const String &loginToken);
     void blockingConnectReceptionist(const String &receptionistIp, const int receptionistPort, const String &id, const String &type);
     void processOps();
-    void setPosition(std::int64_t entityId, double x, double y);
     void sendInfoMessage(const String &msg);
     template <typename T>
     void sendComponentUpdate(const worker::EntityId entity_id, const typename T::Update& update);
+
+    // a hack until a commander exists
+    void spawnPlayerEntity(int entity_id);
+    void reserveId();
 
     String get_configuration_warning() const;
 

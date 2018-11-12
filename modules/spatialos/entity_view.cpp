@@ -60,3 +60,5 @@ EntityView::EntityView() {
 // Force generation so that linking works
 template void EntityView::addComponent<improbable::Position>(const worker::AddComponentOp<improbable::Position>&);
 template void EntityView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
+//template void EntityView::addComponent<improbable::Metadata>(const worker::AddComponentOp<improbable::Metadata>&);
+//template void EntityView::updateComponent<improbable::Metadata>(const worker::ComponentUpdateOp<improbable::Metadata>&);
