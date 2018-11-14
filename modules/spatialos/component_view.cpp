@@ -14,7 +14,6 @@ void ComponentView<T>::_bind_methods() {
     ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
 
     // Yolo position hacks while flows get figured out
-    ADD_SIGNAL(MethodInfo("yolo_position_update", PropertyInfo(Variant::REAL, "x"), PropertyInfo(Variant::REAL, "y")));
     ClassDB::bind_method(D_METHOD("get_position"), &ComponentView::getPosition);
 }
 
@@ -34,10 +33,9 @@ void ComponentView<T>::updateComponent(const worker::ComponentUpdateOp<T>& updat
         if (update.Update.coords()) {
             const improbable::Coordinates& coords = *update.Update.coords();
             godotcore::GodotPosition2DData global = toGodotPosition(coords);
-            std::pair<float, float> local_positon = toLocalGodotPosition(global, 0, 0);
-            syncedPos.x = local_positon.first;
-            syncedPos.y = local_positon.second;
-            emit_signal("yolo_position_update", local_positon.first, local_positon.second);
+            std::pair<float, float> local_position = toLocalGodotPosition(global, 0, 0);
+            syncedPos.x = local_position.first;
+            syncedPos.y = local_position.second;
         }
     }
     // todo emit update signal once schema types are properly exposed

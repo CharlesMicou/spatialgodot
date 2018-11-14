@@ -12,7 +12,6 @@ void PositionSync::sync() {
         return;
     }
     if (connection == NULL || position_component == NULL) {
-        //std::cout << "Failed to sync position because a ref was not set" << std::endl;
         return;
     }
     if (position_component->hasAuthority()) {

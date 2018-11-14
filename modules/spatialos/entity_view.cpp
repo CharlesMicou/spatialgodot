@@ -34,13 +34,12 @@ void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
 
 template <typename T>
 void EntityView::updateComponent(const worker::ComponentUpdateOp<T>& update) {
-    /*auto it = components.find(T::ComponentId);
+    auto it = components.find(T::ComponentId);
     if (it != components.end()) {
-        std::cout << "Handling a component update" << std::endl;
         dynamic_cast<ComponentView<T>*>(it->second)->updateComponent(update);
     } else {
         std::cout << "Received a component update before it was added to the entity model" << std::endl;
-    }*/
+    }
 }
 
 void EntityView::removeComponent(const worker::ComponentId component_id) {

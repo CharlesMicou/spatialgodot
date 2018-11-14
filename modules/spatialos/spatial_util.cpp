@@ -10,7 +10,7 @@ const float kGodotUnitsPerSpatialUnits = 20;
 std::pair<int, float> toChunkedCoordinate(double unchunked) {
     int chunk = (int) (unchunked / kChunkSizeInGodotUnits);
     double local = unchunked - chunk * kChunkSizeInGodotUnits;
-    return std::pair<int, float>(0, (float) local);
+    return std::pair<int, float>(chunk, (float) local);
 }
 
 std::string fromGodotString(const String& godotString) {
