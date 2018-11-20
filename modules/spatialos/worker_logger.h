@@ -13,7 +13,7 @@ class WorkerLogger {
     private:
         const std::string logger_name;
 
-        static std::ofstream log_file;
+        static std::ofstream* log_file;
         static worker::Connection* connection;
 
         static int log_to_connection_severity;

@@ -213,9 +213,9 @@ void Spatialos::initLogging() {
     while (it) {
             if (kLogFileFlag.is_subsequence_of(it->get())) {
                 String dest = it->get().split("=")[1];
+                std::cout << "Will try to log to " << fromGodotString(dest) << std::endl;
                 WorkerLogger::init_log_file(fromGodotString(dest));
                 // If we have a log file, we can turn off console logging.
-                logger.info("Setup logging to file.");
                 WorkerLogger::set_console_severity(log_severity::MAX);
                 break;
             }
@@ -252,6 +252,7 @@ Spatialos::Spatialos(): logger(WorkerLogger("core")) {
     workerId = "defaultworkerid";
     workerType = "defaultworkertype";
     isConnected = false;
+    initLogging();
 }
 
 template void Spatialos::sendComponentUpdate<improbable::Position>(const worker::EntityId entity_id, const improbable::Position::Update& update);

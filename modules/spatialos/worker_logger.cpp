@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <improbable/worker.h>
+#include "core/os/memory.h"
 #include <time.h>
 
 #ifndef LOG_COLORS
@@ -19,7 +20,7 @@
 #endif
 
 // C++ is still a total mystery to me.
-std::ofstream WorkerLogger::log_file;
+std::ofstream* WorkerLogger::log_file = NULL;
 worker::Connection* WorkerLogger::connection;
 int WorkerLogger::log_to_connection_severity;
 int WorkerLogger::log_to_console_severity;
@@ -85,7 +86,7 @@ void WorkerLogger::write(const int severity, const std::string& name_tag, const 
 
 void WorkerLogger::write_to_file(const std::string& timestamp, const std::string& severity_tag, const std::string& name_tag, const std::string& msg) {
     if (log_file) {
-        log_file << timestamp << " [" << severity_tag << "] [" << name_tag << "] " << msg << std::endl;
+        (*log_file) << timestamp << " [" << severity_tag << "] [" << name_tag << "] " << msg << std::endl;
     }
 }
 
@@ -112,10 +113,12 @@ void WorkerLogger::write_to_connection(const int severity, const std::string& na
 }
 
 void WorkerLogger::init_log_file(const std::string& filename) {
-    if (log_file) {
+    if (WorkerLogger::log_file) {
         WorkerLogger::write(log_severity::ERROR, "logging", "Tried to initialise log file twice.");
     } else {
-        std::ofstream log_file(filename);
+        std::ofstream* out = memnew(std::ofstream(filename));
+        WorkerLogger::log_file = out;
+        (*out) << "--GODOT WORKER LOGFILE START--" << std::endl;
     }
 }
 
@@ -140,7 +143,7 @@ void WorkerLogger::set_console_severity(const int console_severity) {
 WorkerLogger::WorkerLogger(const std::string name): logger_name(std::move(name)) {}
 
 WorkerLogger::~WorkerLogger() {
-    if (log_file) {
-        log_file.close();
+    if (WorkerLogger::log_file) {
+        WorkerLogger::log_file->close();
     }
 }
