@@ -96,6 +96,11 @@ void Spatialos::setupDispatcherForComponentMetaclass() {
 
 void Spatialos::setupDispatcher() {
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", "Hello from Godot!");
+
+    WorkerLogger::init_remote_log_callback([&](const worker::LogLevel level, const std::string& name, const std::string& msg){
+        connection->SendLogMessage(level, name, msg);
+    }, log_severity::WARN /* send warn and above over the protocol */);
+
     dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
     isConnected = true;
     logger.info("Test info message");

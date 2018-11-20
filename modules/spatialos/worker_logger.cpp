@@ -21,7 +21,7 @@
 
 // C++ is still a total mystery to me.
 std::ofstream* WorkerLogger::log_file = NULL;
-worker::Connection* WorkerLogger::connection;
+std::function<void(const worker::LogLevel, const std::string&, const std::string&)> WorkerLogger::logback = NULL;
 int WorkerLogger::log_to_connection_severity;
 int WorkerLogger::log_to_console_severity;
 
@@ -95,16 +95,16 @@ void WorkerLogger::write_to_console(const std::string& color, const std::string&
 }
 
 void WorkerLogger::write_to_connection(const int severity, const std::string& name_tag, const std::string& msg) {
-    if (connection) {
+    if (logback) {
         switch (severity) {
             case log_severity::INFO:
-                connection->SendLogMessage(worker::LogLevel::kInfo, name_tag, msg);
+                logback(worker::LogLevel::kInfo, name_tag, msg);
                 break;
            case log_severity::WARN:
-                connection->SendLogMessage(worker::LogLevel::kWarn, name_tag, msg);
+                logback(worker::LogLevel::kWarn, name_tag, msg);
                 break;
           case log_severity::ERROR:
-                connection->SendLogMessage(worker::LogLevel::kError, name_tag, msg);
+                logback(worker::LogLevel::kError, name_tag, msg);
                 break;
            default:
                 break;
@@ -122,17 +122,17 @@ void WorkerLogger::init_log_file(const std::string& filename) {
     }
 }
 
-void WorkerLogger::init_connection(worker::Connection* upstream, const int min_severity) {
-    if (connection) {
+void WorkerLogger::init_remote_log_callback(std::function<void(const worker::LogLevel, const std::string&, const std::string&)> callback, log_severity min_sev) {
+    if (logback) {
         WorkerLogger::write(log_severity::ERROR, "logging", "Tried to initialise connection logging twice.");
     } else {
-        connection = upstream;
-        log_to_connection_severity = min_severity;
+        logback = callback;
+        log_to_connection_severity = min_sev;
     }
 }
 
 void WorkerLogger::on_connection_closed() {
-    connection = NULL;
+    logback = NULL;
     log_to_connection_severity = log_severity::MAX;
 }
 

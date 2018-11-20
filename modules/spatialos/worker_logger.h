@@ -14,7 +14,9 @@ class WorkerLogger {
         const std::string logger_name;
 
         static std::ofstream* log_file;
-        static worker::Connection* connection;
+
+        static void log_remote_info(const std::string& name_tag, const std::string& msg);
+        static std::function<void(const worker::LogLevel, const std::string&, const std::string&)> logback;
 
         static int log_to_connection_severity;
         static int log_to_console_severity;
@@ -31,6 +33,7 @@ class WorkerLogger {
 
         static void init_log_file(const std::string& filename);
         static void init_connection(worker::Connection* upstream, const int min_severity);
+        static void init_remote_log_callback(std::function<void(const worker::LogLevel, const std::string&, const std::string&)> callback, log_severity min_sev);
         static void on_connection_closed();
         static void set_console_severity(const int console_severity);
 
