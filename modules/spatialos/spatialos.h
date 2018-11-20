@@ -5,11 +5,13 @@
 #include "core/ustring.h"
 #include <improbable/worker.h>
 #include "world_view.h"
+#include "worker_logger.h"
 
 class Spatialos : public Node {
     GDCLASS(Spatialos, Node);
     String workerId;
     String workerType;
+    WorkerLogger logger;
     std::unique_ptr<worker::Dispatcher> dispatcher;
     std::unique_ptr<worker::Connection> connection;
     WorldView* world_view;
@@ -17,6 +19,7 @@ class Spatialos : public Node {
     void setupDispatcher();
     template <typename Metaclass>
     void setupDispatcherForComponentMetaclass();
+    void initLogging();
 
 protected:
     static void _bind_methods();

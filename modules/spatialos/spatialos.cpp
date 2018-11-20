@@ -4,12 +4,14 @@
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 #include <iostream>
+#include "core/os/os.h"
 #include "editor_node.h"
 #include "spatial_util.h"
 
 using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata, godotcore::GodotPosition2D, improbable::EntityAcl, improbable::Persistence>;
 
 const std::string kLocatorHost = "locator.improbable.io";
+const String kLogFileFlag = "--spatialos_log_file";
 const int kOpsPerFrame = 1000;
 
 worker::Connection ConnectWithReceptionist(const std::string hostname,
@@ -96,6 +98,9 @@ void Spatialos::setupDispatcher() {
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_core", "Hello from Godot!");
     dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
     isConnected = true;
+    logger.info("Test info message");
+    logger.warn("Test warn message");
+    logger.error("Test error message");
 
     // Super hacky but hey
     NodePath path = NodePath("WorldView");
@@ -103,6 +108,7 @@ void Spatialos::setupDispatcher() {
 
     // Messages
     dispatcher->OnLogMessage([&](const worker::LogMessageOp& op) {
+        logger.warn("[worker sdk]" + op.Message);
         std::cout << "[worker sdk]: " << op.Message << std::endl;
     });
 
@@ -152,6 +158,7 @@ void Spatialos::setupDispatcher() {
     dispatcher->OnDisconnect([&](const worker::DisconnectOp& op) {
         std::cerr << "[disconnect] " << op.Reason << std::endl;
         isConnected = false;
+        WorkerLogger::on_connection_closed();
     });
     emit_signal("connection_success");
 }
@@ -199,6 +206,23 @@ void Spatialos::reserveId() {
     connection->SendReserveEntityIdRequest({} /* timeout */);
 }
 
+void Spatialos::initLogging() {
+    WorkerLogger::set_console_severity(log_severity::INFO);
+    List<String> args = OS::get_singleton()->get_cmdline_args();
+    auto it = args.front();
+    while (it) {
+            if (kLogFileFlag.is_subsequence_of(it->get())) {
+                String dest = it->get().split("=")[1];
+                WorkerLogger::init_log_file(fromGodotString(dest));
+                // If we have a log file, we can turn off console logging.
+                logger.info("Setup logging to file.");
+                WorkerLogger::set_console_severity(log_severity::MAX);
+                break;
+            }
+			it = it->next();
+	};
+}
+
 String Spatialos::get_configuration_warning() const {
 	String warning = Node::get_configuration_warning();
 	if (world_view == NULL) {
@@ -224,7 +248,7 @@ void Spatialos::_bind_methods() {
     ClassDB::bind_method(D_METHOD("reserve_id"), &Spatialos::reserveId);
 }
 
-Spatialos::Spatialos() {
+Spatialos::Spatialos(): logger(WorkerLogger("core")) {
     workerId = "defaultworkerid";
     workerType = "defaultworkertype";
     isConnected = false;
