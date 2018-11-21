@@ -13,7 +13,8 @@ src_list = [
     "component_view.cpp",
     "spatialos.cpp",
     "register_types.cpp",
-    "worker_logger.cpp"]
+    "worker_logger.cpp",
+    "worker_logger_wrapper.cpp"]
 module_env.add_source_files(env.modules_sources, src_list)
 
 # Schema dependencies

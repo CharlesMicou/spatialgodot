@@ -7,6 +7,7 @@
 #include "entity_view.h"
 #include "component_view.h"
 #include "position_sync.h"
+#include "worker_logger_wrapper.h"
 #include <improbable/standard_library.h>
 
 void register_spatialos_types() { 
@@ -16,6 +17,7 @@ void register_spatialos_types() {
         ClassDB::register_class<ComponentView<improbable::Position>>();
         //ClassDB::register_class<ComponentView<improbable::Metadata>>();
         ClassDB::register_class<PositionSync>();
+        ClassDB::register_class<WorkerLoggerWrapper>();
 }
 
 void unregister_spatialos_types() {
