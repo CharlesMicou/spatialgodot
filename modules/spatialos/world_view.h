@@ -8,6 +8,8 @@
 
 class WorldView : public Node2D {
     GDCLASS(WorldView, Node2D);
+    static WorkerLogger logger;
+
     bool inCriticalSection;
     worker::Map<worker::EntityId, EntityView*> entities;
     std::queue<worker::EntityId> pendingSceneEntities;

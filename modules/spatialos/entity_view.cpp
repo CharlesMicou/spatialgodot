@@ -1,8 +1,9 @@
 #include "entity_view.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
-#include <iostream>
 #include <stdio.h>
+
+WorkerLogger EntityView::logger = WorkerLogger("entity_view");
 
 void EntityView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("component_added", PropertyInfo(Variant::OBJECT, "component_view", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
@@ -11,17 +12,17 @@ void EntityView::_bind_methods() {
 }
 
 void EntityView::authorityChange(const worker::ComponentId component_id, const worker::Authority& authority) {
-    std::cout << "Received an authority change" << std::endl;
+    logger.info("Received an authority change for component " + std::to_string(component_id));
     auto it = components.find(component_id);
     if (it != components.end()) {
-        std::cout << "Forwarding authority change" << std::endl;
+        logger.info("Forwarding authority change");
         (it->second)->authorityChange(authority);
     }
 }
 
 template <typename T>
 void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
-    std::cout << "Received an add component" << std::endl;
+    logger.info("Received an add component for component id " + std::to_string(T::ComponentId));
     ComponentView<T>* newComponent = memnew(ComponentView<T>);
     newComponent->init(T::ComponentId, add.Data);
     // if this happens within a critical section no one will hear it.
@@ -38,12 +39,12 @@ void EntityView::updateComponent(const worker::ComponentUpdateOp<T>& update) {
     if (it != components.end()) {
         dynamic_cast<ComponentView<T>*>(it->second)->updateComponent(update);
     } else {
-        std::cout << "Received a component update before it was added to the entity model" << std::endl;
+        logger.warn("Received a component update before it was added to the entity model");
     }
 }
 
 void EntityView::removeComponent(const worker::ComponentId component_id) {
-    std::cout << "Received a remove component" << std::endl;
+    logger.info("Received a remove component");
     emit_signal("component_removed", components[component_id]);
     remove_child(components[component_id]);
     components.erase(component_id);

@@ -7,6 +7,7 @@
 
 class EntityView : public Node {
     GDCLASS(EntityView, Node);
+    static WorkerLogger logger;
     worker::Map<worker::ComponentId, ComponentViewBase*> components;
 
 protected:

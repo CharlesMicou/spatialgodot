@@ -9,6 +9,8 @@
 
 class PositionSync : public Node {
     GDCLASS(PositionSync, Node);
+    static WorkerLogger logger;
+
     worker::EntityId entity_id;
     Spatialos* connection;
     Node2D* parent;

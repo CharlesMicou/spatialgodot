@@ -1,7 +1,8 @@
 #include "world_view.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
-#include <iostream>
+
+WorkerLogger WorldView::logger = WorkerLogger("world_view");
 
 void WorldView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("entity_added", PropertyInfo(Variant::OBJECT, "entity_view", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
@@ -15,7 +16,6 @@ void WorldView::addEntity(const worker::AddEntityOp& add) {
 
     // don't add the entity in the middle of a critical section
     if (inCriticalSection) {
-        std::cout << "Received an add entity, but inside a critical section." << std::endl;
         pendingSceneEntities.push(add.EntityId);
     } else {
         addEntityToScene(add.EntityId);
@@ -23,7 +23,7 @@ void WorldView::addEntity(const worker::AddEntityOp& add) {
 }
 
 void WorldView::removeEntity(const worker::RemoveEntityOp& remove) {
-    std::cout << "Emitting a remove entity signal" << std::endl;
+    logger.info("Emitting a remove entity signal");
     emit_signal("entity_removed", entities[remove.EntityId]);
     remove_child(entities[remove.EntityId]);
     entities.erase(remove.EntityId);
@@ -59,7 +59,7 @@ void WorldView::handleCriticalSection(const worker::CriticalSectionOp& section) 
 
 void WorldView::addEntityToScene(worker::EntityId entity_id) {
     add_child(entities[entity_id]);
-    std::cout << "Emitting an add entity signal" << std::endl;
+    logger.info("Emitting an add entity signal");
     emit_signal("entity_added", entities[entity_id]);
 }
 

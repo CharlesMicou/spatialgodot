@@ -1,3 +1,6 @@
+#ifndef WORKER_LOGGER_H
+#define WORKER_LOGGER_H
+
 #include <iostream>
 #include <fstream>
 #include <improbable/worker.h>
@@ -40,3 +43,5 @@ class WorkerLogger {
         WorkerLogger(const std::string name);
         ~WorkerLogger();
 };
+
+#endif

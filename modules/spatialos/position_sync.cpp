@@ -1,14 +1,15 @@
 #include "position_sync.h"
 #include "editor_node.h"
 #include "spatial_util.h"
-#include <iostream>
 #include <stdio.h>
+
+WorkerLogger PositionSync::logger = WorkerLogger("position_sync");
 
 void PositionSync::sync() {
     // todo fix this
     parent = dynamic_cast<Node2D*>(get_parent());
     if (parent == NULL) {
-        std::cout << "PARENT WAS NULL" << std::endl;
+        logger.warn("Parent was null");
         return;
     }
     if (connection == NULL || position_component == NULL) {

@@ -3,7 +3,6 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
-#include <iostream>
 #include "core/os/os.h"
 #include "editor_node.h"
 #include "spatial_util.h"
@@ -38,9 +37,7 @@ worker::Connection ConnectWithLocator(
         deployment_name,
         connection_parameters,
         [](worker::QueueStatus queueStatus) -> bool {return true;}); // Indefinitely retry the queue
-    std::cout << "Blocking on locator connection." << std::endl;
     worker::Connection result = future.Get();
-    std::cout << "Locator result complete." << std::endl;
     return result;
 }
 
@@ -55,9 +52,8 @@ void Spatialos::blockingConnectReceptionist(
     parameters.WorkerType = fromGodotString(workerType);
     parameters.Network.ConnectionType = worker::NetworkConnectionType::kTcp;
     parameters.Network.UseExternalIp = false;
-
+    logger.info("Trying to login in via receptionist.");
     connection.reset(new worker::Connection{ConnectWithReceptionist(fromGodotString(receptionistIp), receptionistPort, fromGodotString(workerId), parameters)});
-
     setupDispatcher();
 }
 
@@ -71,6 +67,7 @@ void Spatialos::blockingConnectLocator(
     parameters.WorkerType = fromGodotString(workerType);
     parameters.Network.ConnectionType = worker::NetworkConnectionType::kTcp;
     parameters.Network.UseExternalIp = true;
+    logger.info("Trying to login in via locator.");
     connection.reset(new worker::Connection{ConnectWithLocator(fromGodotString(dplName), fromGodotString(projectName), fromGodotString(loginToken), parameters)});
     workerId = toGodotString(connection->GetWorkerId());
     setupDispatcher();
@@ -103,9 +100,6 @@ void Spatialos::setupDispatcher() {
 
     dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
     isConnected = true;
-    logger.info("Test info message");
-    logger.warn("Test warn message");
-    logger.error("Test error message");
 
     // Super hacky but hey
     NodePath path = NodePath("WorldView");
@@ -113,8 +107,7 @@ void Spatialos::setupDispatcher() {
 
     // Messages
     dispatcher->OnLogMessage([&](const worker::LogMessageOp& op) {
-        logger.warn("[worker sdk]" + op.Message);
-        std::cout << "[worker sdk]: " << op.Message << std::endl;
+        logger.warn("[worker sdk] " + op.Message);
     });
 
     // World view connections
@@ -139,29 +132,29 @@ void Spatialos::setupDispatcher() {
     // Todo: log messages, flags, queries, and all the others.
     dispatcher->OnReserveEntityIdResponse([&](const worker::ReserveEntityIdResponseOp op) {
         if (op.StatusCode != worker::StatusCode::kSuccess) {
-            std::cout << "Received a reserve entity failure: " + op.Message << std::endl;
+            logger.warn("Received a reserve entity failure: " + op.Message);
             return;
         }
         if (op.EntityId.empty()) {
-            std::cout << "Reserve entity was a success but also empty"<< std::endl;
+            logger.warn("Reserve entity was a success but also empty.");
             return;
         }
 
         int entityId = *op.EntityId;
-        std::cout << "Reserved an entity " << std::to_string(*op.EntityId) << " " << std::to_string(entityId) << std::endl;
+        logger.info("Reserved an entity " + std::to_string(*op.EntityId) + " " + std::to_string(entityId));
         emit_signal("entity_reserved", entityId);
     });
     dispatcher->OnCreateEntityResponse([&](const worker::CreateEntityResponseOp op) {
         if (op.StatusCode != worker::StatusCode::kSuccess) {
-            std::cout << "Received a create entity failure: " + op.Message << std::endl;
+            logger.warn("Received a create entity failure: " + op.Message);
         } else {
-            std::cout << "Received a create entity success" << std::endl;
+            logger.info("Received a create entity success");
         }
     });
 
     // Misc. Dispatcher
     dispatcher->OnDisconnect([&](const worker::DisconnectOp& op) {
-        std::cerr << "[disconnect] " << op.Reason << std::endl;
+        logger.warn("Disconnected with reason: " + op.Reason);
         isConnected = false;
         WorkerLogger::on_connection_closed();
     });
@@ -191,7 +184,7 @@ void Spatialos::sendInfoMessage(const String &msg) {
 }
 
 void Spatialos::spawnPlayerEntity(int entity_id) {
-    std::cout << "Attempting to spawn entity " << std::to_string(entity_id) << std::endl;
+    logger.info("Attempting to spawn entity " + std::to_string(entity_id));
     worker::EntityId entityId = entity_id;
     worker::Entity entityToSpawn;
     entityToSpawn.Add<improbable::Position>({{0, 0, 0}});
@@ -207,7 +200,7 @@ void Spatialos::spawnPlayerEntity(int entity_id) {
 }
 
 void Spatialos::reserveId() {
-    std::cout << "Attempting to reserve an entity id" << std::endl;
+    logger.info("Attempting to reserve an entity id");
     connection->SendReserveEntityIdRequest({} /* timeout */);
 }
 
@@ -218,7 +211,6 @@ void Spatialos::initLogging() {
     while (it) {
             if (kLogFileFlag.is_subsequence_of(it->get())) {
                 String dest = it->get().split("=")[1];
-                std::cout << "Will try to log to " << fromGodotString(dest) << std::endl;
                 WorkerLogger::init_log_file(fromGodotString(dest));
                 // If we have a log file, we can turn off console logging.
                 WorkerLogger::set_console_severity(log_severity::MAX);

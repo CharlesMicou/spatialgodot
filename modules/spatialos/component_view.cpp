@@ -1,11 +1,12 @@
 #include "component_view.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
-#include <iostream>
 #include "spatial_util.h"
 #include <stdio.h>
 
 const worker::ComponentId kPositionId = 54;
+template <typename T>
+WorkerLogger ComponentView<T>::logger = WorkerLogger("component_view");
 
 template <typename T>
 void ComponentView<T>::_bind_methods() {
