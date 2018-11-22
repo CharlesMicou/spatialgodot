@@ -205,7 +205,11 @@ void Spatialos::reserveId() {
 }
 
 void Spatialos::initLogging() {
-    WorkerLogger::set_console_severity(log_severity::INFO);
+    #ifdef DEBUG_ENABLED
+        WorkerLogger::set_console_severity(log_severity::INFO);
+    #else
+        WorkerLogger::set_console_severity(log_severity::MAX);
+    #endif
     List<String> args = OS::get_singleton()->get_cmdline_args();
     auto it = args.front();
     while (it) {
