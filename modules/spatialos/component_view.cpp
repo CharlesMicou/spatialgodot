@@ -13,9 +13,6 @@ void ComponentView<T>::_bind_methods() {
     // Note(charlie): literally just refs until I figure this out. could also be a void.
     ADD_SIGNAL(MethodInfo("component_updated", PropertyInfo(Variant::OBJECT, "component_update", PROPERTY_HINT_NONE, "Reference")));
     ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
-
-    // Yolo position hacks while flows get figured out
-    ClassDB::bind_method(D_METHOD("get_position"), &ComponentView::getPosition);
 }
 
 template <typename T>
@@ -29,36 +26,17 @@ void ComponentView<T>::authorityChange(const worker::Authority& authority) {
 
 template <typename T>
 void ComponentView<T>::updateComponent(const worker::ComponentUpdateOp<T>& update) {
-    if (T::ComponentId == kPositionId) {
-        // Note to self: this is an optional
-        if (update.Update.coords()) {
-            const improbable::Coordinates& coords = *update.Update.coords();
-            godotcore::GodotPosition2DData global = toGodotPosition(coords);
-            std::pair<float, float> local_position = toLocalGodotPosition(global, 0, 0);
-            syncedPos.x = local_position.first;
-            syncedPos.y = local_position.second;
-        }
-    }
-    // todo emit update signal once schema types are properly exposed
+    update.Update.ApplyTo(data);
 }
 
 template <typename T>
 void ComponentView<T>::init(const worker::ComponentId component_id, const typename T::Data& state) {
-    // only works for position for now
-    if (component_id != 54) {
-        return;
-    }
     data = state;
-    const improbable::Coordinates& coords = state.coords();
-    godotcore::GodotPosition2DData global = toGodotPosition(coords);
-    std::pair<float, float> local_positon = toLocalGodotPosition(global, 0, 0);
-    syncedPos.x = local_positon.first;
-    syncedPos.y = local_positon.second;
 }
 
 template <typename T>
-Vector2 ComponentView<T>::getPosition() {
-    return syncedPos;
+const typename T::Data& ComponentView<T>::getData() {
+    return data;
 }
 
 template <typename T>

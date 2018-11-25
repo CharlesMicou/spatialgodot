@@ -19,7 +19,6 @@ class ComponentView : public ComponentViewBase {
     bool authoritative;
     typename T::Data data;
     worker::ComponentId componentId;
-    Vector2 syncedPos;
 
 protected:
     static void _bind_methods();
@@ -29,10 +28,9 @@ public:
     void updateComponent(const worker::ComponentUpdateOp<T>& update);
     void removeComponent();
 
-    // This is temporary while I figure out spawning and stuff.
-    Vector2 getPosition();
     void init(const worker::ComponentId component_id, const typename T::Data& state);
     const bool hasAuthority();
+    const typename T::Data& getData();
 
     ComponentView();
 };
