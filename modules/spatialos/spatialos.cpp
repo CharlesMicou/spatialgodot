@@ -157,6 +157,7 @@ void Spatialos::setupDispatcher() {
         logger.warn("Disconnected with reason: " + op.Reason);
         isConnected = false;
         WorkerLogger::on_connection_closed();
+        emit_signal("disconnected");
     });
     emit_signal("connection_success");
 }
@@ -237,6 +238,7 @@ String Spatialos::get_configuration_warning() const {
 
 void Spatialos::_bind_methods() {
     ADD_SIGNAL(MethodInfo("connection_success"));
+    ADD_SIGNAL(MethodInfo("disconnected"));
 
     ClassDB::bind_method(D_METHOD("connect_receptionist", "receptionist_host", "receptionist_port", "worker_id", "worker_type"), &Spatialos::blockingConnectReceptionist);
     ClassDB::bind_method(D_METHOD("connect_locator", "worker_type", "deployment_name", "project_name", "login_token"), &Spatialos::blockingConnectLocator);
