@@ -123,9 +123,7 @@ void Spatialos::setupDispatcher() {
 
     // Components
     setupDispatcherForComponentMetaclass<improbable::Position>();
-    
-    // Note(charlie): components need to be properly generic and not have position hacks first
-    //setupDispatcherForComponentMetaclass<improbable::Metadata>();
+    setupDispatcherForComponentMetaclass<improbable::Metadata>();
 
     // Todo: command responses
     // Todo: command requests

@@ -14,8 +14,7 @@ void register_spatialos_types() {
         ClassDB::register_class<Spatialos>();
         ClassDB::register_class<WorldView>();
         ClassDB::register_class<EntityView>();
-        ClassDB::register_class<ComponentView<improbable::Position>>();
-        //ClassDB::register_class<ComponentView<improbable::Metadata>>();
+        ClassDB::register_virtual_class<ComponentViewBase>();
         ClassDB::register_class<PositionSync>();
         ClassDB::register_class<WorkerLoggerWrapper>();
 }

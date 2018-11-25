@@ -9,13 +9,6 @@ template <typename T>
 WorkerLogger ComponentView<T>::logger = WorkerLogger("component_view");
 
 template <typename T>
-void ComponentView<T>::_bind_methods() {
-    // Note(charlie): literally just refs until I figure this out. could also be a void.
-    ADD_SIGNAL(MethodInfo("component_updated", PropertyInfo(Variant::OBJECT, "component_update", PROPERTY_HINT_NONE, "Reference")));
-    ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
-}
-
-template <typename T>
 void ComponentView<T>::authorityChange(const worker::Authority& authority) {
     bool prev = authoritative;
     authoritative = (authority == worker::Authority::kAuthoritative);
@@ -51,4 +44,4 @@ const bool ComponentView<T>::hasAuthority() {
 
 // Force generation so that linking works
 template class ComponentView<improbable::Position>;
-//template class ComponentView<improbable::Metadata>;
+template class ComponentView<improbable::Metadata>;
