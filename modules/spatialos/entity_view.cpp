@@ -9,6 +9,7 @@ void EntityView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("component_added", PropertyInfo(Variant::OBJECT, "component_view", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
     ADD_SIGNAL(MethodInfo("component_removed", PropertyInfo(Variant::OBJECT, "component_view", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
     ClassDB::bind_method(D_METHOD("get_entity_id"), &EntityView::get_entity_id);
+    ClassDB::bind_method(D_METHOD("get_component_node", "component_id"), &EntityView::getComponentNode);
 }
 
 void EntityView::authorityChange(const worker::ComponentId component_id, const worker::Authority& authority) {
@@ -52,6 +53,15 @@ void EntityView::removeComponent(const worker::ComponentId component_id) {
 
 std::int64_t EntityView::get_entity_id() {
     return entity_id;
+}
+
+ComponentViewBase* EntityView::getComponentNode(const worker::ComponentId component_id) {
+    auto it = components.find(component_id);
+    if (it != components.end()) {
+        return it->second;
+    } else {
+        return nullptr;
+    }
 }
 
 EntityView::EntityView() {

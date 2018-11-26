@@ -257,4 +257,4 @@ Spatialos::Spatialos(): logger(WorkerLogger("core")) {
 }
 
 template void Spatialos::sendComponentUpdate<improbable::Position>(const worker::EntityId entity_id, const improbable::Position::Update& update);
-//template void Spatialos::sendComponentUpdate<improbable::Metadata>(const worker::EntityId entity_id, const improbable::Metadata::Update& update);
+template void Spatialos::sendComponentUpdate<improbable::Metadata>(const worker::EntityId entity_id, const improbable::Metadata::Update& update);

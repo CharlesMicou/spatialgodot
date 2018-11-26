@@ -19,7 +19,14 @@ void PositionSync::sync() {
         float x = parent->get_position().x;
         float y = parent->get_position().y;
         godotcore::GodotPosition2DData asGodotData = godotcore::GodotPosition2DData(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y), godotcore::GodotVector2D());
-        connection->sendComponentUpdate<improbable::Position>(entity_id, improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
+        // Only update the position if it has actually changed
+        // Disabling this for now because for some reason it causes a ton of jitter
+        //if (last_position != asGodotData) {
+        if (true) {
+            last_position = asGodotData;
+            connection->sendComponentUpdate<improbable::Position>(entity_id, improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
+        }
+        
     } else {
         const improbable::Coordinates& coords = position_component->getData().coords();
         godotcore::GodotPosition2DData global = toGodotPosition(coords);
