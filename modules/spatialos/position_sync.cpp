@@ -21,6 +21,7 @@ void PositionSync::sync() {
         godotcore::GodotPosition2DData asGodotData = godotcore::GodotPosition2DData(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y), godotcore::GodotVector2D());
         // Only update the position if it has actually changed
         // Disabling this for now because for some reason it causes a ton of jitter
+        // Suspect this will be fixed by not storing the position internally to here but reffing the component view instead
         //if (last_position != asGodotData) {
         if (true) {
             last_position = asGodotData;

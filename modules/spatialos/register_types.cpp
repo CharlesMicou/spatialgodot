@@ -8,7 +8,7 @@
 #include "component_view.h"
 #include "position_sync.h"
 #include "worker_logger_wrapper.h"
-#include <improbable/standard_library.h>
+#include "snapshot_generator.h"
 
 void register_spatialos_types() { 
         ClassDB::register_class<Spatialos>();
@@ -17,6 +17,7 @@ void register_spatialos_types() {
         ClassDB::register_virtual_class<ComponentViewBase>();
         ClassDB::register_class<PositionSync>();
         ClassDB::register_class<WorkerLoggerWrapper>();
+        ClassDB::register_class<SnapshotGenerator>();
 }
 
 void unregister_spatialos_types() {
