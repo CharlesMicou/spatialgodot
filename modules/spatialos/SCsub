@@ -23,21 +23,26 @@ env.Append(CPPPATH="generated_code/cpp/improbable")
 env.Append(CPPPATH="generated_code/cpp/spellcrest")
 env.Append(CPPPATH="generated_code/cpp/godotcore")
 
+module_env.Append(CPPPATH="generated_code/cpp")
+module_env.Append(CPPPATH="generated_code/cpp/improbable")
+module_env.Append(CPPPATH="generated_code/cpp/spellcrest")
+module_env.Append(CPPPATH="generated_code/cpp/godotcore")
+
 # Set compiler options as the worker sdk requires c++11
 if (not env.msvc):
     module_env.Append(CXXFLAGS=['-O2', '-std=c++11', '-g'])
 
 # Worker SDK dependencies
+module_env.Append(CPPPATH="worker_sdk/cpp/include")
 env.Append(CPPPATH="worker_sdk/cpp/include")
 #module_env.Append(CPPPATH="worker_sdk/cpp/include")
-env.Append(LIBPATH=["worker_sdk/cpp/lib"])
 #module_env.Append(LIBPATH=["worker_sdk/cpp/lib"])
+env.Append(LIBPATH=["worker_sdk/cpp/lib"])
 if (not env.msvc):
     env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.a"))
 else:
-    env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.lib"))
     #module_env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.lib"))
-    #env.Append(LIBS=tmp)
+    env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.lib"))
 
 
 # Build schema into a static library
