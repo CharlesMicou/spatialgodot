@@ -4,7 +4,7 @@ Import('env')
 
 module_env = env.Clone()
 
-# Godot's setup for what constitutes sources
+# Explicit listing of source files for this module.
 src_list = [
     "spatial_util.cpp",
     "position_sync.cpp",
@@ -13,20 +13,23 @@ src_list = [
     "component_view.cpp",
     "spatialos.cpp",
     "register_types.cpp",
+    "snapshot_generator.cpp",
     "worker_logger.cpp",
-    "worker_logger_wrapper.cpp"]
+    "worker_logger_wrapper.cpp",
+    "component_registry.cpp"]
 module_env.add_source_files(env.modules_sources, src_list)
 
 # Schema dependencies.
-# These are added to both the module environment and the global environment.
-env.Append(CPPPATH="generated_code/cpp")
-env.Append(CPPPATH="generated_code/cpp/improbable")
-env.Append(CPPPATH="generated_code/cpp/spellcrest")
-env.Append(CPPPATH="generated_code/cpp/godotcore")
 module_env.Append(CPPPATH="generated_code/cpp")
 module_env.Append(CPPPATH="generated_code/cpp/improbable")
 module_env.Append(CPPPATH="generated_code/cpp/spellcrest")
 module_env.Append(CPPPATH="generated_code/cpp/godotcore")
+# On msvc builds these need to be added to the global environment path
+if (env.msvc):
+    env.Append(CPPPATH="generated_code/cpp")
+    env.Append(CPPPATH="generated_code/cpp/improbable")
+    env.Append(CPPPATH="generated_code/cpp/spellcrest")
+    env.Append(CPPPATH="generated_code/cpp/godotcore")
 
 # Set compiler options as the worker sdk requires c++11
 if (not env.msvc):
@@ -62,6 +65,5 @@ else:
     lib = env.add_library("schema", improbable_schema + spellcrest_schema + godotcore_schema)
     env.Append(LIBS=[lib])
     env.Append(LIBPATH=['schema'])
-    pass
 
 Export('env')

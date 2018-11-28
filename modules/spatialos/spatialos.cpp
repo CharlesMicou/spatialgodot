@@ -3,11 +3,10 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
+#include "component_registry.h"
 #include "core/os/os.h"
 #include "editor_node.h"
 #include "spatial_util.h"
-
-using ComponentRegistry = worker::Components<improbable::Position, improbable::Metadata, godotcore::GodotPosition2D, improbable::EntityAcl, improbable::Persistence>;
 
 const std::string kLocatorHost = "locator.improbable.io";
 const String kLogFileFlag = "--spatialos_log_file";
@@ -17,7 +16,7 @@ worker::Connection ConnectWithReceptionist(const std::string hostname,
                                            const std::uint16_t port,
                                            const std::string& worker_id,
                                            const worker::ConnectionParameters& connection_parameters) {
-    auto future = worker::Connection::ConnectAsync(ComponentRegistry{}, hostname, port, worker_id, connection_parameters);
+    auto future = worker::Connection::ConnectAsync(MergedComponentRegistry(), hostname, port, worker_id, connection_parameters);
     return future.Get();
 }
 
@@ -33,7 +32,7 @@ worker::Connection ConnectWithLocator(
     locatorParams.CredentialsType = worker::LocatorCredentialsType::kLoginToken;
     worker::Locator locator = worker::Locator(kLocatorHost, locatorParams);
     auto future = locator.ConnectAsync(
-        ComponentRegistry{},
+        MergedComponentRegistry(),
         deployment_name,
         connection_parameters,
         [](worker::QueueStatus queueStatus) -> bool {return true;}); // Indefinitely retry the queue
@@ -98,7 +97,7 @@ void Spatialos::setupDispatcher() {
         connection->SendLogMessage(level, name, msg);
     }, log_severity::WARN /* send warn and above over the protocol */);
 
-    dispatcher.reset(new worker::Dispatcher{ComponentRegistry{}});
+    dispatcher.reset(new worker::Dispatcher{MergedComponentRegistry()});
     isConnected = true;
 
     // Super hacky but hey
@@ -123,9 +122,7 @@ void Spatialos::setupDispatcher() {
 
     // Components
     setupDispatcherForComponentMetaclass<improbable::Position>();
-    
-    // Note(charlie): components need to be properly generic and not have position hacks first
-    //setupDispatcherForComponentMetaclass<improbable::Metadata>();
+    setupDispatcherForComponentMetaclass<improbable::Metadata>();
 
     // Todo: command responses
     // Todo: command requests
@@ -157,6 +154,7 @@ void Spatialos::setupDispatcher() {
         logger.warn("Disconnected with reason: " + op.Reason);
         isConnected = false;
         WorkerLogger::on_connection_closed();
+        emit_signal("disconnected");
     });
     emit_signal("connection_success");
 }
@@ -189,12 +187,9 @@ void Spatialos::spawnPlayerEntity(int entity_id) {
     worker::Entity entityToSpawn;
     entityToSpawn.Add<improbable::Position>({{0, 0, 0}});
     entityToSpawn.Add<improbable::Metadata>({"Client"});
-
-    improbable::WorkerRequirementSet bothReqSet{{{{"gserver"}}, {{"gclient"}}}};
-    //improbable::WorkerRequirementSet bothReqSet{{{{"gserver"}}}};
-    std::string hackyAttribute = "workerId:" + fromGodotString(workerId);
-    worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> component_acl = {{improbable::Position::ComponentId, {{{{hackyAttribute}}}}}};
-    entityToSpawn.Add<improbable::EntityAcl>({bothReqSet, component_acl});
+    worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> component_acl = 
+        {{improbable::Position::ComponentId, makeUniqueReqSet(fromGodotString(workerId))}};
+    entityToSpawn.Add<improbable::EntityAcl>({clientAndServerReqSet, component_acl});
 
     connection->SendCreateEntityRequest(entityToSpawn, entityId, {5000} /* timeout */);
 }
@@ -237,6 +232,7 @@ String Spatialos::get_configuration_warning() const {
 
 void Spatialos::_bind_methods() {
     ADD_SIGNAL(MethodInfo("connection_success"));
+    ADD_SIGNAL(MethodInfo("disconnected"));
 
     ClassDB::bind_method(D_METHOD("connect_receptionist", "receptionist_host", "receptionist_port", "worker_id", "worker_type"), &Spatialos::blockingConnectReceptionist);
     ClassDB::bind_method(D_METHOD("connect_locator", "worker_type", "deployment_name", "project_name", "login_token"), &Spatialos::blockingConnectLocator);
@@ -257,4 +253,4 @@ Spatialos::Spatialos(): logger(WorkerLogger("core")) {
 }
 
 template void Spatialos::sendComponentUpdate<improbable::Position>(const worker::EntityId entity_id, const improbable::Position::Update& update);
-//template void Spatialos::sendComponentUpdate<improbable::Metadata>(const worker::EntityId entity_id, const improbable::Metadata::Update& update);
+template void Spatialos::sendComponentUpdate<improbable::Metadata>(const worker::EntityId entity_id, const improbable::Metadata::Update& update);

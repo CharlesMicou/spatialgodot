@@ -15,6 +15,7 @@ class PositionSync : public Node {
     Spatialos* connection;
     Node2D* parent;
     ComponentView<improbable::Position>* position_component;
+    godotcore::GodotPosition2DData last_position;
 
 protected:
     static void _bind_methods();
