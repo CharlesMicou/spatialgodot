@@ -22,11 +22,11 @@ worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> make_componen
 worker::Entity make_ball(float x, float y) {
     worker::Entity builder;
 
-    godotcore::GodotPosition2DData gpos({{0, 0}, {x, y}, {0, 0}});
+    godotcore::GodotCoordinates2D gpos({{0, 0}, {x, y}});
     
     builder.Add<improbable::Metadata>({"TestBall"});
     builder.Add<improbable::Persistence>({});
-    builder.Add<godotcore::GodotPosition2D>(gpos);
+    builder.Add<godotcore::GodotPosition2D>({gpos, {}});
     builder.Add<improbable::Position>({fromGodotPosition(gpos)});
 
     // ACL must be done last if we want it to pick up components automatically

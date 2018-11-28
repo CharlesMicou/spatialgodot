@@ -24,19 +24,19 @@ String toGodotString(const std::string& regularString) {
     return s;
 }
 
-improbable::Coordinates fromGodotPosition(const godotcore::GodotPosition2DData& godotPosition) {
+improbable::Coordinates fromGodotPosition(const godotcore::GodotCoordinates2D& godotPosition) {
     double spatial_x = (godotPosition.global_chunk().x() * kChunkSizeInGodotUnits + godotPosition.local_position().x()) / kGodotUnitsPerSpatialUnits;
     double spatial_z = - (godotPosition.global_chunk().y() * kChunkSizeInGodotUnits + godotPosition.local_position().y()) / kGodotUnitsPerSpatialUnits;
     return improbable::Coordinates(spatial_x, 0.0, spatial_z);
 }
 
-godotcore::GodotPosition2DData toGodotPosition(const improbable::PositionData& improbablePosition) {
+godotcore::GodotCoordinates2D toGodotPosition(const improbable::PositionData& improbablePosition) {
     std::pair<int, float> x = toChunkedCoordinate(improbablePosition.coords().x() * kGodotUnitsPerSpatialUnits);
     std::pair<int, float> y = toChunkedCoordinate(- improbablePosition.coords().z() * kGodotUnitsPerSpatialUnits);
-    return godotcore::GodotPosition2DData(godotcore::GodotChunk2D(x.first, y.first), godotcore::GodotVector2D(x.second, y.second), godotcore::GodotVector2D{});
+    return godotcore::GodotCoordinates2D(godotcore::GodotChunk2D(x.first, y.first), godotcore::GodotVector2D(x.second, y.second));
 }
 
-std::pair<float, float> toLocalGodotPosition(const godotcore::GodotPosition2DData& godotPosition, const int x_chunk_origin, const int y_chunk_origin) {
+std::pair<float, float> toLocalGodotPosition(const godotcore::GodotCoordinates2D& godotPosition, const int x_chunk_origin, const int y_chunk_origin) {
     int relative_x_chunk = godotPosition.global_chunk().x() - x_chunk_origin;
     float local_x = relative_x_chunk * kChunkSizeInGodotUnits + godotPosition.local_position().x();
     int relative_y_chunk = godotPosition.global_chunk().y() - y_chunk_origin;
