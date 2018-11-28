@@ -38,7 +38,6 @@ if (not env.msvc):
 # Worker SDK include path and libraries.
 # Note that the environment, rather than the module, is what needs the sdk libraries.
 module_env.Append(CPPPATH="worker_sdk/cpp/include")
-env.Append(CPPPATH="worker_sdk/cpp/include")
 env.Append(LIBPATH=["worker_sdk/cpp/lib"])
 if (not env.msvc):
     # On linux we depend on cpp-static-x86_64-gcc_libstdcpp-linux
@@ -46,6 +45,7 @@ if (not env.msvc):
 else:
     # On windows we depend on cpp-static-x86-msvc_md-win32
     # NOTE: the build instructions are different to out-of-the-box godot (we compile with MD instead of MT)
+    env.Append(CPPPATH="worker_sdk/cpp/include")
     env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.lib"))
 
 

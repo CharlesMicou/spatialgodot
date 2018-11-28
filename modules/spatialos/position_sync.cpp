@@ -1,7 +1,6 @@
 #include "position_sync.h"
 #include "editor_node.h"
 #include "spatial_util.h"
-#include <stdio.h>
 
 WorkerLogger PositionSync::logger = WorkerLogger("position_sync");
 

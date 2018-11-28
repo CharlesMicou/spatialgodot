@@ -1,7 +1,6 @@
 #include "entity_view.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
-#include <stdio.h>
 
 WorkerLogger EntityView::logger = WorkerLogger("entity_view");
 

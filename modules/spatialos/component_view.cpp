@@ -2,7 +2,6 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include "spatial_util.h"
-#include <stdio.h>
 
 const worker::ComponentId kPositionId = 54;
 template <typename T>
