@@ -21,22 +21,35 @@ class ComponentViewBase : public Node {
 
     public:
         virtual void authorityChange(const worker::Authority& authority) = 0;
+        virtual void setupConnection(Node* spos) = 0;
 };
 
 template <typename T>
 class ComponentView : public ComponentViewBase {
     static WorkerLogger logger;
 
+    bool initialized;
+
+    // Absolutely horrific hack to get a reference to the Spatialos node
+    Node* connection;
     bool authoritative;
     typename T::Data data;
     worker::ComponentId componentId;
+    worker::EntityId entityId;
 
 public:
+    // Processing signals sent to the worker
     void authorityChange(const worker::Authority& authority) override;
     void updateComponent(const worker::ComponentUpdateOp<T>& update);
     void removeComponent();
 
-    void init(const worker::ComponentId component_id, const typename T::Data& state);
+    // Sending updates back upstream
+    bool tryUpdate(const typename T::Update& update);
+
+    // Initialisation
+    void setupConnection(Node* spos);
+    void init(const worker::EntityId entity_id, const worker::ComponentId component_id, const typename T::Data& state);
+
     const bool hasAuthority();
     const typename T::Data& getData();
 

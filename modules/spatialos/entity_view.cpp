@@ -1,4 +1,5 @@
 #include "entity_view.h"
+#include "component_view.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 
@@ -24,11 +25,17 @@ template <typename T>
 void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
     logger.info("Received an add component for component id " + std::to_string(T::ComponentId));
     ComponentView<T>* newComponent = memnew(ComponentView<T>);
-    newComponent->init(T::ComponentId, add.Data);
+    newComponent->init(entity_id, T::ComponentId, add.Data);
     // if this happens within a critical section no one will hear it.
     // instead, they'll receive a complete entity.
     // this is fine.
     components.insert({{T::ComponentId, newComponent}});
+
+    // If the entity is already part of the scene, then connect the component
+    // straight away.
+    if (spos != NULL) {
+        newComponent->setupConnection(spos);
+    }
     add_child(newComponent);
     emit_signal("component_added", newComponent);
 }
@@ -60,6 +67,24 @@ ComponentViewBase* EntityView::getComponentNode(const worker::ComponentId compon
         return it->second;
     } else {
         return nullptr;
+    }
+}
+
+void EntityView::_notification(int p_what) {
+    if (p_what == NOTIFICATION_ENTER_TREE) {
+        Node* wv = get_parent();
+        if (wv == NULL) {
+            logger.error("Entity received enter tree but has no parent");
+            return;
+        }
+        spos = wv->get_parent();
+        if (spos == NULL) {
+            logger.error("Entity entering scene could not find Spatialos node");
+            return;
+        }
+        for (auto const& component : components) {
+            component.second->setupConnection(spos);
+        }
     }
 }
 

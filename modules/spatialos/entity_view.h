@@ -9,9 +9,11 @@ class EntityView : public Node {
     GDCLASS(EntityView, Node);
     static WorkerLogger logger;
     worker::Map<worker::ComponentId, ComponentViewBase*> components;
+    Node* spos;
 
 protected:
     static void _bind_methods();
+    void _notification(int p_what);
 
 public:
     void authorityChange(const worker::ComponentId component_id, const worker::Authority& authority);

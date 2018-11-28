@@ -5,13 +5,12 @@
 WorkerLogger PositionSync::logger = WorkerLogger("position_sync");
 
 void PositionSync::sync() {
-    // todo fix this
     parent = dynamic_cast<Node2D*>(get_parent());
     if (parent == NULL) {
-        logger.warn("Parent was null");
+        logger.warn("PositionSync node has no parent, unable to sync.");
         return;
     }
-    if (connection == NULL || position_component == NULL) {
+    if (position_component == NULL) {
         return;
     }
     if (position_component->hasAuthority()) {
@@ -24,7 +23,7 @@ void PositionSync::sync() {
         //if (last_position != asGodotData) {
         if (true) {
             last_position = asGodotData;
-            connection->sendComponentUpdate<improbable::Position>(entity_id, improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
+            position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
         }
         
     } else {
@@ -33,14 +32,6 @@ void PositionSync::sync() {
         std::pair<float, float> local_positon = toLocalGodotPosition(global, 0, 0);
         parent->set_position(Vector2(local_positon.first, local_positon.second));
     }
-}
-
-void PositionSync::set_connection(Node* spos) {
-    connection = dynamic_cast<Spatialos*>(spos);
-}
-
-void PositionSync::set_entity_id(std::int64_t id) {
-    entity_id = id;
 }
 
 void PositionSync::set_position(Node* ref) {
@@ -52,7 +43,5 @@ PositionSync::PositionSync() {
 
 void PositionSync::_bind_methods() {
     ClassDB::bind_method(D_METHOD("sync"), &PositionSync::sync);
-    ClassDB::bind_method(D_METHOD("set_connection_node"), &PositionSync::set_connection);
-    ClassDB::bind_method(D_METHOD("set_entity_id"), &PositionSync::set_entity_id);
     ClassDB::bind_method(D_METHOD("set_position_component"), &PositionSync::set_position);
 }

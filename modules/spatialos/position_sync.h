@@ -11,8 +11,6 @@ class PositionSync : public Node {
     GDCLASS(PositionSync, Node);
     static WorkerLogger logger;
 
-    worker::EntityId entity_id;
-    Spatialos* connection;
     Node2D* parent;
     ComponentView<improbable::Position>* position_component;
     godotcore::GodotPosition2DData last_position;
@@ -23,8 +21,6 @@ protected:
 public:
     PositionSync();
     void sync();
-    void set_entity_id(std::int64_t id);
-    void set_connection(Node* spos);
     void set_position(Node* ref);
 };
 
