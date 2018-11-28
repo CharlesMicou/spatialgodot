@@ -17,17 +17,11 @@ void PositionSync::sync() {
         float x = parent->get_position().x;
         float y = parent->get_position().y;
         godotcore::GodotCoordinates2D asGodotData = godotcore::GodotCoordinates2D(godotcore::GodotCoordinates2D(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y)));
-        // Only update the position if it has actually changed
-        // Disabling this for now because for some reason it causes a ton of jitter
-        // Suspect this will be fixed by not storing the position internally to here but reffing the component view instead
-        //if (last_position != asGodotData) {
-        if (true) {
-            // still need to look at this
-            // last_position = asGodotData;
-            godot_position_component->tryUpdate(godotcore::GodotPosition2D::Update{}.set_coordinates(asGodotData));
-            improbable_position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
+        // Todo: only send data when the data has changed
+        // Todo: only send improbable position when sufficiently far away from last position
+        godot_position_component->tryUpdate(godotcore::GodotPosition2D::Update{}.set_coordinates(asGodotData));
+        improbable_position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
         }
-        
     } else {
         std::pair<float, float> local_positon = toLocalGodotPosition(godot_position_component->getData().coordinates(), 0, 0);
         parent->set_position(Vector2(local_positon.first, local_positon.second));

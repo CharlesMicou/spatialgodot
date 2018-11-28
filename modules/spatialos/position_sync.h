@@ -14,7 +14,6 @@ class PositionSync : public Node {
     Node2D* parent;
     ComponentView<improbable::Position>* improbable_position_component;
     ComponentView<godotcore::GodotPosition2D>* godot_position_component;
-    godotcore::GodotPosition2DData last_position;
 
 protected:
     static void _bind_methods();
