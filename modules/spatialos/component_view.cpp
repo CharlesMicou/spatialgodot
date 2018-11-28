@@ -2,6 +2,7 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include "spatial_util.h"
+#include <godotcore/godot_position2d.h>
 #include "spatialos.h"
 
 const worker::ComponentId kPositionId = 54;
@@ -86,3 +87,4 @@ const bool ComponentView<T>::hasAuthority() {
 // Force generation so that linking works
 template class ComponentView<improbable::Position>;
 template class ComponentView<improbable::Metadata>;
+template class ComponentView<godotcore::GodotPosition2D>;

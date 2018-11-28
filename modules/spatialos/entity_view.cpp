@@ -2,6 +2,7 @@
 #include "component_view.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
+#include <godotcore/godot_position2d.h>
 
 WorkerLogger EntityView::logger = WorkerLogger("entity_view");
 
@@ -94,5 +95,9 @@ EntityView::EntityView() {
 // Force generation so that linking works
 template void EntityView::addComponent<improbable::Position>(const worker::AddComponentOp<improbable::Position>&);
 template void EntityView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
+
 template void EntityView::addComponent<improbable::Metadata>(const worker::AddComponentOp<improbable::Metadata>&);
 template void EntityView::updateComponent<improbable::Metadata>(const worker::ComponentUpdateOp<improbable::Metadata>&);
+
+template void EntityView::addComponent<godotcore::GodotPosition2D>(const worker::AddComponentOp<godotcore::GodotPosition2D>&);
+template void EntityView::updateComponent<godotcore::GodotPosition2D>(const worker::ComponentUpdateOp<godotcore::GodotPosition2D>&);

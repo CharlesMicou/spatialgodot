@@ -10,10 +10,10 @@ void PositionSync::sync() {
         logger.warn("PositionSync node has no parent, unable to sync.");
         return;
     }
-    if (position_component == NULL) {
+    if (improbable_position_component == NULL || godot_position_component == NULL) {
         return;
     }
-    if (position_component->hasAuthority()) {
+    if (improbable_position_component->hasAuthority() && godot_position_component->hasAuthority()) {
         float x = parent->get_position().x;
         float y = parent->get_position().y;
         godotcore::GodotCoordinates2D asGodotData = godotcore::GodotCoordinates2D(godotcore::GodotCoordinates2D(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y)));
@@ -24,19 +24,23 @@ void PositionSync::sync() {
         if (true) {
             // still need to look at this
             // last_position = asGodotData;
-            position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
+            godot_position_component->tryUpdate(godotcore::GodotPosition2D::Update{}.set_coordinates(asGodotData));
+            improbable_position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
         }
         
     } else {
-        const improbable::Coordinates& coords = position_component->getData().coords();
-        godotcore::GodotCoordinates2D global = toGodotPosition(coords);
-        std::pair<float, float> local_positon = toLocalGodotPosition(global, 0, 0);
+        std::pair<float, float> local_positon = toLocalGodotPosition(godot_position_component->getData().coordinates(), 0, 0);
         parent->set_position(Vector2(local_positon.first, local_positon.second));
     }
 }
 
-void PositionSync::set_position(Node* ref) {
-    position_component = dynamic_cast<ComponentView<improbable::Position>*>(ref);
+void PositionSync::set_position_components(Node* improbable, Node* godot) {
+    improbable_position_component = dynamic_cast<ComponentView<improbable::Position>*>(improbable);
+    godot_position_component = dynamic_cast<ComponentView<godotcore::GodotPosition2D>*>(godot);
+    if (improbable_position_component == NULL || godot_position_component == NULL) {
+        logger.warn("A position sync node received incorrectly configured component refs. "
+            "The call order is <improbable position>, <godot position>.");
+    }
 }
 
 PositionSync::PositionSync() {
@@ -44,5 +48,5 @@ PositionSync::PositionSync() {
 
 void PositionSync::_bind_methods() {
     ClassDB::bind_method(D_METHOD("sync"), &PositionSync::sync);
-    ClassDB::bind_method(D_METHOD("set_position_component"), &PositionSync::set_position);
+    ClassDB::bind_method(D_METHOD("set_position_components"), &PositionSync::set_position_components);
 }

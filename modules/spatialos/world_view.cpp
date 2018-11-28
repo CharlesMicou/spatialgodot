@@ -1,6 +1,7 @@
 #include "world_view.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
+#include <godotcore/godot_position2d.h>
 
 WorkerLogger WorldView::logger = WorkerLogger("world_view");
 
@@ -70,5 +71,9 @@ WorldView::WorldView() {
 // Force generation so that linking works
 template void WorldView::addComponent<improbable::Position>(const worker::AddComponentOp<improbable::Position>&);
 template void WorldView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
+
 template void WorldView::addComponent<improbable::Metadata>(const worker::AddComponentOp<improbable::Metadata>&);
 template void WorldView::updateComponent<improbable::Metadata>(const worker::ComponentUpdateOp<improbable::Metadata>&);
+
+template void WorldView::addComponent<godotcore::GodotPosition2D>(const worker::AddComponentOp<godotcore::GodotPosition2D>&);
+template void WorldView::updateComponent<godotcore::GodotPosition2D>(const worker::ComponentUpdateOp<godotcore::GodotPosition2D>&);

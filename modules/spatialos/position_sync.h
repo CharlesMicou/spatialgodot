@@ -12,7 +12,8 @@ class PositionSync : public Node {
     static WorkerLogger logger;
 
     Node2D* parent;
-    ComponentView<improbable::Position>* position_component;
+    ComponentView<improbable::Position>* improbable_position_component;
+    ComponentView<godotcore::GodotPosition2D>* godot_position_component;
     godotcore::GodotPosition2DData last_position;
 
 protected:
@@ -21,7 +22,7 @@ protected:
 public:
     PositionSync();
     void sync();
-    void set_position(Node* ref);
+    void set_position_components(Node* improbable, Node* godot);
 };
 
 #endif
