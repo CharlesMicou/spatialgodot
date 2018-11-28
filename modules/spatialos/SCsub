@@ -17,12 +17,12 @@ src_list = [
     "worker_logger_wrapper.cpp"]
 module_env.add_source_files(env.modules_sources, src_list)
 
-# Schema dependencies
+# Schema dependencies.
+# These are added to both the module environment and the global environment.
 env.Append(CPPPATH="generated_code/cpp")
 env.Append(CPPPATH="generated_code/cpp/improbable")
 env.Append(CPPPATH="generated_code/cpp/spellcrest")
 env.Append(CPPPATH="generated_code/cpp/godotcore")
-
 module_env.Append(CPPPATH="generated_code/cpp")
 module_env.Append(CPPPATH="generated_code/cpp/improbable")
 module_env.Append(CPPPATH="generated_code/cpp/spellcrest")
@@ -32,37 +32,33 @@ module_env.Append(CPPPATH="generated_code/cpp/godotcore")
 if (not env.msvc):
     module_env.Append(CXXFLAGS=['-O2', '-std=c++11', '-g'])
 
-# Worker SDK dependencies
+# Worker SDK include path and libraries.
+# Note that the environment, rather than the module, is what needs the sdk libraries.
 module_env.Append(CPPPATH="worker_sdk/cpp/include")
 env.Append(CPPPATH="worker_sdk/cpp/include")
-#module_env.Append(CPPPATH="worker_sdk/cpp/include")
-#module_env.Append(LIBPATH=["worker_sdk/cpp/lib"])
 env.Append(LIBPATH=["worker_sdk/cpp/lib"])
 if (not env.msvc):
+    # On linux we depend on cpp-static-x86_64-gcc_libstdcpp-linux
     env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.a"))
 else:
-    #module_env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.lib"))
+    # On windows we depend on cpp-static-x86-msvc_md-win32
+    # NOTE: the build instructions are different to out-of-the-box godot (we compile with MD instead of MT)
     env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.lib"))
 
 
 # Build schema into a static library
-"""improbable_schema = Glob("generated_code/cpp/improbable/*.h", strings=True) + Glob("generated_code/cpp/improbable/*.cc", strings=True)
-spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.h", strings=True) + Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
-godotcore_schema = Glob("generated_code/cpp/godotcore/*.h", strings=True) + Glob("generated_code/cpp/godotcore/*.cc", strings=True)"""
-
-improbable_schema = Glob("generated_code/cpp/improbable/*.cc", strings=True)
-spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
-godotcore_schema = Glob("generated_code/cpp/godotcore/*.cc", strings=True)
-
 if (not env.msvc):
+    improbable_schema = Glob("generated_code/cpp/improbable/*.h", strings=True) + Glob("generated_code/cpp/improbable/*.cc", strings=True)
+    spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.h", strings=True) + Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
+    godotcore_schema = Glob("generated_code/cpp/godotcore/*.h", strings=True) + Glob("generated_code/cpp/godotcore/*.cc", strings=True)
     schemaLib = module_env.Library(target='#bin/schema', source=(improbable_schema + spellcrest_schema + godotcore_schema))
     shim = schemaLib[0].name.rsplit('.', 1)[0]
     env.Append(LIBS=[shim])
     env.Append(LIBPATH=['#bin'])
 else:
-    #lib = module_env.add_library("schema", improbable_schema + spellcrest_schema + godotcore_schema)
-    #module_env.Append(LIBS=[lib])
-    #module_env.Append(LIBPATH=['schema'])
+    improbable_schema = Glob("generated_code/cpp/improbable/*.cc", strings=True)
+    spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
+    godotcore_schema = Glob("generated_code/cpp/godotcore/*.cc", strings=True)
     lib = env.add_library("schema", improbable_schema + spellcrest_schema + godotcore_schema)
     env.Append(LIBS=[lib])
     env.Append(LIBPATH=['schema'])
