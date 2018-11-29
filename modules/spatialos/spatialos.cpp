@@ -3,6 +3,7 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
+#include <spellcrest/player_controls.h>
 #include "component_registry.h"
 #include "core/os/os.h"
 #include "editor_node.h"
@@ -259,4 +260,4 @@ Spatialos::Spatialos(): logger(WorkerLogger("core")) {
 template void Spatialos::sendComponentUpdate<improbable::Position>(const worker::EntityId entity_id, const improbable::Position::Update& update);
 template void Spatialos::sendComponentUpdate<improbable::Metadata>(const worker::EntityId entity_id, const improbable::Metadata::Update& update);
 template void Spatialos::sendComponentUpdate<godotcore::GodotPosition2D>(const worker::EntityId entity_id, const godotcore::GodotPosition2D::Update& update);
-
+template void Spatialos::sendComponentUpdate<spellcrest::PlayerControls>(const worker::EntityId entity_id, const spellcrest::PlayerControls::Update& update);

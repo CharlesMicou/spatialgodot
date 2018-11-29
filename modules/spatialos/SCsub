@@ -8,6 +8,7 @@ module_env = env.Clone()
 src_list = [
     "spatial_util.cpp",
     "position_sync.cpp",
+    "player_controls_sync.cpp",
     "world_view.cpp",
     "entity_view.cpp",
     "component_view.cpp",

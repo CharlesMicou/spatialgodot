@@ -2,6 +2,7 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
+#include <spellcrest/player_controls.h>
 
 WorkerLogger WorldView::logger = WorkerLogger("world_view");
 
@@ -77,3 +78,7 @@ template void WorldView::updateComponent<improbable::Metadata>(const worker::Com
 
 template void WorldView::addComponent<godotcore::GodotPosition2D>(const worker::AddComponentOp<godotcore::GodotPosition2D>&);
 template void WorldView::updateComponent<godotcore::GodotPosition2D>(const worker::ComponentUpdateOp<godotcore::GodotPosition2D>&);
+
+template void WorldView::addComponent<spellcrest::PlayerControls>(const worker::AddComponentOp<spellcrest::PlayerControls>&);
+template void WorldView::updateComponent<spellcrest::PlayerControls>(const worker::ComponentUpdateOp<spellcrest::PlayerControls>&);
+

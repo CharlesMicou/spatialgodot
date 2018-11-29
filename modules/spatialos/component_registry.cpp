@@ -1,6 +1,7 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
+#include <spellcrest/player_controls.h>
 #include "component_registry.h"
 
 const worker::ComponentRegistry& MergedComponentRegistry() {
@@ -9,7 +10,8 @@ const worker::ComponentRegistry& MergedComponentRegistry() {
         improbable::Metadata,
         improbable::EntityAcl,
         improbable::Persistence,
-        godotcore::GodotPosition2D> components;
+        godotcore::GodotPosition2D,
+        spellcrest::PlayerControls> components;
     return components;
 }
 

@@ -3,6 +3,7 @@
 #include <improbable/standard_library.h>
 #include "spatial_util.h"
 #include <godotcore/godot_position2d.h>
+#include <spellcrest/player_controls.h>
 #include "spatialos.h"
 
 const worker::ComponentId kPositionId = 54;
@@ -88,3 +89,4 @@ const bool ComponentView<T>::hasAuthority() {
 template class ComponentView<improbable::Position>;
 template class ComponentView<improbable::Metadata>;
 template class ComponentView<godotcore::GodotPosition2D>;
+template class ComponentView<spellcrest::PlayerControls>;

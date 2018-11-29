@@ -2,8 +2,8 @@
 #define POSITION_SYNC_H
 
 #include "editor_node.h"
-#include "spatialos.h"
-#include <improbable/worker.h>
+#include "worker_logger.h"
+#include "component_view.h"
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 
