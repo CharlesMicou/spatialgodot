@@ -23,8 +23,8 @@ void PositionSync::sync() {
         // Todo: only send improbable position when sufficiently far away from last position
         if (asGodotData != godot_position_component->getData().coordinates()) {
             godot_position_component->tryUpdate(godotcore::GodotPosition2D::Update{}.set_coordinates(asGodotData));
+            improbable_position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
         }
-        improbable_position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
     } else {
         std::pair<float, float> local_positon = toLocalGodotPosition(godot_position_component->getData().coordinates(), 0, 0);
         parent->set_position(Vector2(local_positon.first, local_positon.second));
