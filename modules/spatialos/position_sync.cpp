@@ -21,7 +21,7 @@ void PositionSync::sync() {
         godotcore::GodotCoordinates2D asGodotData = godotcore::GodotCoordinates2D(godotcore::GodotCoordinates2D(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y)));
         // Todo: only send data when the data has changed
         // Todo: only send improbable position when sufficiently far away from last position
-        if (asGodotData != godot_position_component->getData().coordinates) {
+        if (asGodotData != godot_position_component->getData().coordinates()) {
             godot_position_component->tryUpdate(godotcore::GodotPosition2D::Update{}.set_coordinates(asGodotData));
         }
         improbable_position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
