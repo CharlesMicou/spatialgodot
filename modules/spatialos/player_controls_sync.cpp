@@ -5,15 +5,11 @@
 #include "component_view.h"
 #include <spellcrest/player_controls.h>
 
-WorkerLogger PlayerControlsSync::logger = WorkerLogger("position_sync");
+WorkerLogger PlayerControlsSync::logger = WorkerLogger("player_controls_sync");
 
 void PlayerControlsSync::sync(const Vector2 destination) {
-    parent = dynamic_cast<Node2D*>(get_parent());
-    if (parent == NULL) {
-        logger.warn("PlayerControlsSync node has no parent, unable to sync.");
-        return;
-    }
     if (controls_component == NULL) {
+        logger.warn("PlayerControlsSync node has no controls component, unable to sync.");
         return;
     }
     if (controls_component->hasAuthority()) {
@@ -45,4 +41,5 @@ PlayerControlsSync::PlayerControlsSync() {
 void PlayerControlsSync::_bind_methods() {
     ClassDB::bind_method(D_METHOD("sync"), &PlayerControlsSync::sync);
     ClassDB::bind_method(D_METHOD("set_player_controls_components"), &PlayerControlsSync::set_player_controls_component);
+    ClassDB::bind_method(D_METHOD("get_controls_value"), &PlayerControlsSync::get_controls_value);
 }

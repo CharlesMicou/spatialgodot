@@ -15,7 +15,7 @@ class ComponentViewBase : public Node {
 
     protected:
         static void _bind_methods() {
-            ADD_SIGNAL(MethodInfo("component_updated", PropertyInfo(Variant::OBJECT, "component_update", PROPERTY_HINT_NONE, "Reference")));
+            ADD_SIGNAL(MethodInfo("component_updated"));
             ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
         }
 

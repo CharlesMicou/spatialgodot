@@ -10,7 +10,6 @@ class PlayerControlsSync : public Node {
     GDCLASS(PlayerControlsSync, Node);
     static WorkerLogger logger;
 
-    Node2D* parent;
     ComponentView<spellcrest::PlayerControls>* controls_component;
 
 protected:

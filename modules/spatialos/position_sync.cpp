@@ -24,7 +24,6 @@ void PositionSync::sync() {
         godot_position_component->tryUpdate(godotcore::GodotPosition2D::Update{}.set_coordinates(asGodotData));
         improbable_position_component->tryUpdate(improbable::Position::Update{}.set_coords(fromGodotPosition(asGodotData)));
     } else {
-        logger.info("Receiving an update now.");
         std::pair<float, float> local_positon = toLocalGodotPosition(godot_position_component->getData().coordinates(), 0, 0);
         parent->set_position(Vector2(local_positon.first, local_positon.second));
     }

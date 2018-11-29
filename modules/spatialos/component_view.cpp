@@ -31,6 +31,7 @@ void ComponentView<T>::updateComponent(const worker::ComponentUpdateOp<T>& updat
             + " before it was initialized.");
     }
     update.Update.ApplyTo(data);
+    emit_signal("component_updated");
 }
 
 template <typename T>

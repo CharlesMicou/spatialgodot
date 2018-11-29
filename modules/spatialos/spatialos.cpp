@@ -125,6 +125,7 @@ void Spatialos::setupDispatcher() {
     setupDispatcherForComponentMetaclass<improbable::Position>();
     setupDispatcherForComponentMetaclass<improbable::Metadata>();
     setupDispatcherForComponentMetaclass<godotcore::GodotPosition2D>();
+    setupDispatcherForComponentMetaclass<spellcrest::PlayerControls>();
 
     // Todo: command responses
     // Todo: command requests
@@ -191,9 +192,11 @@ void Spatialos::spawnPlayerEntity(int entity_id) {
     entityToSpawn.Add<godotcore::GodotPosition2D>({gpos, {}});
     entityToSpawn.Add<improbable::Position>({fromGodotPosition(gpos)});
     entityToSpawn.Add<improbable::Metadata>({"Client"});
+    entityToSpawn.Add<spellcrest::PlayerControls>({});
     worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> component_acl = 
-        {{improbable::Position::ComponentId, makeUniqueReqSet(fromGodotString(workerId))},
-        {godotcore::GodotPosition2D::ComponentId, makeUniqueReqSet(fromGodotString(workerId))}};
+        {{improbable::Position::ComponentId, serverReqSet},
+        {godotcore::GodotPosition2D::ComponentId, serverReqSet},
+        {spellcrest::PlayerControls::ComponentId, makeUniqueReqSet(fromGodotString(workerId))}};
     entityToSpawn.Add<improbable::EntityAcl>({clientAndServerReqSet, component_acl});
 
     connection->SendCreateEntityRequest(entityToSpawn, entityId, {5000} /* timeout */);
