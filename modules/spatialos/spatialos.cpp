@@ -11,7 +11,6 @@
 
 const std::string kLocatorHost = "locator.improbable.io";
 const String kLogFileFlag = "--spatialos_log_file";
-const int kOpsPerFrame = 1000;
 
 worker::Connection ConnectWithReceptionist(const std::string hostname,
                                            const std::uint16_t port,
@@ -166,7 +165,7 @@ void Spatialos::processOps() {
     if (!isConnected) {
         return;
     }
-    dispatcher->Process(connection->GetOpList(kOpsPerFrame));
+    dispatcher->Process(connection->GetOpList(0));
 }
 
 template <typename T>
