@@ -24,7 +24,10 @@ public:
     void removeComponent(const worker::ComponentId component_id);
     std::int64_t get_entity_id();
     worker::EntityId entity_id;
+    bool has_component(const worker::ComponentId component_id);
     ComponentViewBase* getComponentNode(const worker::ComponentId component_id);
+    ComponentViewBase* getComponentNodeByName(const String component_name);
+    Dictionary get_all_component_values() const;
     
     EntityView();
 };

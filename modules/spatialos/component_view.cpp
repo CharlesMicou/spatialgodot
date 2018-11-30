@@ -5,6 +5,7 @@
 #include <godotcore/godot_position2d.h>
 #include <spellcrest/player_controls.h>
 #include "spatialos.h"
+#include "schema_parser.h"
 
 const worker::ComponentId kPositionId = 54;
 template <typename T>
@@ -73,6 +74,12 @@ bool ComponentView<T>::tryUpdate(const typename T::Update& update) {
 template <typename T>
 const typename T::Data& ComponentView<T>::getData() {
     return data;
+}
+
+template <typename T>
+Dictionary ComponentView<T>::to_gd_dict() const {
+    const typename T::Data& d = data;
+    return SchemaParser::parseComponent(d);
 }
 
 template <typename T>

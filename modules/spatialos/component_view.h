@@ -17,11 +17,13 @@ class ComponentViewBase : public Node {
         static void _bind_methods() {
             ADD_SIGNAL(MethodInfo("component_updated"));
             ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
+            ClassDB::bind_method(D_METHOD("get_component_value"), &ComponentViewBase::to_gd_dict);
         }
 
     public:
         virtual void authorityChange(const worker::Authority& authority) = 0;
         virtual void setupConnection(Node* spos) = 0;
+        virtual Dictionary to_gd_dict() const = 0;
 };
 
 template <typename T>
@@ -50,8 +52,10 @@ public:
     void setupConnection(Node* spos);
     void init(const worker::EntityId entity_id, const worker::ComponentId component_id, const typename T::Data& state);
 
-    const bool hasAuthority();
+    // Accessors
+    Dictionary to_gd_dict() const;
     const typename T::Data& getData();
+    const bool hasAuthority();
 
     ComponentView();
 };

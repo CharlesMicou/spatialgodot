@@ -1,5 +1,8 @@
 #include "entity_view.h"
 #include "component_view.h"
+#include "schema_parser.h"
+#include "spatial_util.h"
+#include <string>
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
@@ -11,7 +14,10 @@ void EntityView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("component_added", PropertyInfo(Variant::OBJECT, "component_view", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
     ADD_SIGNAL(MethodInfo("component_removed", PropertyInfo(Variant::OBJECT, "component_view", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
     ClassDB::bind_method(D_METHOD("get_entity_id"), &EntityView::get_entity_id);
+    ClassDB::bind_method(D_METHOD("has_component", "component_id"), &EntityView::has_component);
     ClassDB::bind_method(D_METHOD("get_component_node", "component_id"), &EntityView::getComponentNode);
+    ClassDB::bind_method(D_METHOD("get_component_node_by_name", "component_name"), &EntityView::getComponentNodeByName);
+    ClassDB::bind_method(D_METHOD("get_all_component_values"), &EntityView::get_all_component_values);
 }
 
 void EntityView::authorityChange(const worker::ComponentId component_id, const worker::Authority& authority) {
@@ -63,13 +69,42 @@ std::int64_t EntityView::get_entity_id() {
     return entity_id;
 }
 
+bool EntityView::has_component(const worker::ComponentId component_id) {
+     auto it = components.find(component_id);
+     return it != components.end();
+}
+
 ComponentViewBase* EntityView::getComponentNode(const worker::ComponentId component_id) {
     auto it = components.find(component_id);
     if (it != components.end()) {
         return it->second;
     } else {
+        long l = get_entity_id();
+        logger.warn("The component " + std::to_string(component_id) + " is not present on entity " + std::to_string(l));
         return nullptr;
     }
+}
+
+ComponentViewBase* EntityView::getComponentNodeByName(const String component_name) {
+    std::string s = fromGodotString(component_name);
+    auto it_a = schema_component_ids.find(s);
+    if (it_a == schema_component_ids.end()) {
+        logger.warn("The component " + s + " is not a known component in schema");
+        return nullptr;
+    } else {
+        return getComponentNode(it_a->second);
+    }
+}
+
+Dictionary EntityView::get_all_component_values() const {
+    Dictionary d;
+    for (auto const& entry : components) {
+        auto it = schema_component_names.find(entry.first);
+        if (it != schema_component_names.end()) {
+            d[toGodotString(it->second)] = entry.second->to_gd_dict();
+        }
+    }
+    return d;
 }
 
 void EntityView::_notification(int p_what) {

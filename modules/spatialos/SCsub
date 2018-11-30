@@ -17,7 +17,8 @@ src_list = [
     "snapshot_generator.cpp",
     "worker_logger.cpp",
     "worker_logger_wrapper.cpp",
-    "component_registry.cpp"]
+    "component_registry.cpp",
+    "schema_parser.cpp"]
 module_env.add_source_files(env.modules_sources, src_list)
 
 # Schema dependencies.
