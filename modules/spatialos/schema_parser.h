@@ -27,8 +27,6 @@ class SchemaParser {
         static WorkerLogger logger;
 
     public:
-        static String componentName(worker::ComponentId id);
-
         static Dictionary parseType(const improbable::Coordinates& data);
         static Dictionary parseComponent(const improbable::PositionData& data);
 
