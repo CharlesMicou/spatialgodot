@@ -125,6 +125,7 @@ void Spatialos::setupDispatcher() {
     setupDispatcherForComponentMetaclass<improbable::Metadata>();
     setupDispatcherForComponentMetaclass<godotcore::GodotPosition2D>();
     setupDispatcherForComponentMetaclass<spellcrest::PlayerControls>();
+    setupDispatcherForComponentMetaclass<spellcrest::ChatParticipant>();
 
     // Todo: command responses
     // Todo: command requests
@@ -183,7 +184,7 @@ void Spatialos::sendInfoMessage(const String &msg) {
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_user", fromGodotString(msg));
 }
 
-void Spatialos::spawnPlayerEntity(int entity_id) {
+void Spatialos::spawnPlayerEntity(int entity_id, String player_name) {
     logger.info("Attempting to spawn entity " + std::to_string(entity_id));
     worker::EntityId entityId = entity_id;
     worker::Entity entityToSpawn;
@@ -192,10 +193,12 @@ void Spatialos::spawnPlayerEntity(int entity_id) {
     entityToSpawn.Add<improbable::Position>({fromGodotPosition(gpos)});
     entityToSpawn.Add<improbable::Metadata>({"Client"});
     entityToSpawn.Add<spellcrest::PlayerControls>({});
+    entityToSpawn.Add<spellcrest::ChatParticipant>({fromGodotString(player_name)});
     worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> component_acl = 
         {{improbable::Position::ComponentId, serverReqSet},
         {godotcore::GodotPosition2D::ComponentId, serverReqSet},
-        {spellcrest::PlayerControls::ComponentId, makeUniqueReqSet(fromGodotString(workerId))}};
+        {spellcrest::PlayerControls::ComponentId, makeUniqueReqSet(fromGodotString(workerId))},
+        {spellcrest::ChatParticipant::ComponentId, makeUniqueReqSet(fromGodotString(workerId))}};
     entityToSpawn.Add<improbable::EntityAcl>({clientAndServerReqSet, component_acl});
 
     connection->SendCreateEntityRequest(entityToSpawn, entityId, {5000} /* timeout */);
@@ -248,7 +251,7 @@ void Spatialos::_bind_methods() {
 
     // Hacky signals until a commander is implemented
     ADD_SIGNAL(MethodInfo("entity_reserved", PropertyInfo(Variant::INT, "reserved_entity_id")));
-    ClassDB::bind_method(D_METHOD("spawn_entity", "entity_id"), &Spatialos::spawnPlayerEntity);
+    ClassDB::bind_method(D_METHOD("spawn_entity", "entity_id", "player_name"), &Spatialos::spawnPlayerEntity);
     ClassDB::bind_method(D_METHOD("reserve_id"), &Spatialos::reserveId);
 }
 
@@ -263,3 +266,4 @@ template void Spatialos::sendComponentUpdate<improbable::Position>(const worker:
 template void Spatialos::sendComponentUpdate<improbable::Metadata>(const worker::EntityId entity_id, const improbable::Metadata::Update& update);
 template void Spatialos::sendComponentUpdate<godotcore::GodotPosition2D>(const worker::EntityId entity_id, const godotcore::GodotPosition2D::Update& update);
 template void Spatialos::sendComponentUpdate<spellcrest::PlayerControls>(const worker::EntityId entity_id, const spellcrest::PlayerControls::Update& update);
+template void Spatialos::sendComponentUpdate<spellcrest::ChatParticipant>(const worker::EntityId entity_id, const spellcrest::ChatParticipant::Update& update);

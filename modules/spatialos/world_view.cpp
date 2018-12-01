@@ -82,3 +82,5 @@ template void WorldView::updateComponent<godotcore::GodotPosition2D>(const worke
 template void WorldView::addComponent<spellcrest::PlayerControls>(const worker::AddComponentOp<spellcrest::PlayerControls>&);
 template void WorldView::updateComponent<spellcrest::PlayerControls>(const worker::ComponentUpdateOp<spellcrest::PlayerControls>&);
 
+template void WorldView::addComponent<spellcrest::ChatParticipant>(const worker::AddComponentOp<spellcrest::ChatParticipant>&);
+template void WorldView::updateComponent<spellcrest::ChatParticipant>(const worker::ComponentUpdateOp<spellcrest::ChatParticipant>&);

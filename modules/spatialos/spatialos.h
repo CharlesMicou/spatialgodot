@@ -33,7 +33,7 @@ public:
     void sendComponentUpdate(const worker::EntityId entity_id, const typename T::Update& update);
 
     // a hack until a commander exists
-    void spawnPlayerEntity(int entity_id);
+    void spawnPlayerEntity(int entity_id, String player_name);
     void reserveId();
 
     String get_configuration_warning() const;

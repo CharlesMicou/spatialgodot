@@ -152,3 +152,6 @@ template void EntityView::updateComponent<godotcore::GodotPosition2D>(const work
 
 template void EntityView::addComponent<spellcrest::PlayerControls>(const worker::AddComponentOp<spellcrest::PlayerControls>&);
 template void EntityView::updateComponent<spellcrest::PlayerControls>(const worker::ComponentUpdateOp<spellcrest::PlayerControls>&);
+
+template void EntityView::addComponent<spellcrest::ChatParticipant>(const worker::AddComponentOp<spellcrest::ChatParticipant>&);
+template void EntityView::updateComponent<spellcrest::ChatParticipant>(const worker::ComponentUpdateOp<spellcrest::ChatParticipant>&);

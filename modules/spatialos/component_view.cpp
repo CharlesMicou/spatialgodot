@@ -32,6 +32,9 @@ void ComponentView<T>::updateComponent(const worker::ComponentUpdateOp<T>& updat
             + " before it was initialized.");
     }
     update.Update.ApplyTo(data);
+    for (auto it : SchemaParser::extractEvents(update.Update)) {
+        emit_signal("component_event", it);
+    }
     emit_signal("component_updated");
 }
 
@@ -98,3 +101,4 @@ template class ComponentView<improbable::Position>;
 template class ComponentView<improbable::Metadata>;
 template class ComponentView<godotcore::GodotPosition2D>;
 template class ComponentView<spellcrest::PlayerControls>;
+template class ComponentView<spellcrest::ChatParticipant>;

@@ -11,7 +11,8 @@ const worker::ComponentRegistry& MergedComponentRegistry() {
         improbable::EntityAcl,
         improbable::Persistence,
         godotcore::GodotPosition2D,
-        spellcrest::PlayerControls> components;
+        spellcrest::PlayerControls,
+        spellcrest::ChatParticipant> components;
     return components;
 }
 

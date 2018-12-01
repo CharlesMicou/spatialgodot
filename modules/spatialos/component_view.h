@@ -17,6 +17,7 @@ class ComponentViewBase : public Node {
         static void _bind_methods() {
             ADD_SIGNAL(MethodInfo("component_updated"));
             ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
+            ADD_SIGNAL(MethodInfo("component_event", PropertyInfo(Variant::DICTIONARY, "event")));
             ClassDB::bind_method(D_METHOD("get_component_value"), &ComponentViewBase::to_gd_dict);
         }
 
