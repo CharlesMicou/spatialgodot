@@ -75,6 +75,13 @@ bool ComponentView<T>::tryUpdate(const typename T::Update& update) {
 }
 
 template <typename T>
+bool ComponentView<T>::try_update(const Dictionary d) {
+    typename T::Data* dummy;
+    typename T::Update update = SchemaParser::serializeComponentUpdate(dummy, d);
+    return tryUpdate(update);
+}
+
+template <typename T>
 const typename T::Data& ComponentView<T>::getData() {
     return data;
 }

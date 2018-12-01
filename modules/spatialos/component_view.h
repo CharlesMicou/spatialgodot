@@ -19,12 +19,14 @@ class ComponentViewBase : public Node {
             ADD_SIGNAL(MethodInfo("authority_changed", PropertyInfo(Variant::BOOL, "authority")));
             ADD_SIGNAL(MethodInfo("component_event", PropertyInfo(Variant::DICTIONARY, "event")));
             ClassDB::bind_method(D_METHOD("get_component_value"), &ComponentViewBase::to_gd_dict);
+            ClassDB::bind_method(D_METHOD("send_component_update"), &ComponentViewBase::try_update);
         }
 
     public:
         virtual void authorityChange(const worker::Authority& authority) = 0;
         virtual void setupConnection(Node* spos) = 0;
         virtual Dictionary to_gd_dict() const = 0;
+        virtual bool try_update(const Dictionary d) = 0;
 };
 
 template <typename T>
@@ -48,6 +50,7 @@ public:
 
     // Sending updates back upstream
     bool tryUpdate(const typename T::Update& update);
+    bool try_update(const Dictionary d);
 
     // Initialisation
     void setupConnection(Node* spos);
