@@ -15,6 +15,8 @@ class PositionSync : public Node {
     ComponentView<improbable::Position>* improbable_position_component;
     ComponentView<godotcore::GodotPosition2D>* godot_position_component;
 
+    void maybe_sync_spatialos_position(const godotcore::GodotCoordinates2D& truePos);
+
 protected:
     static void _bind_methods();
 
