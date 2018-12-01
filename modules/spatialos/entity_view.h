@@ -25,6 +25,7 @@ public:
     std::int64_t get_entity_id();
     worker::EntityId entity_id;
     bool has_component(const worker::ComponentId component_id);
+    bool has_component_by_name(const String component_name);
     ComponentViewBase* getComponentNode(const worker::ComponentId component_id);
     ComponentViewBase* getComponentNodeByName(const String component_name);
     Dictionary get_all_component_values() const;

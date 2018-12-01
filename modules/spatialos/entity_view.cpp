@@ -14,9 +14,10 @@ void EntityView::_bind_methods() {
     ADD_SIGNAL(MethodInfo("component_added", PropertyInfo(Variant::OBJECT, "component_view", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
     ADD_SIGNAL(MethodInfo("component_removed", PropertyInfo(Variant::OBJECT, "component_view", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
     ClassDB::bind_method(D_METHOD("get_entity_id"), &EntityView::get_entity_id);
-    ClassDB::bind_method(D_METHOD("has_component", "component_id"), &EntityView::has_component);
-    ClassDB::bind_method(D_METHOD("get_component_node", "component_id"), &EntityView::getComponentNode);
-    ClassDB::bind_method(D_METHOD("get_component_node_by_name", "component_name"), &EntityView::getComponentNodeByName);
+    ClassDB::bind_method(D_METHOD("has_component_by_id", "component_id"), &EntityView::has_component);
+    ClassDB::bind_method(D_METHOD("has_component", "component_name"), &EntityView::has_component_by_name);
+    ClassDB::bind_method(D_METHOD("get_component_node_by_id", "component_id"), &EntityView::getComponentNode);
+    ClassDB::bind_method(D_METHOD("get_component_node", "component_name"), &EntityView::getComponentNodeByName);
     ClassDB::bind_method(D_METHOD("get_all_component_values"), &EntityView::get_all_component_values);
 }
 
@@ -74,6 +75,17 @@ bool EntityView::has_component(const worker::ComponentId component_id) {
      return it != components.end();
 }
 
+bool EntityView::has_component_by_name(const String component_name) {
+    std::string s = fromGodotString(component_name);
+    auto it = schema_component_ids.find(s);
+    if (it == schema_component_ids.end()) {
+        logger.warn("The component " + s + " is not a known component in schema");
+        return false;
+    } else {
+        return has_component(it->second);
+    }
+}
+
 ComponentViewBase* EntityView::getComponentNode(const worker::ComponentId component_id) {
     auto it = components.find(component_id);
     if (it != components.end()) {
@@ -87,12 +99,12 @@ ComponentViewBase* EntityView::getComponentNode(const worker::ComponentId compon
 
 ComponentViewBase* EntityView::getComponentNodeByName(const String component_name) {
     std::string s = fromGodotString(component_name);
-    auto it_a = schema_component_ids.find(s);
-    if (it_a == schema_component_ids.end()) {
+    auto it = schema_component_ids.find(s);
+    if (it == schema_component_ids.end()) {
         logger.warn("The component " + s + " is not a known component in schema");
         return nullptr;
     } else {
-        return getComponentNode(it_a->second);
+        return getComponentNode(it->second);
     }
 }
 
