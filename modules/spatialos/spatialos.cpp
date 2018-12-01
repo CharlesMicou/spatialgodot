@@ -240,6 +240,14 @@ String Spatialos::get_configuration_warning() const {
 	return warning;
 }
 
+void Spatialos::debug_method(String arbitrary_input) {
+    //connection->SendComponentUpdate()
+    int eid = arbitrary_input.to_int();
+    spellcrest::ChatParticipant::Update u;
+    u.add_sent_chat_message({"Some component update foo"});
+    connection->SendComponentUpdate<spellcrest::ChatParticipant>(eid, u);
+}
+
 void Spatialos::_bind_methods() {
     ADD_SIGNAL(MethodInfo("connection_success"));
     ADD_SIGNAL(MethodInfo("disconnected"));
@@ -253,6 +261,9 @@ void Spatialos::_bind_methods() {
     ADD_SIGNAL(MethodInfo("entity_reserved", PropertyInfo(Variant::INT, "reserved_entity_id")));
     ClassDB::bind_method(D_METHOD("spawn_entity", "entity_id", "player_name"), &Spatialos::spawnPlayerEntity);
     ClassDB::bind_method(D_METHOD("reserve_id"), &Spatialos::reserveId);
+
+    // Debug method for testing various features from gdscript
+    ClassDB::bind_method(D_METHOD("debug_method"), &Spatialos::debug_method);
 }
 
 Spatialos::Spatialos(): logger(WorkerLogger("core")) {

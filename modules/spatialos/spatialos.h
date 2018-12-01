@@ -36,6 +36,9 @@ public:
     void spawnPlayerEntity(int entity_id, String player_name);
     void reserveId();
 
+    // A debug method that just calls into whatever
+    void debug_method(String arbitrary_input);
+
     String get_configuration_warning() const;
 
     Spatialos();

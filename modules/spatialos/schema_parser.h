@@ -10,19 +10,19 @@
 #include <spellcrest/player_controls.h>
 
 const std::unordered_map<worker::ComponentId, std::string> schema_component_names {
-            {53, "improbable::Metadata"},
-            {54, "improbable::Position"},
-            {3001, "godotcore::GodotPosition2D"},
-            {4001, "spellcrest::PlayerControls"},
-            {4002, "spellcrest:ChatParticipant"}
+            {53, "improbable.Metadata"},
+            {54, "improbable.Position"},
+            {3001, "godotcore.GodotPosition2D"},
+            {4001, "spellcrest.PlayerControls"},
+            {4002, "spellcrest.ChatParticipant"}
 };
 
 const std::unordered_map<std::string, worker::ComponentId> schema_component_ids {
-            {"improbable::Metadata", 53},
-            {"improbable::Position", 54},
-            {"godotcore::GodotPosition2D", 3001},
-            {"spellcrest::PlayerControls", 4001},
-            {"spellcrest:ChatParticipant", 4002}
+            {"improbable.Metadata", 53},
+            {"improbable.Position", 54},
+            {"godotcore.GodotPosition2D", 3001},
+            {"spellcrest.PlayerControls", 4001},
+            {"spellcrest.ChatParticipant", 4002}
 };
 
 class SchemaParser {
