@@ -20,8 +20,6 @@ void PositionSync::sync() {
         float x = parent->get_position().x;
         float y = parent->get_position().y;
         godotcore::GodotCoordinates2D posToSync = godotcore::GodotCoordinates2D(godotcore::GodotCoordinates2D(godotcore::GodotChunk2D(), godotcore::GodotVector2D(x, y)));
-        // Todo: only send data when the data has changed
-        // Todo: only send improbable position when sufficiently far away from last position
         const godotcore::GodotCoordinates2D currentSyncedPos = godot_position_component->getData().coordinates();
         if (posToSync != currentSyncedPos) {
             godot_position_component->tryUpdate(godotcore::GodotPosition2D::Update{}.set_coordinates(posToSync));

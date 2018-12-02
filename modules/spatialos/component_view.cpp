@@ -76,8 +76,8 @@ bool ComponentView<T>::tryUpdate(const typename T::Update& update) {
 
 template <typename T>
 bool ComponentView<T>::try_update(const Dictionary d) {
-    typename T::Data* dummy;
-    typename T::Update update = SchemaParser::serializeComponentUpdate(dummy, d);
+    typename T::Update update;
+    SchemaParser::serializeComponentUpdate(update, d);
     return tryUpdate(update);
 }
 
@@ -99,7 +99,7 @@ ComponentView<T>::ComponentView() {
 }
 
 template <typename T>
-const bool ComponentView<T>::hasAuthority() {
+bool ComponentView<T>::hasAuthority() {
     return authoritative;
 }
 

@@ -241,11 +241,7 @@ String Spatialos::get_configuration_warning() const {
 }
 
 void Spatialos::debug_method(String arbitrary_input) {
-    //connection->SendComponentUpdate()
-    int eid = arbitrary_input.to_int();
-    spellcrest::ChatParticipant::Update u;
-    u.add_sent_chat_message({"Some component update foo"});
-    connection->SendComponentUpdate<spellcrest::ChatParticipant>(eid, u);
+    // Put debug in here
 }
 
 void Spatialos::_bind_methods() {

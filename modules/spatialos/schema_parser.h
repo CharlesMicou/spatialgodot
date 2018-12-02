@@ -53,20 +53,20 @@ class SchemaParser {
 
         // Conversions to Schema format from Godot format
         // Force passing in dummy pointers so that we can overload properly
-        static const improbable::Coordinates serializeType(improbable::Coordinates* dummy, const Dictionary d);
-        static const improbable::Position::Update serializeComponentUpdate(improbable::Position::Update* dummy, const Dictionary d);
+        static void serializeType(improbable::Coordinates& result, const Dictionary d);
+        static void serializeComponentUpdate(improbable::Position::Update& result, const Dictionary d);
 
-        static const improbable::Metadata::Update serializeComponentUpdate(improbable::Metadata::Update* dummy, const Dictionary d);
+        static void serializeComponentUpdate(improbable::Metadata::Update& result, const Dictionary d);
 
-        static const godotcore::GodotChunk2D serializeType(godotcore::GodotChunk2D* dummy, const Dictionary d);
-        static const godotcore::GodotCoordinates2D serializeType(godotcore::GodotCoordinates2D* dummy, const Dictionary d);
-        static const godotcore::GodotVector2D serializeType(godotcore::GodotVector2D* dummy, const Dictionary d);
-        static const godotcore::GodotPosition2D::Update serializeComponentUpdate(godotcore::GodotPosition2DData* dummy, const Dictionary d);
+        static void serializeType(godotcore::GodotChunk2D& result, const Dictionary d);
+        static void serializeType(godotcore::GodotCoordinates2D& result, const Dictionary d);
+        static void serializeType(godotcore::GodotVector2D& result, const Dictionary d);
+        static void serializeComponentUpdate(godotcore::GodotPosition2D::Update& result, const Dictionary d);
 
-        static const spellcrest::PlayerControls::Update serializeComponentUpdate(spellcrest::PlayerControls::Update* dummy, const Dictionary d);
+        static void serializeComponentUpdate(spellcrest::PlayerControls::Update& result, const Dictionary d);
 
-        static const spellcrest::ChatMessage serializeType(spellcrest::ChatMessage* dummy, const Dictionary d);
-        static const spellcrest::ChatParticipant::Update serializeComponentUpdate(spellcrest::ChatParticipant::Update* dummy, const Dictionary d);
+        static void serializeType(spellcrest::ChatMessage& result, const Dictionary d);
+        static void serializeComponentUpdate(spellcrest::ChatParticipant::Update& result, const Dictionary d);
 };
 
 #endif

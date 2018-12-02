@@ -20,6 +20,7 @@ class ComponentViewBase : public Node {
             ADD_SIGNAL(MethodInfo("component_event", PropertyInfo(Variant::DICTIONARY, "event")));
             ClassDB::bind_method(D_METHOD("get_component_value"), &ComponentViewBase::to_gd_dict);
             ClassDB::bind_method(D_METHOD("send_component_update"), &ComponentViewBase::try_update);
+            ClassDB::bind_method(D_METHOD("has_authority"), &ComponentViewBase::hasAuthority);
         }
 
     public:
@@ -27,6 +28,7 @@ class ComponentViewBase : public Node {
         virtual void setupConnection(Node* spos) = 0;
         virtual Dictionary to_gd_dict() const = 0;
         virtual bool try_update(const Dictionary d) = 0;
+        virtual bool hasAuthority() = 0;
 };
 
 template <typename T>
@@ -59,7 +61,7 @@ public:
     // Accessors
     Dictionary to_gd_dict() const;
     const typename T::Data& getData();
-    const bool hasAuthority();
+    bool hasAuthority();
 
     ComponentView();
 };

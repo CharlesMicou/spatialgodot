@@ -103,16 +103,15 @@ std::list<Dictionary> SchemaParser::extractEvents(const spellcrest::ChatParticip
 }
 
 /* From GDScript to Spatialos */
-const improbable::Coordinates SchemaParser::serializeType(improbable::Coordinates* dummy, const Dictionary d) {
-    improbable::Coordinates v;
+void SchemaParser::serializeType(improbable::Coordinates& result, const Dictionary d) {
     if (d.has("x")) {
-        v.set_x((double) d["x"]);
+        result.set_x((double) d["x"]);
     }
     if (d.has("y")) {
-        v.set_y((double) d["y"]);
+        result.set_y((double) d["y"]);
     }
     if (d.has("z")) {
-        v.set_z((double) d["z"]);
+        result.set_z((double) d["z"]);
     }
 
     Array a = d.keys();
@@ -122,15 +121,13 @@ const improbable::Coordinates SchemaParser::serializeType(improbable::Coordinate
             logger.warn("improbable.Coordinates has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return v;
 }
 
-const improbable::Position::Update SchemaParser::serializeComponentUpdate(improbable::Position::Update* dummy, const Dictionary d) {
-    improbable::Position::Update u;
+void SchemaParser::serializeComponentUpdate(improbable::Position::Update& result, const Dictionary d) {
     if (d.has("coords")) {
-        improbable::Coordinates* dummy1;
-        u.set_coords(serializeType(dummy1, d["coords"]));
+        improbable::Coordinates v;
+        serializeType(v, d["coords"]);
+        result.set_coords(v);
     }
 
     Array a = d.keys();
@@ -140,14 +137,11 @@ const improbable::Position::Update SchemaParser::serializeComponentUpdate(improb
             logger.warn("improbable.Position has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return u;
 }
 
-const improbable::Metadata::Update SchemaParser::serializeComponentUpdate(improbable::Metadata::Update* dummy, const Dictionary d) {
-    improbable::Metadata::Update u;
+void SchemaParser::serializeComponentUpdate(improbable::Metadata::Update& result, const Dictionary d) {
     if (d.has("entity_type")) {
-        u.set_entity_type(fromGodotString(d["entity_type"]));
+        result.set_entity_type(fromGodotString(d["entity_type"]));
     }
 
     Array a = d.keys();
@@ -157,17 +151,14 @@ const improbable::Metadata::Update SchemaParser::serializeComponentUpdate(improb
             logger.warn("improbable.Metadata has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return u;
 }
 
-const godotcore::GodotChunk2D SchemaParser::serializeType(godotcore::GodotChunk2D* dummy, const Dictionary d) {
-    godotcore::GodotChunk2D v;
+void SchemaParser::serializeType(godotcore::GodotChunk2D& result, const Dictionary d) {
     if (d.has("x")) {
-        v.set_x((int32_t) d["x"]);
+        result.set_x((int32_t) d["x"]);
     }
     if (d.has("y")) {
-        v.set_y((int32_t) d["y"]);
+        result.set_y((int32_t) d["y"]);
     }
 
     Array a = d.keys();
@@ -177,17 +168,14 @@ const godotcore::GodotChunk2D SchemaParser::serializeType(godotcore::GodotChunk2
             logger.warn("godotcore.GodotChunk2D has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return v;
 }
 
-const godotcore::GodotVector2D SchemaParser::serializeType(godotcore::GodotVector2D* dummy, const Dictionary d) {
-    godotcore::GodotVector2D v;
+void SchemaParser::serializeType(godotcore::GodotVector2D& result, const Dictionary d) {
     if (d.has("x")) {
-        v.set_x((float) d["x"]);
+        result.set_x((float) d["x"]);
     }
     if (d.has("y")) {
-        v.set_y((float) d["y"]);
+        result.set_y((float) d["y"]);
     }
 
     Array a = d.keys();
@@ -197,19 +185,18 @@ const godotcore::GodotVector2D SchemaParser::serializeType(godotcore::GodotVecto
             logger.warn("godotcore.GodotVector2D has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return v;
 }
 
-const godotcore::GodotCoordinates2D SchemaParser::serializeType(godotcore::GodotCoordinates2D* dummy, const Dictionary d) {
-    godotcore::GodotCoordinates2D v;
+void SchemaParser::serializeType(godotcore::GodotCoordinates2D& result, const Dictionary d) {
     if (d.has("global_chunk")) {
-        godotcore::GodotChunk2D* dummy1;
-        v.set_global_chunk(serializeType(dummy1, d["global_chunk"]));
+        godotcore::GodotChunk2D v;
+        serializeType(v, d["global_chunk"]);
+        result.set_global_chunk(v);
     }
     if (d.has("local_position")) {
-        godotcore::GodotVector2D* dummy1;
-        v.set_local_position(serializeType(dummy1, d["local_position"]));
+        godotcore::GodotVector2D v;
+        serializeType(v, d["local_position"]);
+        result.set_local_position(v);
     }
 
     Array a = d.keys();
@@ -219,19 +206,18 @@ const godotcore::GodotCoordinates2D SchemaParser::serializeType(godotcore::Godot
             logger.warn("godotcore.GodotCoordinates2D has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return v;
 }
 
-const godotcore::GodotPosition2D::Update SchemaParser::serializeComponentUpdate(godotcore::GodotPosition2DData* dummy, const Dictionary d) {
-    godotcore::GodotPosition2D::Update u;
+void SchemaParser::serializeComponentUpdate(godotcore::GodotPosition2D::Update& result, const Dictionary d) {
     if (d.has("coordinates")) {
-        godotcore::GodotCoordinates2D* dummy1;
-        u.set_coordinates(serializeType(dummy1, d["coordinates"]));
+        godotcore::GodotCoordinates2D v;
+        serializeType(v, d["coordinates"]);
+        result.set_coordinates(v);
     }
     if (d.has("velocity")) {
-        godotcore::GodotVector2D* dummy1;
-        u.set_velocity(serializeType(dummy1, d["velocity"]));
+        godotcore::GodotVector2D v;
+        serializeType(v, d["velocity"]);
+        result.set_velocity(v);
     }
 
     Array a = d.keys();
@@ -241,15 +227,13 @@ const godotcore::GodotPosition2D::Update SchemaParser::serializeComponentUpdate(
             logger.warn("godotcore.GodotPosition2D has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return u;
 }
 
-const spellcrest::PlayerControls::Update SchemaParser::serializeComponentUpdate(spellcrest::PlayerControls::Update* dummy, const Dictionary d) {
-    spellcrest::PlayerControls::Update u;
+void SchemaParser::serializeComponentUpdate(spellcrest::PlayerControls::Update& result, const Dictionary d) {
     if (d.has("move_destination")) {
-        godotcore::GodotCoordinates2D* dummy1;
-        u.set_move_destination(serializeType(dummy1, d["move_destination"]));
+        godotcore::GodotCoordinates2D v;
+        serializeType(v, d["move_destination"]);
+        result.set_move_destination(v);
     }
 
     Array a = d.keys();
@@ -259,14 +243,11 @@ const spellcrest::PlayerControls::Update SchemaParser::serializeComponentUpdate(
             logger.warn("spellcrest.PlayerControls has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return u;
 }
 
-const spellcrest::ChatMessage SchemaParser::serializeType(spellcrest::ChatMessage* dummy, const Dictionary d) {
-    spellcrest::ChatMessage v;
+void SchemaParser::serializeType(spellcrest::ChatMessage& result, const Dictionary d) {
     if (d.has("message")) {
-        v.set_message(fromGodotString(d["message"]));
+        result.set_message(fromGodotString(d["message"]));
     }
 
     Array a = d.keys();
@@ -276,19 +257,17 @@ const spellcrest::ChatMessage SchemaParser::serializeType(spellcrest::ChatMessag
             logger.warn("spellcrest.ChatMessage has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return v;
 }
 
-const spellcrest::ChatParticipant::Update SchemaParser::serializeComponentUpdate(spellcrest::ChatParticipant::Update* dummy, const Dictionary d) {
-    spellcrest::ChatParticipant::Update u;
+void SchemaParser::serializeComponentUpdate(spellcrest::ChatParticipant::Update& result, const Dictionary d) {
     if (d.has("chat_name")) {
-        u.set_chat_name(fromGodotString(d["chat_name"]));
+        result.set_chat_name(fromGodotString(d["chat_name"]));
     }
     
     if (d.has("sent_chat_message")) {
-        spellcrest::ChatMessage* dummy1;
-        u.add_sent_chat_message(serializeType(dummy1, d["sent_chat_message"]));
+        spellcrest::ChatMessage v;
+        serializeType(v, d["sent_chat_message"]);
+        result.add_sent_chat_message(v);
     }
 
     Array a = d.keys();
@@ -298,6 +277,4 @@ const spellcrest::ChatParticipant::Update SchemaParser::serializeComponentUpdate
             logger.warn("spellcrest.ChatParticipant has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
-
-    return u;
 }
