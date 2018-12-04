@@ -9,6 +9,7 @@
 #include "core/os/os.h"
 #include "editor_node.h"
 #include "spatial_util.h"
+#include "auto_instantiable.h"
 
 const std::string kLocatorHost = "locator.improbable.io";
 const String kLogFileFlag = "--spatialos_log_file";
@@ -102,8 +103,11 @@ void Spatialos::setupDispatcher() {
     isConnected = true;
 
     // Super hacky but hey
-    NodePath path = NodePath("WorldView");
-    world_view = dynamic_cast<WorldView*>(get_node(path));
+    NodePath world_view_path = NodePath("WorldView");
+    world_view = dynamic_cast<WorldView*>(get_node(world_view_path));
+    NodePath auto_instantiator_path = NodePath("AutoInstantiator");
+    AutoInstantiator* auto_instantiator = dynamic_cast<AutoInstantiator*>(get_node(auto_instantiator_path));
+    auto_instantiator->start(world_view);
 
     // Messages
     dispatcher->OnLogMessage([&](const worker::LogMessageOp& op) {

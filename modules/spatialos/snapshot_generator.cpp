@@ -1,6 +1,7 @@
 #include "snapshot_generator.h"
 #include <godotcore/godot_position2d.h>
 #include <improbable/standard_library.h>
+#include <godotcore/auto_instantiable.h>
 #include "improbable/worker.h"
 #include "spatial_util.h"
 #include "component_registry.h"
@@ -35,6 +36,23 @@ worker::Entity make_ball(float x, float y) {
     return builder;
 }
 
+worker::Entity make_auto_inst(float x, float y) {
+    worker::Entity builder;
+
+    godotcore::GodotCoordinates2D gpos({{0, 0}, {x, y}});
+    
+    builder.Add<improbable::Metadata>({"Rock"});
+    builder.Add<improbable::Persistence>({});
+    builder.Add<godotcore::GodotPosition2D>({gpos, {}});
+    builder.Add<godotcore::AutoInstantiable>({"res://scenes/auto_instantiable/TestAutoInstantiableScene.tscn"});
+    builder.Add<improbable::Position>({fromGodotPosition(gpos)});
+
+    // ACL must be done last if we want it to pick up components automatically
+    builder.Add<improbable::EntityAcl>({clientAndServerReqSet, make_component_acl(builder)});
+    
+    return builder;
+}
+
 void SnapshotGenerator::takeSnapshot(String path) {
     std::string p = fromGodotString(path);
     worker::SnapshotOutputStream ostream{MergedComponentRegistry(), p};
@@ -45,6 +63,8 @@ void SnapshotGenerator::takeSnapshot(String path) {
     ostream.WriteEntity(3, make_ball(-100, 100));
     ostream.WriteEntity(4, make_ball(100, -100));
     ostream.WriteEntity(5, make_ball(150, -155));
+    ostream.WriteEntity(6, make_auto_inst(-200, -200));
+    ostream.WriteEntity(7, make_auto_inst(200, -200));
     std::cout << "Finished writing snapshot" << std::endl;
 }
 
