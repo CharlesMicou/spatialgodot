@@ -7,12 +7,14 @@
 
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
+#include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
 
 const std::unordered_map<worker::ComponentId, std::string> schema_component_names {
             {53, "improbable.Metadata"},
             {54, "improbable.Position"},
             {3001, "godotcore.GodotPosition2D"},
+            {3002, "godotcore.AutoInstantiable"},
             {4001, "spellcrest.PlayerControls"},
             {4002, "spellcrest.ChatParticipant"}
 };
@@ -21,6 +23,7 @@ const std::unordered_map<std::string, worker::ComponentId> schema_component_ids 
             {"improbable.Metadata", 53},
             {"improbable.Position", 54},
             {"godotcore.GodotPosition2D", 3001},
+            {"godotcore.AutoInstantiable", 3002},
             {"spellcrest.PlayerControls", 4001},
             {"spellcrest.ChatParticipant", 4002}
 };
@@ -44,6 +47,9 @@ class SchemaParser {
         static Dictionary parseComponent(const godotcore::GodotPosition2DData& data);
         static std::list<Dictionary> extractEvents(const godotcore::GodotPosition2D::Update& update);
 
+        static Dictionary parseComponent(const godotcore::AutoInstantiableData& data);
+        static std::list<Dictionary> extractEvents(const godotcore::AutoInstantiable::Update& update);
+
         static Dictionary parseComponent(const spellcrest::PlayerControlsData& data);
         static std::list<Dictionary> extractEvents(const spellcrest::PlayerControls::Update& update);
 
@@ -52,7 +58,6 @@ class SchemaParser {
         static std::list<Dictionary> extractEvents(const spellcrest::ChatParticipant::Update& update);
 
         // Conversions to Schema format from Godot format
-        // Force passing in dummy pointers so that we can overload properly
         static void serializeType(improbable::Coordinates& result, const Dictionary d);
         static void serializeComponentUpdate(improbable::Position::Update& result, const Dictionary d);
 
@@ -62,6 +67,8 @@ class SchemaParser {
         static void serializeType(godotcore::GodotCoordinates2D& result, const Dictionary d);
         static void serializeType(godotcore::GodotVector2D& result, const Dictionary d);
         static void serializeComponentUpdate(godotcore::GodotPosition2D::Update& result, const Dictionary d);
+
+        static void serializeComponentUpdate(godotcore::AutoInstantiable::Update& result, const Dictionary d);
 
         static void serializeComponentUpdate(spellcrest::PlayerControls::Update& result, const Dictionary d);
 

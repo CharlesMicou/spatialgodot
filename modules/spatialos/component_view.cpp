@@ -3,11 +3,11 @@
 #include <improbable/standard_library.h>
 #include "spatial_util.h"
 #include <godotcore/godot_position2d.h>
+#include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
 #include "spatialos.h"
 #include "schema_parser.h"
 
-const worker::ComponentId kPositionId = 54;
 template <typename T>
 WorkerLogger ComponentView<T>::logger = WorkerLogger("component_view");
 
@@ -107,5 +107,7 @@ bool ComponentView<T>::hasAuthority() {
 template class ComponentView<improbable::Position>;
 template class ComponentView<improbable::Metadata>;
 template class ComponentView<godotcore::GodotPosition2D>;
+template class ComponentView<godotcore::AutoInstantiable>;
 template class ComponentView<spellcrest::PlayerControls>;
 template class ComponentView<spellcrest::ChatParticipant>;
+

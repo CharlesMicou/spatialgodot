@@ -1,6 +1,7 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
+#include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
 #include "component_registry.h"
 
@@ -11,6 +12,7 @@ const worker::ComponentRegistry& MergedComponentRegistry() {
         improbable::EntityAcl,
         improbable::Persistence,
         godotcore::GodotPosition2D,
+        godotcore::AutoInstantiable,
         spellcrest::PlayerControls,
         spellcrest::ChatParticipant> components;
     return components;

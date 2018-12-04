@@ -6,6 +6,7 @@
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
+#include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
 
 WorkerLogger EntityView::logger = WorkerLogger("entity_view");
@@ -149,6 +150,9 @@ template void EntityView::updateComponent<improbable::Metadata>(const worker::Co
 
 template void EntityView::addComponent<godotcore::GodotPosition2D>(const worker::AddComponentOp<godotcore::GodotPosition2D>&);
 template void EntityView::updateComponent<godotcore::GodotPosition2D>(const worker::ComponentUpdateOp<godotcore::GodotPosition2D>&);
+
+template void EntityView::addComponent<godotcore::AutoInstantiable>(const worker::AddComponentOp<godotcore::AutoInstantiable>&);
+template void EntityView::updateComponent<godotcore::AutoInstantiable>(const worker::ComponentUpdateOp<godotcore::AutoInstantiable>&);
 
 template void EntityView::addComponent<spellcrest::PlayerControls>(const worker::AddComponentOp<spellcrest::PlayerControls>&);
 template void EntityView::updateComponent<spellcrest::PlayerControls>(const worker::ComponentUpdateOp<spellcrest::PlayerControls>&);

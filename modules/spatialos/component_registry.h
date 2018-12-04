@@ -3,6 +3,7 @@
 
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
+#include <godotcore/auto_instantiable.h>
 #include <godotcore/godot_position2d.h>
 #include <unordered_set>
 

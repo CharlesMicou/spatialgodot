@@ -6,6 +6,7 @@
 
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
+#include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
 
 WorkerLogger SchemaParser::logger = WorkerLogger("schema_parser");
@@ -67,6 +68,16 @@ Dictionary SchemaParser::parseComponent(const godotcore::GodotPosition2DData& da
 }
 
 std::list<Dictionary> SchemaParser::extractEvents(const godotcore::GodotPosition2D::Update& update) {
+    return std::list<Dictionary>(0);
+}
+
+Dictionary SchemaParser::parseComponent(const godotcore::AutoInstantiableData& data) {
+    Dictionary d;
+    d["scene_name"] = toGodotString(data.scene_name());
+    return d;
+}
+
+std::list<Dictionary> SchemaParser::extractEvents(const godotcore::AutoInstantiable::Update& update) {
     return std::list<Dictionary>(0);
 }
 
@@ -225,6 +236,20 @@ void SchemaParser::serializeComponentUpdate(godotcore::GodotPosition2D::Update& 
         String b = a.get(i);
         if (b != "coordinates" && b != "velocity") {
             logger.warn("godotcore.GodotPosition2D has no field " + fromGodotString(b) + ". Ignoring.");
+        }
+    }
+}
+
+void SchemaParser::serializeComponentUpdate(godotcore::AutoInstantiable::Update& result, const Dictionary d) {
+    if (d.has("scene_name")) {
+        result.set_scene_name(fromGodotString(d["scene_name"]));
+    }
+
+    Array a = d.keys();
+    for (int i = 0; i < a.size(); i++) {
+        String b = a.get(i);
+        if (b != "scene_name") {
+            logger.warn("godotcore.AutoInstantiable has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
 }
