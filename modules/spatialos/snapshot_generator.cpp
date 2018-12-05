@@ -36,7 +36,7 @@ worker::Entity make_ball(float x, float y) {
     return builder;
 }
 
-worker::Entity make_auto_inst(float x, float y) {
+worker::Entity make_rock(float x, float y) {
     worker::Entity builder;
 
     godotcore::GodotCoordinates2D gpos({{0, 0}, {x, y}});
@@ -44,7 +44,24 @@ worker::Entity make_auto_inst(float x, float y) {
     builder.Add<improbable::Metadata>({"Rock"});
     builder.Add<improbable::Persistence>({});
     builder.Add<godotcore::GodotPosition2D>({gpos, {}});
-    builder.Add<godotcore::AutoInstantiable>({"res://scenes/auto_instantiable/TestAutoInstantiableScene.tscn"});
+    builder.Add<godotcore::AutoInstantiable>({"res://auto_scene/rock1.tscn"});
+    builder.Add<improbable::Position>({fromGodotPosition(gpos)});
+
+    // ACL must be done last if we want it to pick up components automatically
+    builder.Add<improbable::EntityAcl>({clientAndServerReqSet, make_component_acl(builder)});
+    
+    return builder;
+}
+
+worker::Entity make_tree(float x, float y) {
+    worker::Entity builder;
+
+    godotcore::GodotCoordinates2D gpos({{0, 0}, {x, y}});
+    
+    builder.Add<improbable::Metadata>({"Rock"});
+    builder.Add<improbable::Persistence>({});
+    builder.Add<godotcore::GodotPosition2D>({gpos, {}});
+    builder.Add<godotcore::AutoInstantiable>({"res://auto_scene/tree1.tscn"});
     builder.Add<improbable::Position>({fromGodotPosition(gpos)});
 
     // ACL must be done last if we want it to pick up components automatically
@@ -63,8 +80,11 @@ void SnapshotGenerator::takeSnapshot(String path) {
     ostream.WriteEntity(3, make_ball(-100, 100));
     ostream.WriteEntity(4, make_ball(100, -100));
     ostream.WriteEntity(5, make_ball(150, -155));
-    ostream.WriteEntity(6, make_auto_inst(-200, -200));
-    ostream.WriteEntity(7, make_auto_inst(200, -200));
+    ostream.WriteEntity(6, make_rock(-200, -200));
+    ostream.WriteEntity(7, make_rock(200, 200));
+    ostream.WriteEntity(8, make_tree(300, 350));
+    ostream.WriteEntity(9, make_tree(-300, 0));
+    ostream.WriteEntity(10, make_tree(0, 500));
     std::cout << "Finished writing snapshot" << std::endl;
 }
 
