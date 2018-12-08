@@ -26,14 +26,12 @@ void EntityView::authorityChange(const worker::ComponentId component_id, const w
     logger.info("Received an authority change for component " + std::to_string(component_id));
     auto it = components.find(component_id);
     if (it != components.end()) {
-        logger.info("Forwarding authority change");
         (it->second)->authorityChange(authority);
     }
 }
 
 template <typename T>
 void EntityView::addComponent(const worker::AddComponentOp<T>& add) {
-    logger.info("Received an add component for component id " + std::to_string(T::ComponentId));
     ComponentView<T>* newComponent = memnew(ComponentView<T>);
     newComponent->init(entity_id, T::ComponentId, add.Data);
     // if this happens within a critical section no one will hear it.
@@ -61,7 +59,6 @@ void EntityView::updateComponent(const worker::ComponentUpdateOp<T>& update) {
 }
 
 void EntityView::removeComponent(const worker::ComponentId component_id) {
-    logger.info("Received a remove component");
     emit_signal("component_removed", components[component_id]);
     remove_child(components[component_id]);
     components.erase(component_id);

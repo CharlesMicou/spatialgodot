@@ -10,7 +10,7 @@
 #include "worker_logger_wrapper.h"
 #include "snapshot_generator.h"
 #include "player_controls_sync.h"
-#include "auto_instantiable.h"
+#include "auto_instantiator.h"
 
 void register_spatialos_types() { 
         ClassDB::register_class<Spatialos>();
@@ -21,7 +21,6 @@ void register_spatialos_types() {
         ClassDB::register_class<PlayerControlsSync>();
         ClassDB::register_class<WorkerLoggerWrapper>();
         ClassDB::register_class<SnapshotGenerator>();
-        ClassDB::register_class<AutoInstantiableScene>();
         ClassDB::register_class<AutoInstantiator>();
 }
 

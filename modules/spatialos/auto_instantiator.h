@@ -1,24 +1,17 @@
-#ifndef SPOS_AUTO_INSTANTIABLE_H
-#define SPOS_AUTO_INSTANTIABLE_H
+#ifndef SPOS_AUTO_INSTANTIATOR_H
+#define SPOS_AUTO_INSTANTIATOR_H
 
 #include "editor_node.h"
 #include "worker_logger.h"
 #include "world_view.h"
 #include <improbable/worker.h>
 
-class AutoInstantiableScene : public Node {
-    GDCLASS(AutoInstantiableScene, Node);
-
-    protected:
-        static void _bind_methods() {
-            BIND_VMETHOD(MethodInfo("_setup_from_entity", PropertyInfo(Variant::OBJECT, "entity_view")));
-        }
-};
-
 class AutoInstantiator : public Node {
     GDCLASS(AutoInstantiator, Node);
-    worker::Map<worker::EntityId, AutoInstantiableScene*> added_instantances;
-    // Todo: cache loaded resources
+    worker::Map<worker::EntityId, Node*> added_instantances;
+    
+    // Todo: make this a cache with an eviction policy, rather than
+    // an obvious memory leak.
     worker::Map<std::string, RES> instantiable_scenes;
 
     protected:

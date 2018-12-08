@@ -1,7 +1,7 @@
 
 #include "editor_node.h"
 #include "worker_logger.h"
-#include "auto_instantiable.h"
+#include "auto_instantiator.h"
 #include "world_view.h"
 #include "entity_view.h"
 #include "component_view.h"
@@ -22,30 +22,44 @@ void AutoInstantiator::_on_entity_added(Node* added) {
         // We only care about AutoInstantiable annotated entities here.
         return;
     }
-    String scene_name = toGodotString(dynamic_cast<ComponentView<godotcore::AutoInstantiable>*>(entity_view
+
+    std::string scene_name = dynamic_cast<ComponentView<godotcore::AutoInstantiable>*>(entity_view
         ->getComponentNode(godotcore::AutoInstantiable::ComponentId))
-        ->getData().scene_name());
-    Ref<PackedScene> resource = ResourceLoader::load(scene_name);
-    if (!resource.is_valid()) {
-        logger.error("Could not load scene " + fromGodotString(scene_name));
-        return;
+        ->getData().scene_name();
+    Ref<PackedScene> resource;
+    bool found_in_cache = false;
+    auto it = instantiable_scenes.find(scene_name);
+    if (it != instantiable_scenes.end()) {
+        resource = it->second;
+        found_in_cache = true;
+    } else {
+        resource = ResourceLoader::load(toGodotString(scene_name));
+        if (!resource.is_valid()) {
+            logger.error("Could not load scene " + scene_name + " for entity " + std::to_string(entity_view->entity_id));
+            return;
+        }
     }
+
     Node* n = resource.ptr()->instance();
     if (n == nullptr) {
-        logger.error("Failed to instance scene " + fromGodotString(scene_name));
+        logger.error("Failed to instance scene " + scene_name);
         return;
     }
-    AutoInstantiableScene* s = dynamic_cast<AutoInstantiableScene*>(n);
-    if (s == nullptr) {
-        logger.error(fromGodotString(scene_name) + " is not an AutoInstantiableScene!");
+    if (!(n->has_method("_setup_from_entity"))) {
+        logger.warn(scene_name + " has no _setup_from_entity method despite being an AutoInstantiable, so will be ignored.");
         return;
     }
-    // Invoke magic gdscript virtual method
-    logger.info("Trying to invoke setup call on " + fromGodotString(scene_name));
-    s->call("_setup_from_entity", entity_view);
-    added_instantances.insert({{entity_view->entity_id, s}});
-    logger.info(fromGodotString(scene_name) + " loaded for entity " + std::to_string(entity_view->get_entity_id()));
-    add_child(s);
+
+    // At this point it's safe to cache the loaded resource.
+    if (!found_in_cache) {
+        instantiable_scenes.insert({{scene_name, resource}});
+        logger.info("Cached resource " + scene_name);
+    }
+
+    n->call("_setup_from_entity", entity_view);
+    added_instantances.insert({{entity_view->entity_id, n}});
+    logger.info(scene_name + " loaded for entity " + std::to_string(entity_view->get_entity_id()));
+    add_child(n);
 }
 
 void AutoInstantiator::_on_entity_removed(Node* removed) {

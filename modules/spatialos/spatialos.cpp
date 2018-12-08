@@ -9,7 +9,7 @@
 #include "core/os/os.h"
 #include "editor_node.h"
 #include "spatial_util.h"
-#include "auto_instantiable.h"
+#include "auto_instantiator.h"
 
 const std::string kLocatorHost = "locator.improbable.io";
 const String kLogFileFlag = "--spatialos_log_file";
