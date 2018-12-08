@@ -58,7 +58,7 @@ worker::Entity make_tree(float x, float y) {
 
     godotcore::GodotCoordinates2D gpos({{0, 0}, {x, y}});
     
-    builder.Add<improbable::Metadata>({"Rock"});
+    builder.Add<improbable::Metadata>({"Tree"});
     builder.Add<improbable::Persistence>({});
     builder.Add<godotcore::GodotPosition2D>({gpos, {}});
     builder.Add<godotcore::AutoInstantiable>({"res://auto_scene/tree1.tscn"});

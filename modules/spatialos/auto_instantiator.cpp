@@ -58,8 +58,18 @@ void AutoInstantiator::_on_entity_added(Node* added) {
 
     n->call("_setup_from_entity", entity_view);
     added_instantances.insert({{entity_view->entity_id, n}});
-    logger.info(scene_name + " loaded for entity " + std::to_string(entity_view->get_entity_id()));
-    add_child(n);
+
+    if (instantiator_target == nullptr) {
+        instantiator_target = get_node(instantiator_path);
+        if (instantiator_target == nullptr) {
+            logger.warn("No target scene was set for the Auto Instantiator. Instancing entity as its own child");
+            add_child(n);
+        } else {
+            instantiator_target->add_child(n);
+        }
+    } else {
+        instantiator_target->add_child(n);
+    }
 }
 
 void AutoInstantiator::_on_entity_removed(Node* removed) {
@@ -70,6 +80,14 @@ void AutoInstantiator::_on_entity_removed(Node* removed) {
     }
     remove_child(added_instantances[entity_view->entity_id]);
     added_instantances.erase(entity_view->entity_id);
+}
+
+void AutoInstantiator::set_instantiator_target(const NodePath &target) {
+    instantiator_target = get_node(instantiator_path);
+}
+
+NodePath AutoInstantiator::get_instantiator_target() const {
+    return instantiator_path;
 }
 
 void AutoInstantiator::start(WorldView* world_view) {

@@ -23,7 +23,6 @@ void EntityView::_bind_methods() {
 }
 
 void EntityView::authorityChange(const worker::ComponentId component_id, const worker::Authority& authority) {
-    logger.info("Received an authority change for component " + std::to_string(component_id));
     auto it = components.find(component_id);
     if (it != components.end()) {
         (it->second)->authorityChange(authority);

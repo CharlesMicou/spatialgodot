@@ -26,7 +26,6 @@ void WorldView::addEntity(const worker::AddEntityOp& add) {
 }
 
 void WorldView::removeEntity(const worker::RemoveEntityOp& remove) {
-    logger.info("Emitting a remove entity signal");
     emit_signal("entity_removed", entities[remove.EntityId]);
     remove_child(entities[remove.EntityId]);
     entities.erase(remove.EntityId);
@@ -62,7 +61,6 @@ void WorldView::handleCriticalSection(const worker::CriticalSectionOp& section) 
 
 void WorldView::addEntityToScene(worker::EntityId entity_id) {
     add_child(entities[entity_id]);
-    logger.info("Emitting an add entity signal");
     emit_signal("entity_added", entities[entity_id]);
 }
 
