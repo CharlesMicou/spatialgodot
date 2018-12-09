@@ -200,6 +200,7 @@ void Spatialos::spawnPlayerEntity(int entity_id, String player_name) {
     entityToSpawn.Add<improbable::Metadata>({"Client"});
     entityToSpawn.Add<spellcrest::PlayerControls>({});
     entityToSpawn.Add<spellcrest::ChatParticipant>({fromGodotString(player_name)});
+    entityToSpawn.Add<godotcore::AutoInstantiable>({"res://auto_scene/PlayerCharacter.tscn"});
     worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> component_acl = 
         {{improbable::Position::ComponentId, serverReqSet},
         {godotcore::GodotPosition2D::ComponentId, serverReqSet},
