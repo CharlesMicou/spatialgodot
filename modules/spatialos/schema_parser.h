@@ -74,6 +74,9 @@ class SchemaParser {
 
         static void serializeType(spellcrest::ChatMessage& result, const Dictionary d);
         static void serializeComponentUpdate(spellcrest::ChatParticipant::Update& result, const Dictionary d);
+
+        // Embarassingly inefficient entity serialization
+        static void applyComponentsToEntity(worker::Entity& entity, const Dictionary d);
 };
 
 #endif

@@ -5,6 +5,25 @@
 #include <spellcrest/player_controls.h>
 #include "component_registry.h"
 
+worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> make_component_acl(const worker::Entity& entity, const std::string player_worker_id) {
+    worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> builder;
+    auto it = entity.GetComponentIds().begin();
+    while (it != entity.GetComponentIds().end()) {
+        auto should_simulate = simulatedComponents.find(*it);
+        if (should_simulate != simulatedComponents.end()) {
+            builder.insert({{*it, serverReqSet}});
+        }
+        if (player_worker_id != "") {
+            auto player_should_be_authoritative = playerAuthoritativeComponents.find(*it);
+            if (player_should_be_authoritative != playerAuthoritativeComponents.end()) {
+                builder.insert({{*it, makeUniqueReqSet(player_worker_id)}});
+            }
+        }
+        it++;
+    }
+    return builder;
+}
+
 const worker::ComponentRegistry& MergedComponentRegistry() {
     static const worker::Components<
         improbable::Position,

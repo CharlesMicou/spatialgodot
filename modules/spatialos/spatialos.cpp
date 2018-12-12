@@ -211,6 +211,10 @@ void Spatialos::spawnPlayerEntity(int entity_id, String player_name) {
     connection->SendCreateEntityRequest(entityToSpawn, entityId, {5000} /* timeout */);
 }
 
+worker::RequestId<worker::CreateEntityRequest> Spatialos::sendCreateCommand(const worker::Entity& entity) {
+    return connection->SendCreateEntityRequest(entity, {}, {5000});
+}
+
 void Spatialos::reserveId() {
     logger.info("Attempting to reserve an entity id");
     connection->SendReserveEntityIdRequest({} /* timeout */);

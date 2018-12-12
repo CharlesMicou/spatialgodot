@@ -7,19 +7,6 @@
 #include "component_registry.h"
 #include <iostream>
 
-worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> make_component_acl(const worker::Entity& entity) {
-    worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> builder;
-    auto it = entity.GetComponentIds().begin();
-    while (it != entity.GetComponentIds().end()) {
-        auto should_simulate = simulatedComponents.find(*it);
-        if (should_simulate != simulatedComponents.end()) {
-            builder.insert({{*it, serverReqSet}});
-        }
-        it++;
-    }
-    return builder;
-}
-
 worker::Entity make_ball(float x, float y) {
     worker::Entity builder;
 

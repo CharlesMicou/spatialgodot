@@ -14,5 +14,6 @@ String toGodotString(const std::string& regularString);
 improbable::Coordinates fromGodotPosition(const godotcore::GodotCoordinates2D& godotPosition);
 godotcore::GodotCoordinates2D toGodotPosition(const improbable::PositionData& improbablePosition);
 std::pair<float, float> toLocalGodotPosition(const godotcore::GodotCoordinates2D& godotPosition, const int x_chunk_origin, const int y_chunk_origin);
+godotcore::GodotCoordinates2D toGlobalGodotPosition(const Vector2 local_position, const int x_chunk_origin, const int y_chunk_origin);
 
 #endif

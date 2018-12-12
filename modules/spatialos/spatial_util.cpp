@@ -1,5 +1,6 @@
 #include "core/ustring.h"
 #include "spatial_util.h"
+#include "editor_node.h"
 #include <godotcore/godot_position2d.h>
 #include <improbable/standard_library.h>
 #include <string>
@@ -42,4 +43,8 @@ std::pair<float, float> toLocalGodotPosition(const godotcore::GodotCoordinates2D
     int relative_y_chunk = godotPosition.global_chunk().y() - y_chunk_origin;
     float local_y = relative_y_chunk * kChunkSizeInGodotUnits + godotPosition.local_position().y();
     return std::pair<float, float>(local_x, local_y);
+}
+
+godotcore::GodotCoordinates2D toGlobalGodotPosition(const Vector2 local_position, const int x_chunk_origin, const int y_chunk_origin) {
+    return godotcore::GodotCoordinates2D(godotcore::GodotChunk2D(x_chunk_origin, y_chunk_origin), godotcore::GodotVector2D(local_position.x, local_position.y));
 }

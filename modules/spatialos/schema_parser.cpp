@@ -303,3 +303,49 @@ void SchemaParser::serializeComponentUpdate(spellcrest::ChatParticipant::Update&
         }
     }
 }
+
+// If you're reading this and you understand how vtables and type erasure work in c++,
+// then please help me make this implementation not be O(number of components in schema),
+// and instead use a lookup based on present components only.
+void SchemaParser::applyComponentsToEntity(worker::Entity& entity, const Dictionary d) {
+    if (d.has("improbable.Position")) {
+        improbable::Position::Update v;
+        SchemaParser::serializeComponentUpdate(v, d["improbable.Position"]);
+        entity.Add<improbable::Position>(v.ToInitialData());
+    }
+    if (d.has("improbable.Metadata")) {
+        improbable::Metadata::Update v;
+        SchemaParser::serializeComponentUpdate(v, d["improbable.Metadata"]);
+        entity.Add<improbable::Metadata>(v.ToInitialData());
+    }
+    if (d.has("godotcore.GodotPosition2D")) {
+        godotcore::GodotPosition2D::Update v;
+        SchemaParser::serializeComponentUpdate(v, d["godotcore.GodotPosition2D"]);
+        entity.Add<godotcore::GodotPosition2D>(v.ToInitialData());
+    }
+    if (d.has("godotcore.AutoInstantiable")) {
+        godotcore::AutoInstantiable::Update v;
+        SchemaParser::serializeComponentUpdate(v, d["godotcore.AutoInstantiable"]);
+        entity.Add<godotcore::AutoInstantiable>(v.ToInitialData());
+    }
+    if (d.has("spellcrest.PlayerControls")) {
+        spellcrest::PlayerControls::Update v;
+        SchemaParser::serializeComponentUpdate(v, d["spellcrest.PlayerControls"]);
+        entity.Add<spellcrest::PlayerControls>(v.ToInitialData());
+    }
+    if (d.has("spellcrest.ChatParticipant")) {
+        spellcrest::ChatParticipant::Update v;
+        SchemaParser::serializeComponentUpdate(v, d["spellcrest.ChatParticipant"]);
+        entity.Add<spellcrest::ChatParticipant>(v.ToInitialData());
+    }
+
+    Array a = d.keys();
+    for (int i = 0; i < a.size(); i++) {
+        std::string b = fromGodotString(a.get(i));
+        auto it = schema_component_ids.find(b);
+        if (it == schema_component_ids.end()) {
+            logger.warn(b + " is not a known component and cannot be added to an entity. Ignoring.");
+        }
+    }
+}
+

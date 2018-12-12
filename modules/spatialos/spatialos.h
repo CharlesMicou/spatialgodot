@@ -31,6 +31,8 @@ public:
     void sendInfoMessage(const String &msg);
     template <typename T>
     void sendComponentUpdate(const worker::EntityId entity_id, const typename T::Update& update);
+    worker::RequestId<worker::CreateEntityRequest> sendCreateCommand(const worker::Entity& entity);
+    worker::RequestId<worker::DeleteEntityRequest> sendDeleteCommand(worker::EntityId entity_id);
 
     // a hack until a commander exists
     void spawnPlayerEntity(int entity_id, String player_name);
