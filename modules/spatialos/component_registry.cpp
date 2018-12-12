@@ -7,8 +7,9 @@
 
 worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> make_component_acl(const worker::Entity& entity, const std::string player_worker_id) {
     worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> builder;
-    auto it = entity.GetComponentIds().begin();
-    while (it != entity.GetComponentIds().end()) {
+    worker::List<worker::ComponentId> component_ids = entity.GetComponentIds();
+    auto it = component_ids.begin();
+    while (it != component_ids.end()) {
         auto should_simulate = simulatedComponents.find(*it);
         if (should_simulate != simulatedComponents.end()) {
             builder.insert({{*it, serverReqSet}});

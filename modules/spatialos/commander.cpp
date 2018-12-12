@@ -6,15 +6,13 @@
 #include "component_view.h"
 #include "spatial_util.h"
 #include "schema_parser.h"
-#include "spatialos.h"
 #include "component_registry.h"
 
-worker::Map<worker::ComponentId, worker::detail::ComponentMetaclass> m;
+WorkerLogger Commander::logger = WorkerLogger("commander");
 
 int Commander::create_entity(Dictionary components, Vector2 local_position, String specific_worker, bool persistant) {
-    if (spos == nullptr) {
-            // not ready to send yet
-            return false;
+    if (!create_call) {
+            return 0;
     }
 
     worker::Entity entity;
@@ -27,17 +25,56 @@ int Commander::create_entity(Dictionary components, Vector2 local_position, Stri
     }
     entity.Add<improbable::EntityAcl>({clientAndServerReqSet, make_component_acl(entity, fromGodotString(specific_worker))});
 
-    Spatialos* s = dynamic_cast<Spatialos*>(spos);
-    if (s == nullptr) {
-        logger.error("Commander was not able to locate Spatialos node");
-    }
-
-    worker::RequestId<worker::CreateEntityRequest> req = s->sendCreateCommand(entity);
+    worker::RequestId<worker::CreateEntityRequest> req = create_call(entity);
     pending_creates.insert({{req, true}});
     return req.Id;
 }
 
 int Commander::delete_entity(std::int64_t entity_id) {
-
+    if (!delete_call) {
+            return 0;
+    }
+    worker::RequestId<worker::DeleteEntityRequest> req = delete_call(entity_id);
+    pending_deletes.insert({{req, true}});
+    return req.Id;
 }
 
+void Commander::handle_create_response(const worker::CreateEntityResponseOp& op) {
+    auto it = pending_creates.find(op.RequestId);
+    if (it == pending_creates.end()) {
+        logger.warn("Received an response for unknown create entity request id");
+        return;
+    }
+    if (op.StatusCode != worker::StatusCode::kSuccess) {
+        logger.warn("Entity creation request failed " + op.Message);
+        emit_signal("create_response", op.RequestId.Id, false, 0);
+    } else {
+        emit_signal("create_response", op.RequestId.Id, true, *op.EntityId);
+    }
+    pending_creates.erase(it->first);
+}
+
+void Commander::handle_delete_response(const worker::DeleteEntityResponseOp& op) {
+    auto it = pending_deletes.find(op.RequestId);
+    if (it == pending_deletes.end()) {
+        logger.warn("Received an response for unknown delete entity request id");
+        return;
+    }
+    if (op.StatusCode != worker::StatusCode::kSuccess) {
+        logger.warn("Entity deletion request failed " + op.Message);
+        emit_signal("delete_response", op.RequestId.Id, false, 0);
+    } else {
+        emit_signal("delete_response", op.RequestId.Id, true, op.EntityId);
+    }
+    pending_deletes.erase(it->first);
+}
+
+void Commander::init_callbacks(std::function<worker::RequestId<worker::CreateEntityRequest>(const worker::Entity& entity)> create_cb, 
+        std::function<worker::RequestId<worker::DeleteEntityRequest>(const worker::EntityId entity_id)> delete_cb) {
+            create_call = create_cb;
+            delete_call = delete_cb;
+}
+
+Commander::Commander() {
+
+}

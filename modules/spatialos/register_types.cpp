@@ -1,5 +1,3 @@
-/* register_types.cpp */
-
 #include "register_types.h"
 #include "core/class_db.h"
 #include "spatialos.h"
@@ -11,6 +9,7 @@
 #include "snapshot_generator.h"
 #include "player_controls_sync.h"
 #include "auto_instantiator.h"
+#include "commander.h"
 
 void register_spatialos_types() { 
         ClassDB::register_class<Spatialos>();
@@ -22,6 +21,7 @@ void register_spatialos_types() {
         ClassDB::register_class<WorkerLoggerWrapper>();
         ClassDB::register_class<SnapshotGenerator>();
         ClassDB::register_class<AutoInstantiator>();
+        ClassDB::register_class<Commander>();
 }
 
 void unregister_spatialos_types() {

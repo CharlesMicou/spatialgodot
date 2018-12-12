@@ -108,6 +108,8 @@ void Spatialos::setupDispatcher() {
     NodePath auto_instantiator_path = NodePath("AutoInstantiator");
     AutoInstantiator* auto_instantiator = dynamic_cast<AutoInstantiator*>(get_node(auto_instantiator_path));
     auto_instantiator->start(world_view);
+    NodePath commander_path = NodePath("Commander");
+    commander = dynamic_cast<Commander*>(get_node(commander_path));
 
     // Messages
     dispatcher->OnLogMessage([&](const worker::LogMessageOp& op) {
@@ -151,12 +153,20 @@ void Spatialos::setupDispatcher() {
         emit_signal("entity_reserved", entityId);
     });
     dispatcher->OnCreateEntityResponse([&](const worker::CreateEntityResponseOp op) {
-        if (op.StatusCode != worker::StatusCode::kSuccess) {
-            logger.warn("Received a create entity failure: " + op.Message);
-        } else {
-            logger.info("Received a create entity success");
-        }
+        commander->handle_create_response(op);
     });
+    dispatcher->OnDeleteEntityResponse([&](const worker::DeleteEntityResponseOp op) {
+        commander->handle_delete_response(op);
+    });
+
+    // Setup ability to send commands only after we're able to receive them
+    commander->init_callbacks(
+        [&](const worker::Entity entity_data){
+            return connection->SendCreateEntityRequest(entity_data, {/* reserved id */}, {5000});
+        },
+        [&](const worker::EntityId entity_id){
+            return connection->SendDeleteEntityRequest(entity_id, {5000});
+        });
 
     // Misc. Dispatcher
     dispatcher->OnDisconnect([&](const worker::DisconnectOp& op) {
@@ -251,6 +261,10 @@ String Spatialos::get_configuration_warning() const {
 	return warning;
 }
 
+String Spatialos::get_worker_id() {
+    return workerId;
+}
+
 void Spatialos::debug_method(String arbitrary_input) {
     // Put debug in here
 }
@@ -263,6 +277,8 @@ void Spatialos::_bind_methods() {
     ClassDB::bind_method(D_METHOD("connect_locator", "worker_type", "deployment_name", "project_name", "login_token"), &Spatialos::blockingConnectLocator);
     ClassDB::bind_method(D_METHOD("process_ops"), &Spatialos::processOps);
     ClassDB::bind_method(D_METHOD("send_log", "msg"), &Spatialos::sendInfoMessage);
+
+    ClassDB::bind_method(D_METHOD("get_worker_id"), &Spatialos::get_worker_id);
 
     // Hacky signals until a commander is implemented
     ADD_SIGNAL(MethodInfo("entity_reserved", PropertyInfo(Variant::INT, "reserved_entity_id")));

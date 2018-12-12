@@ -19,7 +19,8 @@ src_list = [
     "worker_logger_wrapper.cpp",
     "component_registry.cpp",
     "schema_parser.cpp",
-    "auto_instantiator.cpp"]
+    "auto_instantiator.cpp",
+    "commander.cpp"]
 module_env.add_source_files(env.modules_sources, src_list)
 
 # Schema dependencies.

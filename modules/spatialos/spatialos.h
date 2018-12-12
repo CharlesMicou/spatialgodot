@@ -6,6 +6,7 @@
 #include <improbable/worker.h>
 #include "world_view.h"
 #include "worker_logger.h"
+#include "commander.h"
 
 class Spatialos : public Node {
     GDCLASS(Spatialos, Node);
@@ -15,6 +16,7 @@ class Spatialos : public Node {
     std::unique_ptr<worker::Dispatcher> dispatcher;
     std::unique_ptr<worker::Connection> connection;
     WorldView* world_view;
+    Commander* commander;
     bool isConnected;
     void setupDispatcher();
     template <typename Metaclass>
@@ -33,6 +35,8 @@ public:
     void sendComponentUpdate(const worker::EntityId entity_id, const typename T::Update& update);
     worker::RequestId<worker::CreateEntityRequest> sendCreateCommand(const worker::Entity& entity);
     worker::RequestId<worker::DeleteEntityRequest> sendDeleteCommand(worker::EntityId entity_id);
+
+    String get_worker_id();
 
     // a hack until a commander exists
     void spawnPlayerEntity(int entity_id, String player_name);

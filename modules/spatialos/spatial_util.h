@@ -1,7 +1,7 @@
 #ifndef SPATIAL_UTIL_H
 #define SPATIAL_UTIL_H
 
-#include "core/ustring.h"
+#include "editor_node.h"
 #include <godotcore/godot_position2d.h>
 #include <improbable/standard_library.h>
 #include <string>
