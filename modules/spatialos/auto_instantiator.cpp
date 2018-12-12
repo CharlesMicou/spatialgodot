@@ -83,6 +83,7 @@ void AutoInstantiator::_on_entity_removed(Node* removed) {
 }
 
 void AutoInstantiator::set_instantiator_target(const NodePath &target) {
+    instantiator_path = target;
     instantiator_target = get_node(instantiator_path);
 }
 

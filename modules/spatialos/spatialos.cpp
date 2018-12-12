@@ -135,22 +135,9 @@ void Spatialos::setupDispatcher() {
     setupDispatcherForComponentMetaclass<spellcrest::PlayerControls>();
     setupDispatcherForComponentMetaclass<spellcrest::ChatParticipant>();
 
-    // Todo: command responses
-    // Todo: command requests
-    // Todo: log messages, flags, queries, and all the others.
+    // System commands
     dispatcher->OnReserveEntityIdResponse([&](const worker::ReserveEntityIdResponseOp op) {
-        if (op.StatusCode != worker::StatusCode::kSuccess) {
-            logger.warn("Received a reserve entity failure: " + op.Message);
-            return;
-        }
-        if (op.EntityId.empty()) {
-            logger.warn("Reserve entity was a success but also empty.");
-            return;
-        }
-
-        int entityId = *op.EntityId;
-        logger.info("Reserved an entity " + std::to_string(*op.EntityId) + " " + std::to_string(entityId));
-        emit_signal("entity_reserved", entityId);
+        // currently there's no way to make these requests
     });
     dispatcher->OnCreateEntityResponse([&](const worker::CreateEntityResponseOp op) {
         commander->handle_create_response(op);
@@ -167,6 +154,12 @@ void Spatialos::setupDispatcher() {
         [&](const worker::EntityId entity_id){
             return connection->SendDeleteEntityRequest(entity_id, {5000});
         });
+
+    // Todo: entity commands
+
+    // Todo: query commands
+
+    // Todo: read worker flags
 
     // Misc. Dispatcher
     dispatcher->OnDisconnect([&](const worker::DisconnectOp& op) {
@@ -200,34 +193,8 @@ void Spatialos::sendInfoMessage(const String &msg) {
     connection->SendLogMessage(worker::LogLevel::kInfo, "godot_user", fromGodotString(msg));
 }
 
-void Spatialos::spawnPlayerEntity(int entity_id, String player_name) {
-    logger.info("Attempting to spawn entity " + std::to_string(entity_id));
-    worker::EntityId entityId = entity_id;
-    worker::Entity entityToSpawn;
-    godotcore::GodotCoordinates2D gpos({{0, 0}, {0, 0}});
-    entityToSpawn.Add<godotcore::GodotPosition2D>({gpos, {}});
-    entityToSpawn.Add<improbable::Position>({fromGodotPosition(gpos)});
-    entityToSpawn.Add<improbable::Metadata>({"Client"});
-    entityToSpawn.Add<spellcrest::PlayerControls>({});
-    entityToSpawn.Add<spellcrest::ChatParticipant>({fromGodotString(player_name)});
-    entityToSpawn.Add<godotcore::AutoInstantiable>({"res://auto_scene/PlayerCharacter.tscn"});
-    worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> component_acl = 
-        {{improbable::Position::ComponentId, serverReqSet},
-        {godotcore::GodotPosition2D::ComponentId, serverReqSet},
-        {spellcrest::PlayerControls::ComponentId, makeUniqueReqSet(fromGodotString(workerId))},
-        {spellcrest::ChatParticipant::ComponentId, makeUniqueReqSet(fromGodotString(workerId))}};
-    entityToSpawn.Add<improbable::EntityAcl>({clientAndServerReqSet, component_acl});
-
-    connection->SendCreateEntityRequest(entityToSpawn, entityId, {5000} /* timeout */);
-}
-
 worker::RequestId<worker::CreateEntityRequest> Spatialos::sendCreateCommand(const worker::Entity& entity) {
     return connection->SendCreateEntityRequest(entity, {}, {5000});
-}
-
-void Spatialos::reserveId() {
-    logger.info("Attempting to reserve an entity id");
-    connection->SendReserveEntityIdRequest({} /* timeout */);
 }
 
 void Spatialos::initLogging() {
@@ -279,11 +246,6 @@ void Spatialos::_bind_methods() {
     ClassDB::bind_method(D_METHOD("send_log", "msg"), &Spatialos::sendInfoMessage);
 
     ClassDB::bind_method(D_METHOD("get_worker_id"), &Spatialos::get_worker_id);
-
-    // Hacky signals until a commander is implemented
-    ADD_SIGNAL(MethodInfo("entity_reserved", PropertyInfo(Variant::INT, "reserved_entity_id")));
-    ClassDB::bind_method(D_METHOD("spawn_entity", "entity_id", "player_name"), &Spatialos::spawnPlayerEntity);
-    ClassDB::bind_method(D_METHOD("reserve_id"), &Spatialos::reserveId);
 
     // Debug method for testing various features from gdscript
     ClassDB::bind_method(D_METHOD("debug_method"), &Spatialos::debug_method);

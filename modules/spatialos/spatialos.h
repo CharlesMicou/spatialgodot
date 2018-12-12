@@ -38,10 +38,6 @@ public:
 
     String get_worker_id();
 
-    // a hack until a commander exists
-    void spawnPlayerEntity(int entity_id, String player_name);
-    void reserveId();
-
     // A debug method that just calls into whatever
     void debug_method(String arbitrary_input);
 
