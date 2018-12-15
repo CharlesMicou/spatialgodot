@@ -341,7 +341,7 @@ void SchemaParser::serializeType(spellcrest::Health& result, const Dictionary d)
         result.set_max_health(d["max_health"]);
     }
     if (d.has("current_health")) {
-        result.set_max_health(d["current_health"]);
+        result.set_current_health(d["current_health"]);
     }
 
     Array a = d.keys();
