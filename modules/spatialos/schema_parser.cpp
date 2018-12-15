@@ -88,6 +88,13 @@ Dictionary SchemaParser::parseComponent(const spellcrest::PlayerControlsData& da
 }
 
 std::list<Dictionary> SchemaParser::extractEvents(const spellcrest::PlayerControls::Update& update) {
+    std::list<Dictionary> l;
+    for (auto it : update.spell_cast()) {
+        Dictionary d;
+        d["spell_cast"] = parseType(it);
+        l.push_back(d);
+    }
+    return l;
     return std::list<Dictionary>(0);
 }
 
@@ -293,10 +300,16 @@ void SchemaParser::serializeComponentUpdate(spellcrest::PlayerControls::Update& 
         result.set_move_destination(v);
     }
 
+    if (d.has("spell_cast")) {
+        spellcrest::SpellCast v;
+        serializeType(v, d["spell_cast"]);
+        result.add_spell_cast(v);
+    }
+
     Array a = d.keys();
     for (int i = 0; i < a.size(); i++) {
         String b = a.get(i);
-        if (b != "move_destination") {
+        if (b != "move_destination" && b != "spell_cast") {
             logger.warn("spellcrest.PlayerControls has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
