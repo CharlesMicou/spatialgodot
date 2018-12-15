@@ -2,6 +2,7 @@
 #include <godotcore/godot_position2d.h>
 #include <improbable/standard_library.h>
 #include <godotcore/auto_instantiable.h>
+#include <spellcrest/moba_unit.h>
 #include "improbable/worker.h"
 #include "spatial_util.h"
 #include "component_registry.h"
@@ -17,6 +18,7 @@ worker::Entity make_ball(float x, float y) {
     builder.Add<godotcore::GodotPosition2D>({gpos, {}});
     builder.Add<godotcore::AutoInstantiable>({"res://auto_scene/TestBall.tscn"});
     builder.Add<improbable::Position>({fromGodotPosition(gpos)});
+    builder.Add<spellcrest::MobaUnit>({{50, 50}, "Test Ball"});
 
     // ACL must be done last if we want it to pick up components automatically
     builder.Add<improbable::EntityAcl>({clientAndServerReqSet, make_component_acl(builder, "")});
