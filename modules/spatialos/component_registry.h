@@ -6,6 +6,7 @@
 #include <godotcore/auto_instantiable.h>
 #include <godotcore/godot_position2d.h>
 #include <spellcrest/player_controls.h>
+#include <spellcrest/moba_unit.h>
 #include <unordered_set>
 
 const worker::ComponentRegistry& MergedComponentRegistry();
@@ -18,7 +19,8 @@ worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> make_componen
 
 const std::unordered_set<worker::ComponentId> simulatedComponents {
     improbable::Position::ComponentId,
-    godotcore::GodotPosition2D::ComponentId
+    godotcore::GodotPosition2D::ComponentId,
+    spellcrest::MobaUnit::ComponentId
 };
 
 const std::unordered_set<worker::ComponentId> playerAuthoritativeComponents {

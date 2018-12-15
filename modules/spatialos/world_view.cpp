@@ -4,6 +4,7 @@
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
+#include <spellcrest/moba_unit.h>
 
 WorkerLogger WorldView::logger = WorkerLogger("world_view");
 
@@ -86,3 +87,6 @@ template void WorldView::updateComponent<spellcrest::PlayerControls>(const worke
 
 template void WorldView::addComponent<spellcrest::ChatParticipant>(const worker::AddComponentOp<spellcrest::ChatParticipant>&);
 template void WorldView::updateComponent<spellcrest::ChatParticipant>(const worker::ComponentUpdateOp<spellcrest::ChatParticipant>&);
+
+template void WorldView::addComponent<spellcrest::MobaUnit>(const worker::AddComponentOp<spellcrest::MobaUnit>&);
+template void WorldView::updateComponent<spellcrest::MobaUnit>(const worker::ComponentUpdateOp<spellcrest::MobaUnit>&);

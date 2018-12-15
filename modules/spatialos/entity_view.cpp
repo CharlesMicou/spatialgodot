@@ -7,6 +7,7 @@
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
+#include <spellcrest/moba_unit.h>
 #include <spellcrest/player_controls.h>
 
 WorkerLogger EntityView::logger = WorkerLogger("entity_view");
@@ -155,3 +156,6 @@ template void EntityView::updateComponent<spellcrest::PlayerControls>(const work
 
 template void EntityView::addComponent<spellcrest::ChatParticipant>(const worker::AddComponentOp<spellcrest::ChatParticipant>&);
 template void EntityView::updateComponent<spellcrest::ChatParticipant>(const worker::ComponentUpdateOp<spellcrest::ChatParticipant>&);
+
+template void EntityView::addComponent<spellcrest::MobaUnit>(const worker::AddComponentOp<spellcrest::MobaUnit>&);
+template void EntityView::updateComponent<spellcrest::MobaUnit>(const worker::ComponentUpdateOp<spellcrest::MobaUnit>&);

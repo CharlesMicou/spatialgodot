@@ -5,6 +5,7 @@
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
+#include <spellcrest/moba_unit.h>
 #include "spatialos.h"
 #include "schema_parser.h"
 
@@ -110,4 +111,5 @@ template class ComponentView<godotcore::GodotPosition2D>;
 template class ComponentView<godotcore::AutoInstantiable>;
 template class ComponentView<spellcrest::PlayerControls>;
 template class ComponentView<spellcrest::ChatParticipant>;
+template class ComponentView<spellcrest::MobaUnit>;
 

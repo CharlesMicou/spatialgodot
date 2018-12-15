@@ -5,6 +5,7 @@
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
+#include <spellcrest/moba_unit.h>
 #include "component_registry.h"
 #include "core/os/os.h"
 #include "editor_node.h"
@@ -134,6 +135,7 @@ void Spatialos::setupDispatcher() {
     setupDispatcherForComponentMetaclass<godotcore::AutoInstantiable>();
     setupDispatcherForComponentMetaclass<spellcrest::PlayerControls>();
     setupDispatcherForComponentMetaclass<spellcrest::ChatParticipant>();
+    setupDispatcherForComponentMetaclass<spellcrest::MobaUnit>();
 
     // System commands
     dispatcher->OnReserveEntityIdResponse([&](const worker::ReserveEntityIdResponseOp op) {
@@ -264,3 +266,4 @@ template void Spatialos::sendComponentUpdate<godotcore::GodotPosition2D>(const w
 template void Spatialos::sendComponentUpdate<godotcore::AutoInstantiable>(const worker::EntityId entity_id, const godotcore::AutoInstantiable::Update& update);
 template void Spatialos::sendComponentUpdate<spellcrest::PlayerControls>(const worker::EntityId entity_id, const spellcrest::PlayerControls::Update& update);
 template void Spatialos::sendComponentUpdate<spellcrest::ChatParticipant>(const worker::EntityId entity_id, const spellcrest::ChatParticipant::Update& update);
+template void Spatialos::sendComponentUpdate<spellcrest::MobaUnit>(const worker::EntityId entity_id, const spellcrest::MobaUnit::Update& update);

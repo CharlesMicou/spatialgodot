@@ -113,6 +113,38 @@ std::list<Dictionary> SchemaParser::extractEvents(const spellcrest::ChatParticip
     return l;
 }
 
+Dictionary SchemaParser::parseType(const spellcrest::Health& data) {
+    Dictionary d;
+    d["max_health"] = data.max_health();
+    d["current_health"] = data.current_health();
+    return d;
+}
+
+Dictionary SchemaParser::parseType(const spellcrest::SpellCast& data) {
+    Dictionary d;
+    d["spell_id"] = data.spell_id();
+    d["cast_target"] = parseType(data.cast_target());
+    return d;
+}
+
+Dictionary SchemaParser::parseComponent(const spellcrest::MobaUnitData& data) {
+    Dictionary d;
+    d["health"] = parseType(data.health());
+    d["unit_name"] = toGodotString(data.unit_name());
+    return d;
+}
+
+std::list<Dictionary> SchemaParser::extractEvents(const spellcrest::MobaUnit::Update& update) {
+    std::list<Dictionary> l;
+    for (auto it : update.spell_cast()) {
+        Dictionary d;
+        d["spell_cast"] = parseType(it);
+        l.push_back(d);
+    }
+    return l;
+}
+
+
 /* From GDScript to Spatialos */
 void SchemaParser::serializeType(improbable::Coordinates& result, const Dictionary d) {
     if (d.has("x")) {
@@ -304,9 +336,88 @@ void SchemaParser::serializeComponentUpdate(spellcrest::ChatParticipant::Update&
     }
 }
 
-// If you're reading this and you understand how vtables and type erasure work in c++,
-// then please help me make this implementation not be O(number of components in schema),
-// and instead use a lookup based on present components only.
+void SchemaParser::serializeType(spellcrest::Health& result, const Dictionary d) {
+    if (d.has("max_health")) {
+        result.set_max_health(d["max_health"]);
+    }
+    if (d.has("current_health")) {
+        result.set_max_health(d["current_health"]);
+    }
+
+    Array a = d.keys();
+    for (int i = 0; i < a.size(); i++) {
+        String b = a.get(i);
+        if (b != "max_health" && b != "current_health") {
+            logger.warn("spellcrest.Health has no field " + fromGodotString(b) + ". Ignoring.");
+        }
+    }
+}
+
+void SchemaParser::serializeType(spellcrest::SpellCast& result, const Dictionary d) {
+    if (d.has("cast_target")) {
+        godotcore::GodotCoordinates2D v;
+        serializeType(v, d["cast_target"]);
+        result.set_cast_target(v);
+    }
+    if (d.has("spell_id")) {
+        result.set_spell_id(d["spell_id"]);
+    }
+
+    Array a = d.keys();
+    for (int i = 0; i < a.size(); i++) {
+        String b = a.get(i);
+        if (b != "spell_id" && b != "cast_target") {
+            logger.warn("spellcrest.SpellCast has no field " + fromGodotString(b) + ". Ignoring.");
+        }
+    }
+}
+
+void SchemaParser::serializeComponentUpdate(spellcrest::MobaUnit::Update& result, const Dictionary d) {
+    if (d.has("unit_name")) {
+        result.set_unit_name(fromGodotString(d["unit_name"]));
+    }
+
+    if (d.has("health")) {
+        spellcrest::Health v;
+        serializeType(v, d["health"]);
+        result.set_health(v);
+    }
+    
+    if (d.has("spell_cast")) {
+        spellcrest::SpellCast v;
+        serializeType(v, d["spell_cast"]);
+        result.add_spell_cast(v);
+    }
+
+    Array a = d.keys();
+    for (int i = 0; i < a.size(); i++) {
+        String b = a.get(i);
+        if (b != "unit_name" && b != "spell_cast" && b != "health") {
+            logger.warn("spellcrest.MobaUnit has no field " + fromGodotString(b) + ". Ignoring.");
+        }
+    }
+}
+
+/* 
+Todo: this implementation can be made less ridiculous by having a templated serializer class
+with a type erased base class. For example.
+
+class Base {
+    virtual addComponentToEntity(worker::Entity& entity, const Dictionary d)
+}
+
+template <typename T>
+class SpecificToComponent : public Base {
+    actual implementation of addComponentToEntity
+}
+
+std::map<worker::ComponentId, Base> serializerLookup;
+for each (dictionary entry) -> convert key to component id -> call appropriate serializer
+
+*/
+/*
+Todo: This currently explodes if supplied empty data (apparently ToInitialData is not valid on empty)
+*/
 void SchemaParser::applyComponentsToEntity(worker::Entity& entity, const Dictionary d) {
     if (d.has("improbable.Position")) {
         improbable::Position::Update v;
@@ -337,6 +448,11 @@ void SchemaParser::applyComponentsToEntity(worker::Entity& entity, const Diction
         spellcrest::ChatParticipant::Update v;
         SchemaParser::serializeComponentUpdate(v, d["spellcrest.ChatParticipant"]);
         entity.Add<spellcrest::ChatParticipant>(v.ToInitialData());
+    }
+    if (d.has("spellcrest.MobaUnit")) {
+        spellcrest::MobaUnit::Update v;
+        SchemaParser::serializeComponentUpdate(v, d["spellcrest.MobaUnit"]);
+        entity.Add<spellcrest::MobaUnit>(v.ToInitialData());
     }
 
     Array a = d.keys();

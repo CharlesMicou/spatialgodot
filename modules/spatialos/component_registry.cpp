@@ -3,6 +3,7 @@
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
 #include <spellcrest/player_controls.h>
+#include <spellcrest/moba_unit.h>
 #include "component_registry.h"
 
 worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> make_component_acl(const worker::Entity& entity, const std::string player_worker_id) {
@@ -34,7 +35,8 @@ const worker::ComponentRegistry& MergedComponentRegistry() {
         godotcore::GodotPosition2D,
         godotcore::AutoInstantiable,
         spellcrest::PlayerControls,
-        spellcrest::ChatParticipant> components;
+        spellcrest::ChatParticipant,
+        spellcrest::MobaUnit> components;
     return components;
 }
 
