@@ -53,6 +53,7 @@ class SchemaParser {
         static Dictionary parseComponent(const godotcore::AutoInstantiableData& data);
         static std::list<Dictionary> extractEvents(const godotcore::AutoInstantiable::Update& update);
 
+        static Dictionary parseType(const spellcrest::HeartBeat& data);
         static Dictionary parseComponent(const spellcrest::PlayerControlsData& data);
         static std::list<Dictionary> extractEvents(const spellcrest::PlayerControls::Update& update);
 
@@ -78,6 +79,7 @@ class SchemaParser {
 
         static void serializeComponentUpdate(godotcore::AutoInstantiable::Update& result, const Dictionary d);
 
+        static void serializeType(spellcrest::HeartBeat& result, const Dictionary d);
         static void serializeComponentUpdate(spellcrest::PlayerControls::Update& result, const Dictionary d);
 
         static void serializeType(spellcrest::ChatMessage& result, const Dictionary d);

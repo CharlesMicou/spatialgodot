@@ -81,6 +81,12 @@ std::list<Dictionary> SchemaParser::extractEvents(const godotcore::AutoInstantia
     return std::list<Dictionary>(0);
 }
 
+Dictionary SchemaParser::parseType(const spellcrest::HeartBeat& data) {
+    Dictionary d;
+    d["timestamp"] = data.timestamp();
+    return d;
+}
+
 Dictionary SchemaParser::parseComponent(const spellcrest::PlayerControlsData& data) {
     Dictionary d;
     d["move_destination"] = parseType(data.move_destination());
@@ -92,6 +98,11 @@ std::list<Dictionary> SchemaParser::extractEvents(const spellcrest::PlayerContro
     for (auto it : update.spell_cast()) {
         Dictionary d;
         d["spell_cast"] = parseType(it);
+        l.push_back(d);
+    }
+    for (auto it : update.heart_beat()) {
+        Dictionary d;
+        d["heart_beat"] = parseType(it);
         l.push_back(d);
     }
     return l;
@@ -293,6 +304,20 @@ void SchemaParser::serializeComponentUpdate(godotcore::AutoInstantiable::Update&
     }
 }
 
+void SchemaParser::serializeType(spellcrest::HeartBeat& result, const Dictionary d) {
+    if (d.has("timestamp")) {
+        result.set_timestamp(d["timestamp"]);
+    }
+
+    Array a = d.keys();
+    for (int i = 0; i < a.size(); i++) {
+        String b = a.get(i);
+        if (b != "timestamp") {
+            logger.warn("spellcrest.HeartBeat has no field " + fromGodotString(b) + ". Ignoring.");
+        }
+    }
+}
+
 void SchemaParser::serializeComponentUpdate(spellcrest::PlayerControls::Update& result, const Dictionary d) {
     if (d.has("move_destination")) {
         godotcore::GodotCoordinates2D v;
@@ -306,10 +331,16 @@ void SchemaParser::serializeComponentUpdate(spellcrest::PlayerControls::Update& 
         result.add_spell_cast(v);
     }
 
+    if (d.has("heart_beat")) {
+        spellcrest::HeartBeat v;
+        serializeType(v, d["heart_beat"]);
+        result.add_heart_beat(v);
+    }
+
     Array a = d.keys();
     for (int i = 0; i < a.size(); i++) {
         String b = a.get(i);
-        if (b != "move_destination" && b != "spell_cast") {
+        if (b != "move_destination" && b != "spell_cast" && b!= "heart_beat") {
             logger.warn("spellcrest.PlayerControls has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }

@@ -78,7 +78,7 @@ void AutoInstantiator::_on_entity_removed(Node* removed) {
         logger.error("Received an entity removed that was not an entity view node");
         return;
     }
-    remove_child(added_instantances[entity_view->entity_id]);
+    added_instantances[entity_view->entity_id]->queue_delete();
     added_instantances.erase(entity_view->entity_id);
 }
 
