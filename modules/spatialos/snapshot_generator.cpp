@@ -75,6 +75,18 @@ void SnapshotGenerator::takeSnapshot(String path) {
     ostream.WriteEntity(8, make_tree(300, 350));
     ostream.WriteEntity(9, make_tree(-300, 0));
     ostream.WriteEntity(10, make_tree(0, 500));
+    ostream.WriteEntity(11, make_tree(-355, 216));
+    ostream.WriteEntity(12, make_rock(-289, -465));
+    ostream.WriteEntity(13, make_rock(-351, -554));
+    ostream.WriteEntity(14, make_rock(-470, -586));
+    ostream.WriteEntity(15, make_ball(-863, -250));
+    ostream.WriteEntity(16, make_ball(-867, -164));
+    ostream.WriteEntity(17, make_ball(-800, -82));
+    ostream.WriteEntity(18, make_ball(-608, -224));
+    ostream.WriteEntity(19, make_ball(-583, -123));
+    ostream.WriteEntity(20, make_tree(-13, -361));
+    ostream.WriteEntity(21, make_tree(193, -261));
+    ostream.WriteEntity(22, make_tree(391, -451));
     std::cout << "Finished writing snapshot" << std::endl;
 }
 
