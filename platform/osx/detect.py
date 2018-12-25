@@ -119,5 +119,5 @@ def configure(env):
     env.Append(LINKFLAGS=['-framework', 'Cocoa', '-framework', 'Carbon', '-framework', 'OpenGL', '-framework', 'AGL', '-framework', 'AudioUnit', '-framework', 'CoreAudio', '-framework', 'CoreMIDI', '-lz', '-framework', 'IOKit', '-framework', 'ForceFeedback'])
     env.Append(LIBS=['pthread'])
 
-    env.Append(CPPFLAGS=['-mmacosx-version-min=10.9'])
-    env.Append(LINKFLAGS=['-mmacosx-version-min=10.9'])
+    env.Append(CPPFLAGS=['-mmacosx-version-min=10.10'])
+    env.Append(LINKFLAGS=['-mmacosx-version-min=10.10'])

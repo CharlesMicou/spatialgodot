@@ -42,9 +42,14 @@ if (not env.msvc):
 # Worker SDK include path and libraries.
 # Note that the environment, rather than the module, is what needs the sdk libraries.
 module_env.Append(CPPPATH="worker_sdk/cpp/include")
-env.Append(LIBPATH=["worker_sdk/cpp/lib"])
+if (env['PLATFORM'] == 'darwin'):
+    env.Append(LIBPATH=["../../modules/spatialos/worker_sdk/cpp/lib"])
+else:
+     env.Append(LIBPATH=["worker_sdk/cpp/lib"])
+     
 if (not env.msvc):
     # On linux we depend on cpp-static-x86_64-gcc_libstdcpp-linux
+    # On macos we depend on cpp-static-x86_64-clang_libcpp-macos
     env.Append(LIBS=Glob("worker_sdk/cpp/lib/*.a"))
 else:
     # On windows we depend on cpp-static-x86-msvc_md-win32
@@ -54,18 +59,25 @@ else:
 
 
 # Build schema into a static library
+improbable_schema = Glob("generated_code/cpp/improbable/*.cc", strings=True)
+spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
+godotcore_schema = Glob("generated_code/cpp/godotcore/*.cc", strings=True)
+
+# Change libtool be archiving tool on macos to avoid weird unknown architecture compile error
+if (env['PLATFORM'] == 'darwin'):
+    module_env['AR'] = 'libtool'
+    module_env['ARFLAGS'] = '-static -o'
+elif (not env.msvc):
+    improbable_schema = Glob("generated_code/cpp/improbable/*.h", strings=True) + improbable_schema
+    spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.h", strings=True) + spellcrest_schema
+    godotcore_schema = Glob("generated_code/cpp/godotcore/*.h", strings=True) + godotcore_schema
+
 if (not env.msvc):
-    improbable_schema = Glob("generated_code/cpp/improbable/*.h", strings=True) + Glob("generated_code/cpp/improbable/*.cc", strings=True)
-    spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.h", strings=True) + Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
-    godotcore_schema = Glob("generated_code/cpp/godotcore/*.h", strings=True) + Glob("generated_code/cpp/godotcore/*.cc", strings=True)
     schemaLib = module_env.Library(target='#bin/schema', source=(improbable_schema + spellcrest_schema + godotcore_schema))
     shim = schemaLib[0].name.rsplit('.', 1)[0]
     env.Append(LIBS=[shim])
     env.Append(LIBPATH=['#bin'])
 else:
-    improbable_schema = Glob("generated_code/cpp/improbable/*.cc", strings=True)
-    spellcrest_schema = Glob("generated_code/cpp/spellcrest/*.cc", strings=True)
-    godotcore_schema = Glob("generated_code/cpp/godotcore/*.cc", strings=True)
     lib = env.add_library("schema", improbable_schema + spellcrest_schema + godotcore_schema)
     env.Append(LIBS=[lib])
     env.Append(LIBPATH=['schema'])
