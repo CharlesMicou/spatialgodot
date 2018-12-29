@@ -3,6 +3,7 @@
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
+#include <godotcore/tile_map_chunk.h>
 #include <spellcrest/player_controls.h>
 #include <spellcrest/moba_unit.h>
 
@@ -81,6 +82,9 @@ template void WorldView::updateComponent<godotcore::GodotPosition2D>(const worke
 
 template void WorldView::addComponent<godotcore::AutoInstantiable>(const worker::AddComponentOp<godotcore::AutoInstantiable>&);
 template void WorldView::updateComponent<godotcore::AutoInstantiable>(const worker::ComponentUpdateOp<godotcore::AutoInstantiable>&);
+
+template void WorldView::addComponent<godotcore::TileMapChunk>(const worker::AddComponentOp<godotcore::TileMapChunk>&);
+template void WorldView::updateComponent<godotcore::TileMapChunk>(const worker::ComponentUpdateOp<godotcore::TileMapChunk>&);
 
 template void WorldView::addComponent<spellcrest::PlayerControls>(const worker::AddComponentOp<spellcrest::PlayerControls>&);
 template void WorldView::updateComponent<spellcrest::PlayerControls>(const worker::ComponentUpdateOp<spellcrest::PlayerControls>&);

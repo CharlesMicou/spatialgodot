@@ -11,6 +11,7 @@ class SnapshotGenerator : public Node {
         static WorkerLogger logger;
         worker::SnapshotOutputStream* snapshot_ostream;
         std::uint64_t current_entity_id;
+        bool snapshot_in_progress;
 
     protected:
         static void _bind_methods();
@@ -18,6 +19,7 @@ class SnapshotGenerator : public Node {
     public:
         void new_snapshot(String path);
         void add_auto_instantiable_entity(Node* node);
+        void add_streaming_tile_map_entities(Node* node);
         SnapshotGenerator();
         ~SnapshotGenerator();
 };

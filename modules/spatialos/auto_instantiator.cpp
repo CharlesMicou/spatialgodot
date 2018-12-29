@@ -57,7 +57,7 @@ void AutoInstantiator::_on_entity_added(Node* added) {
     }
 
     n->call("_setup_from_entity", entity_view);
-    added_instantances.insert({{entity_view->entity_id, n}});
+    added_instances.insert({{entity_view->entity_id, n}});
 
     if (instantiator_target == nullptr) {
         instantiator_target = get_node(instantiator_path);
@@ -78,8 +78,11 @@ void AutoInstantiator::_on_entity_removed(Node* removed) {
         logger.error("Received an entity removed that was not an entity view node");
         return;
     }
-    added_instantances[entity_view->entity_id]->queue_delete();
-    added_instantances.erase(entity_view->entity_id);
+    if (added_instances.find(entity_view->entity_id) == added_instances.end()) {
+        return;
+    }
+    added_instances[entity_view->entity_id]->queue_delete();
+    added_instances.erase(entity_view->entity_id);
 }
 
 void AutoInstantiator::set_instantiator_target(const NodePath &target) {

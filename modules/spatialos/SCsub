@@ -20,7 +20,8 @@ src_list = [
     "component_registry.cpp",
     "schema_parser.cpp",
     "auto_instantiator.cpp",
-    "commander.cpp"]
+    "commander.cpp",
+    "streaming_tile_map.cpp"]
 module_env.add_source_files(env.modules_sources, src_list)
 
 # Schema dependencies.

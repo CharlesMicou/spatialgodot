@@ -8,6 +8,7 @@
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
+#include <godotcore/tile_map_chunk.h>
 #include <spellcrest/player_controls.h>
 #include <spellcrest/moba_unit.h>
 
@@ -16,6 +17,7 @@ const std::unordered_map<worker::ComponentId, std::string> schema_component_name
             {54, "improbable.Position"},
             {3001, "godotcore.GodotPosition2D"},
             {3002, "godotcore.AutoInstantiable"},
+            {3003, "godotcore.TileMapChunk"},
             {4001, "spellcrest.PlayerControls"},
             {4002, "spellcrest.ChatParticipant"},
             {4101, "spellcrest.MobaUnit"}
@@ -26,6 +28,7 @@ const std::unordered_map<std::string, worker::ComponentId> schema_component_ids 
             {"improbable.Position", 54},
             {"godotcore.GodotPosition2D", 3001},
             {"godotcore.AutoInstantiable", 3002},
+            {"godotcore.TileMapChunk", 3003},
             {"spellcrest.PlayerControls", 4001},
             {"spellcrest.ChatParticipant", 4002},
             {"spellcrest.MobaUnit", 4101}
@@ -53,6 +56,10 @@ class SchemaParser {
         static Dictionary parseComponent(const godotcore::AutoInstantiableData& data);
         static std::list<Dictionary> extractEvents(const godotcore::AutoInstantiable::Update& update);
 
+        static Dictionary parseType(const godotcore::TileCoordinate& data);
+        static Dictionary parseComponent(const godotcore::TileMapChunkData& data);
+        static std::list<Dictionary> extractEvents(const godotcore::TileMapChunk::Update& update);
+
         static Dictionary parseType(const spellcrest::HeartBeat& data);
         static Dictionary parseComponent(const spellcrest::PlayerControlsData& data);
         static std::list<Dictionary> extractEvents(const spellcrest::PlayerControls::Update& update);
@@ -78,6 +85,9 @@ class SchemaParser {
         static void serializeComponentUpdate(godotcore::GodotPosition2D::Update& result, const Dictionary d);
 
         static void serializeComponentUpdate(godotcore::AutoInstantiable::Update& result, const Dictionary d);
+
+        static void serializeType(godotcore::TileCoordinate& result, const Dictionary d);
+        static void serializeComponentUpdate(godotcore::TileMapChunk::Update& result, const Dictionary d);
 
         static void serializeType(spellcrest::HeartBeat& result, const Dictionary d);
         static void serializeComponentUpdate(spellcrest::PlayerControls::Update& result, const Dictionary d);

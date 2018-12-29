@@ -7,6 +7,7 @@
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
+#include <godotcore/tile_map_chunk.h>
 #include <spellcrest/player_controls.h>
 
 WorkerLogger SchemaParser::logger = WorkerLogger("schema_parser");
@@ -78,6 +79,29 @@ Dictionary SchemaParser::parseComponent(const godotcore::AutoInstantiableData& d
 }
 
 std::list<Dictionary> SchemaParser::extractEvents(const godotcore::AutoInstantiable::Update& update) {
+    return std::list<Dictionary>(0);
+}
+
+Dictionary SchemaParser::parseType(const godotcore::TileCoordinate& data) {
+    Dictionary d;
+    d["x"] = data.x();
+    d["y"] = data.y();
+    return d;
+}
+
+Dictionary SchemaParser::parseComponent(const godotcore::TileMapChunkData& data) {
+    Dictionary d;
+    
+    Dictionary e1;
+    for (auto it : data.tile_ids()) {
+        e1[parseType(it.first)] = it.second;
+    }
+    d["tile_ids"] = e1;
+
+    return d;
+}
+
+std::list<Dictionary> SchemaParser::extractEvents(const godotcore::TileMapChunk::Update& update) {
     return std::list<Dictionary>(0);
 }
 
@@ -304,6 +328,49 @@ void SchemaParser::serializeComponentUpdate(godotcore::AutoInstantiable::Update&
     }
 }
 
+void SchemaParser::serializeType(godotcore::TileCoordinate& result, const Dictionary d) {
+    if (d.has("x")) {
+        result.set_x(d["x"]);
+    }
+    if (d.has("y")) {
+        result.set_y(d["y"]);
+    }
+
+    Array a = d.keys();
+    for (int i = 0; i < a.size(); i++) {
+        String b = a.get(i);
+        if (b != "x" && b != "y") {
+            logger.warn("godotcore.TileCoordinate has no field " + fromGodotString(b) + ". Ignoring.");
+        }
+    }
+}
+
+void SchemaParser::serializeComponentUpdate(godotcore::TileMapChunk::Update& result, const Dictionary d) {
+    // Note(charlie): the following is totally untested.
+    // If you're using this as reference for code-gen, maybe validate that it actually works.
+    if (d.has("tile_ids")) {
+        worker::Map<godotcore::TileCoordinate, int32_t> m1;
+        Dictionary s = d["tile_ids"];
+        Array k = s.keys();
+        for (int i = 0; i < k.size(); i++) {
+            godotcore::TileCoordinate k1;
+            serializeType(k1, k.get(i));
+            int32_t v1;
+            v1 = s[k.get(i)];
+            m1.insert({{k1, v1}});
+        }
+        result.set_tile_ids(m1);
+    }
+
+    Array a = d.keys();
+    for (int i = 0; i < a.size(); i++) {
+        String b = a.get(i);
+        if (b != "tile_ids") {
+            logger.warn("godotcore.TileMapChunk has no field " + fromGodotString(b) + ". Ignoring.");
+        }
+    }
+}
+
 void SchemaParser::serializeType(spellcrest::HeartBeat& result, const Dictionary d) {
     if (d.has("timestamp")) {
         result.set_timestamp(d["timestamp"]);
@@ -482,6 +549,11 @@ void SchemaParser::applyComponentsToEntity(worker::Entity& entity, const Diction
         godotcore::AutoInstantiable::Update v;
         SchemaParser::serializeComponentUpdate(v, d["godotcore.AutoInstantiable"]);
         entity.Add<godotcore::AutoInstantiable>(v.ToInitialData());
+    }
+    if (d.has("godotcore.TileMapChunk")) {
+        godotcore::TileMapChunk::Update v;
+        SchemaParser::serializeComponentUpdate(v, d["godotcore.TileMapChunk"]);
+        entity.Add<godotcore::TileMapChunk>(v.ToInitialData());
     }
     if (d.has("spellcrest.PlayerControls")) {
         spellcrest::PlayerControls::Update v;

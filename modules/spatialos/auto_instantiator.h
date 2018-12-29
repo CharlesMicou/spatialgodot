@@ -8,7 +8,7 @@
 
 class AutoInstantiator : public Node {
     GDCLASS(AutoInstantiator, Node);
-    worker::Map<worker::EntityId, Node*> added_instantances;
+    worker::Map<worker::EntityId, Node*> added_instances;
     
     // TODO: make this a cache with an eviction policy, rather than
     // an obvious memory leak.

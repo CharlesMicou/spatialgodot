@@ -4,6 +4,7 @@
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
+#include <godotcore/tile_map_chunk.h>
 #include <spellcrest/player_controls.h>
 #include <spellcrest/moba_unit.h>
 #include "component_registry.h"
@@ -133,6 +134,7 @@ void Spatialos::setupDispatcher() {
     setupDispatcherForComponentMetaclass<improbable::Metadata>();
     setupDispatcherForComponentMetaclass<godotcore::GodotPosition2D>();
     setupDispatcherForComponentMetaclass<godotcore::AutoInstantiable>();
+    setupDispatcherForComponentMetaclass<godotcore::TileMapChunk>();
     setupDispatcherForComponentMetaclass<spellcrest::PlayerControls>();
     setupDispatcherForComponentMetaclass<spellcrest::ChatParticipant>();
     setupDispatcherForComponentMetaclass<spellcrest::MobaUnit>();
@@ -264,6 +266,7 @@ template void Spatialos::sendComponentUpdate<improbable::Position>(const worker:
 template void Spatialos::sendComponentUpdate<improbable::Metadata>(const worker::EntityId entity_id, const improbable::Metadata::Update& update);
 template void Spatialos::sendComponentUpdate<godotcore::GodotPosition2D>(const worker::EntityId entity_id, const godotcore::GodotPosition2D::Update& update);
 template void Spatialos::sendComponentUpdate<godotcore::AutoInstantiable>(const worker::EntityId entity_id, const godotcore::AutoInstantiable::Update& update);
+template void Spatialos::sendComponentUpdate<godotcore::TileMapChunk>(const worker::EntityId entity_id, const godotcore::TileMapChunk::Update& update);
 template void Spatialos::sendComponentUpdate<spellcrest::PlayerControls>(const worker::EntityId entity_id, const spellcrest::PlayerControls::Update& update);
 template void Spatialos::sendComponentUpdate<spellcrest::ChatParticipant>(const worker::EntityId entity_id, const spellcrest::ChatParticipant::Update& update);
 template void Spatialos::sendComponentUpdate<spellcrest::MobaUnit>(const worker::EntityId entity_id, const spellcrest::MobaUnit::Update& update);

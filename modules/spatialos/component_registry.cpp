@@ -2,6 +2,7 @@
 #include <improbable/standard_library.h>
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
+#include <godotcore/tile_map_chunk.h>
 #include <spellcrest/player_controls.h>
 #include <spellcrest/moba_unit.h>
 #include "component_registry.h"
@@ -34,6 +35,7 @@ const worker::ComponentRegistry& MergedComponentRegistry() {
         improbable::Persistence,
         godotcore::GodotPosition2D,
         godotcore::AutoInstantiable,
+        godotcore::TileMapChunk,
         spellcrest::PlayerControls,
         spellcrest::ChatParticipant,
         spellcrest::MobaUnit> components;

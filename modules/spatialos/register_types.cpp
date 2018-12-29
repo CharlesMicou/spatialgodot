@@ -10,6 +10,7 @@
 #include "player_controls_sync.h"
 #include "auto_instantiator.h"
 #include "commander.h"
+#include "streaming_tile_map.h"
 
 void register_spatialos_types() { 
         ClassDB::register_class<Spatialos>();
@@ -22,6 +23,7 @@ void register_spatialos_types() {
         ClassDB::register_class<SnapshotGenerator>();
         ClassDB::register_class<AutoInstantiator>();
         ClassDB::register_class<Commander>();
+        ClassDB::register_class<StreamingTileMap>();
 }
 
 void unregister_spatialos_types() {

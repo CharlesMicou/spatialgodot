@@ -4,6 +4,7 @@
 #include "spatial_util.h"
 #include <godotcore/godot_position2d.h>
 #include <godotcore/auto_instantiable.h>
+#include <godotcore/tile_map_chunk.h>
 #include <spellcrest/player_controls.h>
 #include <spellcrest/moba_unit.h>
 #include "spatialos.h"
@@ -109,6 +110,7 @@ template class ComponentView<improbable::Position>;
 template class ComponentView<improbable::Metadata>;
 template class ComponentView<godotcore::GodotPosition2D>;
 template class ComponentView<godotcore::AutoInstantiable>;
+template class ComponentView<godotcore::TileMapChunk>;
 template class ComponentView<spellcrest::PlayerControls>;
 template class ComponentView<spellcrest::ChatParticipant>;
 template class ComponentView<spellcrest::MobaUnit>;
