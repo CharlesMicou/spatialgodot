@@ -40,6 +40,44 @@ std::list<Dictionary> SchemaParser::extractEvents(const improbable::Metadata::Up
     return std::list<Dictionary>(0);
 }
 
+Dictionary SchemaParser::parseType(const improbable::WorkerAttributeSet& data) {
+    Dictionary d;
+    Array a;
+    for (auto v : data.attribute()) {
+        a.push_back(toGodotString(v));
+    }
+    d["attribute"] = a;
+    return d;
+}
+
+Dictionary SchemaParser::parseType(const improbable::WorkerRequirementSet& data) {
+    Dictionary d;
+    Array a;
+    for (auto v : data.attribute_set()) {
+        a.push_back(parseType(v));
+    }
+    d["attribute_set"] = a;
+    return d;
+}
+
+Dictionary SchemaParser::parseComponent(const improbable::EntityAclData& data) {
+    Dictionary d;
+    d["read_acl"] = parseType(data.read_acl());
+
+    Dictionary e1;
+    for (auto it : data.component_write_acl()) {
+        e1[it.first] = parseType(it.second);
+    }
+    d["component_write_acl"] = e1;
+
+    data.component_write_acl();
+    return d;
+}
+
+std::list<Dictionary> SchemaParser::extractEvents(const improbable::EntityAcl::Update& update) {
+    return std::list<Dictionary>(0);
+}
+
 Dictionary SchemaParser::parseType(const godotcore::GodotChunk2D& data) {
     Dictionary d;
     d["x"] = data.x();
@@ -236,6 +274,11 @@ void SchemaParser::serializeComponentUpdate(improbable::Metadata::Update& result
             logger.warn("improbable.Metadata has no field " + fromGodotString(b) + ". Ignoring.");
         }
     }
+}
+
+void SchemaParser::serializeComponentUpdate(improbable::EntityAcl::Update &result, const Dictionary d) {
+	logger.warn("Attempting to serialize an update for the improbable.EntityAcl component. "
+				"This will be ignored, because GDScript should not be directly modifying ACLs!");
 }
 
 void SchemaParser::serializeType(godotcore::GodotChunk2D& result, const Dictionary d) {

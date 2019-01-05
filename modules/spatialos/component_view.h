@@ -21,6 +21,7 @@ class ComponentViewBase : public Node {
             ClassDB::bind_method(D_METHOD("get_component_value"), &ComponentViewBase::to_gd_dict);
             ClassDB::bind_method(D_METHOD("send_component_update"), &ComponentViewBase::try_update);
             ClassDB::bind_method(D_METHOD("has_authority"), &ComponentViewBase::hasAuthority);
+            ClassDB::bind_method(D_METHOD("can_have_authority"), &ComponentViewBase::canHaveAuthority);
         }
 
     public:
@@ -29,6 +30,7 @@ class ComponentViewBase : public Node {
         virtual Dictionary to_gd_dict() const = 0;
         virtual bool try_update(const Dictionary d) = 0;
         virtual bool hasAuthority() = 0;
+        virtual bool canHaveAuthority() = 0;
 };
 
 template <typename T>
@@ -53,6 +55,9 @@ public:
     // Sending updates back upstream
     bool tryUpdate(const typename T::Update& update);
     bool try_update(const Dictionary d);
+
+    // Potential authority helper
+    bool canHaveAuthority();
 
     // Initialisation
     void setupConnection(Node* spos);

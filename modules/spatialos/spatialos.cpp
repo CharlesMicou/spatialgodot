@@ -50,6 +50,7 @@ void Spatialos::blockingConnectReceptionist(
     const String &id,
     const String &type) {
     workerId = id;
+    std_worker_id = fromGodotString(workerId);
     workerType = type;
     worker::ConnectionParameters parameters;
     parameters.WorkerType = fromGodotString(workerType);
@@ -73,6 +74,7 @@ void Spatialos::blockingConnectLocator(
     logger.info("Trying to login in via locator.");
     connection.reset(new worker::Connection{ConnectWithLocator(fromGodotString(dplName), fromGodotString(projectName), fromGodotString(loginToken), parameters)});
     workerId = toGodotString(connection->GetWorkerId());
+    std_worker_id = connection->GetWorkerId();
     setupDispatcher();
 }
 
@@ -132,6 +134,7 @@ void Spatialos::setupDispatcher() {
     // Components
     setupDispatcherForComponentMetaclass<improbable::Position>();
     setupDispatcherForComponentMetaclass<improbable::Metadata>();
+    setupDispatcherForComponentMetaclass<improbable::EntityAcl>();
     setupDispatcherForComponentMetaclass<godotcore::GodotPosition2D>();
     setupDispatcherForComponentMetaclass<godotcore::AutoInstantiable>();
     setupDispatcherForComponentMetaclass<godotcore::TileMapChunk>();
@@ -236,6 +239,15 @@ String Spatialos::get_worker_id() {
     return workerId;
 }
 
+const std::string& Spatialos::getWorkerId() {
+    return std_worker_id;
+}
+
+bool Spatialos::isServerWorker() {
+    // Really should clean this up
+    return workerType == "GodotServer";
+}
+
 void Spatialos::debug_method(String arbitrary_input) {
     // Put debug in here
 }
@@ -257,12 +269,14 @@ void Spatialos::_bind_methods() {
 
 Spatialos::Spatialos(): logger(WorkerLogger("core")) {
     workerId = "defaultworkerid";
+    std_worker_id = "defaultworkerid";
     workerType = "defaultworkertype";
     isConnected = false;
     initLogging();
 }
 
 template void Spatialos::sendComponentUpdate<improbable::Position>(const worker::EntityId entity_id, const improbable::Position::Update& update);
+template void Spatialos::sendComponentUpdate<improbable::EntityAcl>(const worker::EntityId entity_id, const improbable::EntityAcl::Update& update);
 template void Spatialos::sendComponentUpdate<improbable::Metadata>(const worker::EntityId entity_id, const improbable::Metadata::Update& update);
 template void Spatialos::sendComponentUpdate<godotcore::GodotPosition2D>(const worker::EntityId entity_id, const godotcore::GodotPosition2D::Update& update);
 template void Spatialos::sendComponentUpdate<godotcore::AutoInstantiable>(const worker::EntityId entity_id, const godotcore::AutoInstantiable::Update& update);

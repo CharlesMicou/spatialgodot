@@ -1,4 +1,5 @@
 #include "component_view.h"
+#include "entity_view.h"
 #include <improbable/worker.h>
 #include <improbable/standard_library.h>
 #include "spatial_util.h"
@@ -9,6 +10,7 @@
 #include <spellcrest/moba_unit.h>
 #include "spatialos.h"
 #include "schema_parser.h"
+#include "component_registry.h"
 
 template <typename T>
 WorkerLogger ComponentView<T>::logger = WorkerLogger("component_view");
@@ -105,8 +107,65 @@ bool ComponentView<T>::hasAuthority() {
     return authoritative;
 }
 
+template <typename T>
+bool ComponentView<T>::canHaveAuthority() {
+    Spatialos* s = dynamic_cast<Spatialos*>(connection);
+    if (s == nullptr) {
+        logger.error("Tried to determine if component " + std::to_string(componentId) + " on entity " + std::to_string(entityId)
+            + " could be authoritative, but it did not have the Spos connection initialised. Did you call it before it was fully initialised?");
+        return false;
+    }
+
+    bool isSimulated = simulatedComponents.find(componentId) != simulatedComponents.end();
+    bool isPlayer = playerAuthoritativeComponents.find(componentId) != playerAuthoritativeComponents.end();
+
+    // The simplest case: no one is ever authoritative over this component
+    if (!isSimulated && !isPlayer) {
+        return false;
+    }
+
+    // If this is a server worker, then we can get authority over the component if it is a server-simulated component.
+    if (s->isServerWorker()) {
+        return isSimulated;
+    }
+
+    // From here on out, we know that this is a player worker rather than a server worker.
+    // If this is a simulated component, player workers will not be authoritative over it.
+    if (isSimulated) {
+        return false;
+    }
+
+    // The complex case: this is a player-simulated component, and we need to figure out if we are the right player for it.
+    EntityView* entity = dynamic_cast<EntityView*>(get_parent());
+    if (entity == NULL) {
+        logger.error("Tried to determine if component " + std::to_string(componentId) + " on entity " + std::to_string(entityId)
+            + " could be authoritative, but it did not have an entity view parent. Did you call it before it was fully initialised?");
+        return false;
+    }
+    ComponentView<improbable::EntityAcl>* entityAcl = dynamic_cast<ComponentView<improbable::EntityAcl>*>(entity->getComponentNode(improbable::EntityAcl::ComponentId));
+    if (entityAcl == NULL) {
+        // Adding a warning here as this should *probably* not be happening, and if it does I'd like to know about it.
+        logger.warn("Tried to determine if component " + std::to_string(componentId) + " on entity " + std::to_string(entityId)
+            + " could be authoritative, but could not find an ACL component view for that entity.");
+        return false;
+    }
+    const worker::Map<worker::ComponentId, improbable::WorkerRequirementSet> write_acl = entityAcl->getData().component_write_acl();
+    auto it = write_acl.find(componentId);
+    if (it == write_acl.end()) {
+        // Not present in the write acl means never authoritative.
+        return false;
+    }
+    if (it->second == makeUniqueReqSet(s->getWorkerId())) {
+        // The ACL defines a value for this component id, and that component id corresponds to the worker requirement set uniquely identifying this worker
+        return true;
+    }
+    // Even though we found an ACL definition, it corresponds to a different unique worker, so this worker will never get authority
+    return false;
+}
+
 // Force generation so that linking works
 template class ComponentView<improbable::Position>;
+template class ComponentView<improbable::EntityAcl>;
 template class ComponentView<improbable::Metadata>;
 template class ComponentView<godotcore::GodotPosition2D>;
 template class ComponentView<godotcore::AutoInstantiable>;

@@ -74,6 +74,9 @@ WorldView::WorldView() {
 template void WorldView::addComponent<improbable::Position>(const worker::AddComponentOp<improbable::Position>&);
 template void WorldView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
 
+template void WorldView::addComponent<improbable::EntityAcl>(const worker::AddComponentOp<improbable::EntityAcl>&);
+template void WorldView::updateComponent<improbable::EntityAcl>(const worker::ComponentUpdateOp<improbable::EntityAcl>&);
+
 template void WorldView::addComponent<improbable::Metadata>(const worker::AddComponentOp<improbable::Metadata>&);
 template void WorldView::updateComponent<improbable::Metadata>(const worker::ComponentUpdateOp<improbable::Metadata>&);
 

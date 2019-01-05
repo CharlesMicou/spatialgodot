@@ -143,6 +143,9 @@ EntityView::EntityView() {
 template void EntityView::addComponent<improbable::Position>(const worker::AddComponentOp<improbable::Position>&);
 template void EntityView::updateComponent<improbable::Position>(const worker::ComponentUpdateOp<improbable::Position>&);
 
+template void EntityView::addComponent<improbable::EntityAcl>(const worker::AddComponentOp<improbable::EntityAcl>&);
+template void EntityView::updateComponent<improbable::EntityAcl>(const worker::ComponentUpdateOp<improbable::EntityAcl>&);
+
 template void EntityView::addComponent<improbable::Metadata>(const worker::AddComponentOp<improbable::Metadata>&);
 template void EntityView::updateComponent<improbable::Metadata>(const worker::ComponentUpdateOp<improbable::Metadata>&);
 

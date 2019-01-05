@@ -11,6 +11,7 @@
 class Spatialos : public Node {
     GDCLASS(Spatialos, Node);
     String workerId;
+    std::string std_worker_id;
     String workerType;
     WorkerLogger logger;
     std::unique_ptr<worker::Dispatcher> dispatcher;
@@ -35,8 +36,11 @@ public:
     void sendComponentUpdate(const worker::EntityId entity_id, const typename T::Update& update);
     worker::RequestId<worker::CreateEntityRequest> sendCreateCommand(const worker::Entity& entity);
     worker::RequestId<worker::DeleteEntityRequest> sendDeleteCommand(worker::EntityId entity_id);
+    bool isServerWorker();
 
+    // We expose worker ids in both formats
     String get_worker_id();
+    const std::string& getWorkerId();
 
     // A debug method that just calls into whatever
     void debug_method(String arbitrary_input);

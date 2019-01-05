@@ -13,6 +13,7 @@
 #include <spellcrest/moba_unit.h>
 
 const std::unordered_map<worker::ComponentId, std::string> schema_component_names {
+            {50, "improbable.EntityAcl"},
             {53, "improbable.Metadata"},
             {54, "improbable.Position"},
             {3001, "godotcore.GodotPosition2D"},
@@ -24,6 +25,7 @@ const std::unordered_map<worker::ComponentId, std::string> schema_component_name
 };
 
 const std::unordered_map<std::string, worker::ComponentId> schema_component_ids {
+            {"improbable.EntityAcl", 50},
             {"improbable.Metadata", 53},
             {"improbable.Position", 54},
             {"godotcore.GodotPosition2D", 3001},
@@ -46,6 +48,11 @@ class SchemaParser {
 
         static Dictionary parseComponent(const improbable::MetadataData& data);
         static std::list<Dictionary> extractEvents(const improbable::Metadata::Update& update);
+
+        static Dictionary parseType(const improbable::WorkerAttributeSet& data);
+        static Dictionary parseType(const improbable::WorkerRequirementSet& data);
+        static Dictionary parseComponent(const improbable::EntityAclData& data);
+        static std::list<Dictionary> extractEvents(const improbable::EntityAcl::Update& update);
 
         static Dictionary parseType(const godotcore::GodotChunk2D& data);
         static Dictionary parseType(const godotcore::GodotCoordinates2D& data);
@@ -78,6 +85,8 @@ class SchemaParser {
         static void serializeComponentUpdate(improbable::Position::Update& result, const Dictionary d);
 
         static void serializeComponentUpdate(improbable::Metadata::Update& result, const Dictionary d);
+
+        static void serializeComponentUpdate(improbable::EntityAcl::Update& result, const Dictionary d);
 
         static void serializeType(godotcore::GodotChunk2D& result, const Dictionary d);
         static void serializeType(godotcore::GodotCoordinates2D& result, const Dictionary d);
