@@ -12,6 +12,8 @@ class PositionSync : public Node {
     static WorkerLogger logger;
 
     Node2D* parent;
+    bool enable_csp;
+    bool server_data_is_stale;
     ComponentView<improbable::Position>* improbable_position_component;
     ComponentView<godotcore::GodotPosition2D>* godot_position_component;
 
@@ -24,6 +26,10 @@ public:
     PositionSync();
     void sync();
     void set_position_components(Node* improbable, Node* godot);
+    void notify_update();
+
+    bool get_enable_csp();
+    void set_enable_csp(bool value);
 };
 
 #endif

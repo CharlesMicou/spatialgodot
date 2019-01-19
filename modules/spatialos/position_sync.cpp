@@ -26,8 +26,14 @@ void PositionSync::sync() {
             maybe_sync_spatialos_position(posToSync);
         }
     } else {
-        std::pair<float, float> local_positon = toLocalGodotPosition(godot_position_component->getData().coordinates(), 0, 0);
-        parent->set_position(Vector2(local_positon.first, local_positon.second));
+        // CSP works by simply not changing the value and assuming the controller
+        // has the same behaviour for client and server.
+        bool ignore_upstream_position_this_frame = enable_csp && server_data_is_stale;
+        if(!ignore_upstream_position_this_frame) {
+            std::pair<float, float> local_positon = toLocalGodotPosition(godot_position_component->getData().coordinates(), 0, 0);
+            parent->set_position(Vector2(local_positon.first, local_positon.second));
+            server_data_is_stale = true;
+        }
     }
 }
 
@@ -41,6 +47,12 @@ void PositionSync::set_position_components(Node* improbable, Node* godot) {
     parent = dynamic_cast<Node2D*>(get_parent());
     std::pair<float, float> local_positon = toLocalGodotPosition(godot_position_component->getData().coordinates(), 0, 0);
     parent->set_position(Vector2(local_positon.first, local_positon.second));
+
+    // If CSP is enabled, the component node needs connecting to this node so that a signal
+    // can be used to indicate the server has fresh corrections
+    if(enable_csp) {
+        godot->connect("component_updated", this, "notify_update");
+    }
 }
 
 void PositionSync::maybe_sync_spatialos_position(const godotcore::GodotCoordinates2D& truePos) {
@@ -58,10 +70,28 @@ void PositionSync::maybe_sync_spatialos_position(const godotcore::GodotCoordinat
     }
 }
 
+void PositionSync::notify_update() {
+    server_data_is_stale = false;
+}
+
 PositionSync::PositionSync() {
+    server_data_is_stale = false;
+}
+
+bool PositionSync::get_enable_csp() {
+    return enable_csp;
+}
+
+void PositionSync::set_enable_csp(bool value) {
+    enable_csp = value;
 }
 
 void PositionSync::_bind_methods() {
     ClassDB::bind_method(D_METHOD("sync"), &PositionSync::sync);
+    ClassDB::bind_method(D_METHOD("notify_update"), &PositionSync::notify_update);
     ClassDB::bind_method(D_METHOD("set_position_components"), &PositionSync::set_position_components);
+
+    ClassDB::bind_method(D_METHOD("set_enable_client_side_prediction", "value"), &PositionSync::set_enable_csp);
+	ClassDB::bind_method(D_METHOD("get_enable_client_side_prediction"), &PositionSync::get_enable_csp);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enable_client_side_prediction"), "set_enable_client_side_prediction", "get_enable_client_side_prediction");
 }
