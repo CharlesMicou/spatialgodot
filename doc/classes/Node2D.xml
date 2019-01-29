@@ -7,7 +7,7 @@
 		A 2D game object, with a position, rotation and scale. All 2D physics nodes and sprites inherit from Node2D. Use Node2D as a parent node to move, scale and rotate children in a 2D project. Also gives control on the node's render order.
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/3.0/tutorials/2d/custom_drawing_in_2d.html</link>
+		<link>https://docs.godotengine.org/en/latest/tutorials/2d/custom_drawing_in_2d.html</link>
 	</tutorials>
 	<demos>
 	</demos>
@@ -148,7 +148,7 @@
 			Local [Transform2D].
 		</member>
 		<member name="z_as_relative" type="bool" setter="set_z_as_relative" getter="is_z_relative">
-			If [code]true[/code] the node's Z-index is relative to its parent's Z-index. If this node's Z-index is 2 and its parent's effective Z-index is 3, then this node's effective Z-index will be 2 + 3 = 5.
+			If [code]true[/code], the node's Z-index is relative to its parent's Z-index. If this node's Z-index is 2 and its parent's effective Z-index is 3, then this node's effective Z-index will be 2 + 3 = 5.
 		</member>
 		<member name="z_index" type="int" setter="set_z_index" getter="get_z_index">
 			Z-index. Controls the order in which the nodes render. A node with a higher Z-index will display in front of others.

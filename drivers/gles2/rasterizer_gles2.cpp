@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -58,14 +58,21 @@
 #define _EXT_DEBUG_SEVERITY_LOW_ARB 0x9148
 #define _EXT_DEBUG_OUTPUT 0x92E0
 
-#if (defined WINDOWS_ENABLED) && !(defined UWP_ENABLED)
+#ifndef GLAPIENTRY
+#if defined(WINDOWS_ENABLED) && !defined(UWP_ENABLED)
 #define GLAPIENTRY APIENTRY
 #else
 #define GLAPIENTRY
 #endif
+#endif
 
-#if !defined(GLES_OVER_GL) && !defined(IPHONE_ENABLED)
-// Used for debugging on mobile, but not iOS as EGL is not available
+#ifndef IPHONE_ENABLED
+// We include EGL below to get debug callback on GLES2 platforms,
+// but EGL is not available on iOS.
+#define CAN_DEBUG
+#endif
+
+#if !defined(GLES_OVER_GL) && defined(CAN_DEBUG)
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <GLES2/gl2platform.h>
@@ -78,7 +85,7 @@
 #define strcpy strcpy_s
 #endif
 
-#ifndef IPHONE_ENABLED
+#ifdef CAN_DEBUG
 static void GLAPIENTRY _gl_debug_print(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const GLvoid *userParam) {
 
 	if (type == _EXT_DEBUG_TYPE_OTHER_ARB)
@@ -126,7 +133,7 @@ static void GLAPIENTRY _gl_debug_print(GLenum source, GLenum type, GLuint id, GL
 
 	ERR_PRINTS(output);
 }
-#endif // IPHONE_ENABLED
+#endif // CAN_DEBUG
 
 typedef void (*DEBUGPROCARB)(GLenum source,
 		GLenum type,
@@ -220,6 +227,7 @@ void RasterizerGLES2::initialize() {
 #endif // GLAD_ENABLED
 
 	// For debugging
+#ifdef CAN_DEBUG
 #ifdef GLES_OVER_GL
 	if (OS::get_singleton()->is_stdout_verbose() && GLAD_GL_ARB_debug_output) {
 		glDebugMessageControlARB(_EXT_DEBUG_SOURCE_API_ARB, _EXT_DEBUG_TYPE_ERROR_ARB, _EXT_DEBUG_SEVERITY_HIGH_ARB, 0, NULL, GL_TRUE);
@@ -235,7 +243,6 @@ void RasterizerGLES2::initialize() {
 		*/
 	}
 #else
-#ifndef IPHONE_ENABLED
 	if (OS::get_singleton()->is_stdout_verbose()) {
 		DebugMessageCallbackARB callback = (DebugMessageCallbackARB)eglGetProcAddress("glDebugMessageCallback");
 		if (!callback) {
@@ -250,8 +257,8 @@ void RasterizerGLES2::initialize() {
 			glEnable(_EXT_DEBUG_OUTPUT);
 		}
 	}
-#endif // !IPHONE_ENABLED
 #endif // GLES_OVER_GL
+#endif // CAN_DEBUG
 
 	const GLubyte *renderer = glGetString(GL_RENDERER);
 	print_line("OpenGL ES 2.0 Renderer: " + String((const char *)renderer));
@@ -395,7 +402,6 @@ void RasterizerGLES2::blit_render_target_to_screen(RID p_render_target, const Re
 	ERR_FAIL_COND(!rt);
 
 	canvas->state.canvas_shader.set_conditional(CanvasShaderGLES2::USE_TEXTURE_RECT, true);
-	canvas->state.canvas_shader.set_conditional(CanvasShaderGLES2::USE_UV_ATTRIBUTE, false);
 
 	canvas->state.canvas_shader.set_custom_shader(0);
 	canvas->state.canvas_shader.bind();

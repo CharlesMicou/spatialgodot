@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -159,6 +159,7 @@ void EditorResourcePreview::_generate_preview(Ref<ImageTexture> &r_texture, Ref<
 			small_thumbnail_size *= EDSCALE;
 
 			Ref<Image> small_image = r_texture->get_data();
+			small_image = small_image->duplicate();
 			small_image->resize(small_thumbnail_size, small_thumbnail_size, Image::INTERPOLATE_CUBIC);
 			r_small_texture.instance();
 			r_small_texture->create_from_image(small_image);
@@ -326,7 +327,7 @@ void EditorResourcePreview::queue_edited_resource_preview(const Ref<Resource> &p
 	if (cache.has(path_id) && cache[path_id].last_hash == p_res->hash_edited_version()) {
 
 		cache[path_id].order = order++;
-		p_receiver->call_deferred(p_receiver_func, path_id, cache[path_id].preview, cache[path_id].small_preview, p_userdata);
+		p_receiver->call(p_receiver_func, path_id, cache[path_id].preview, cache[path_id].small_preview, p_userdata);
 		preview_mutex->unlock();
 		return;
 	}
@@ -351,7 +352,7 @@ void EditorResourcePreview::queue_resource_preview(const String &p_path, Object 
 	preview_mutex->lock();
 	if (cache.has(p_path)) {
 		cache[p_path].order = order++;
-		p_receiver->call_deferred(p_receiver_func, p_path, cache[p_path].preview, cache[p_path].small_preview, p_userdata);
+		p_receiver->call(p_receiver_func, p_path, cache[p_path].preview, cache[p_path].small_preview, p_userdata);
 		preview_mutex->unlock();
 		return;
 	}
@@ -416,6 +417,16 @@ void EditorResourcePreview::check_for_invalidation(const String &p_path) {
 	}
 }
 
+void EditorResourcePreview::stop() {
+	if (thread) {
+		exit = true;
+		preview_sem->post();
+		Thread::wait_to_finish(thread);
+		memdelete(thread);
+		thread = NULL;
+	}
+}
+
 EditorResourcePreview::EditorResourcePreview() {
 	singleton = this;
 	preview_mutex = Mutex::create();
@@ -428,10 +439,7 @@ EditorResourcePreview::EditorResourcePreview() {
 
 EditorResourcePreview::~EditorResourcePreview() {
 
-	exit = true;
-	preview_sem->post();
-	Thread::wait_to_finish(thread);
-	memdelete(thread);
+	stop();
 	memdelete(preview_mutex);
 	memdelete(preview_sem);
 }

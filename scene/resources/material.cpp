@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -258,7 +258,7 @@ ShaderMaterial::~ShaderMaterial() {
 /////////////////////////////////
 
 Mutex *SpatialMaterial::material_mutex = NULL;
-SelfList<SpatialMaterial>::List SpatialMaterial::dirty_materials;
+SelfList<SpatialMaterial>::List *SpatialMaterial::dirty_materials = NULL;
 Map<SpatialMaterial::MaterialKey, SpatialMaterial::ShaderData> SpatialMaterial::shader_map;
 SpatialMaterial::ShaderNames *SpatialMaterial::shader_names = NULL;
 
@@ -267,6 +267,8 @@ void SpatialMaterial::init_shaders() {
 #ifndef NO_THREADS
 	material_mutex = Mutex::create();
 #endif
+
+	dirty_materials = memnew(SelfList<SpatialMaterial>::List);
 
 	shader_names = memnew(ShaderNames);
 
@@ -299,6 +301,7 @@ void SpatialMaterial::init_shaders() {
 	shader_names->particles_anim_loop = "particles_anim_loop";
 	shader_names->depth_min_layers = "depth_min_layers";
 	shader_names->depth_max_layers = "depth_max_layers";
+	shader_names->depth_flip = "depth_flip";
 
 	shader_names->grow = "grow";
 
@@ -347,12 +350,15 @@ void SpatialMaterial::finish_shaders() {
 	memdelete(material_mutex);
 #endif
 
+	memdelete(dirty_materials);
+	dirty_materials = NULL;
+
 	memdelete(shader_names);
 }
 
 void SpatialMaterial::_update_shader() {
 
-	dirty_materials.remove(&element);
+	dirty_materials->remove(&element);
 
 	MaterialKey mk = _compute_key();
 	if (mk.key == current_key.key)
@@ -532,6 +538,7 @@ void SpatialMaterial::_update_shader() {
 		code += "uniform float depth_scale;\n";
 		code += "uniform int depth_min_layers;\n";
 		code += "uniform int depth_max_layers;\n";
+		code += "uniform vec2 depth_flip;\n";
 	}
 	if (flags[FLAG_UV1_USE_TRIPLANAR]) {
 		code += "varying vec3 uv1_triplanar_pos;\n";
@@ -612,9 +619,9 @@ void SpatialMaterial::_update_shader() {
 			//handle animation
 			code += "\tfloat particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);\n";
 			code += "\tfloat particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));\n";
-			code += "\tif (particles_anim_loop) particle_frame=clamp(particle_frame,0.0,particle_total_frames-1.0); else particle_frame=mod(particle_frame,float(particle_total_frames));\n";
+			code += "\tif (!particles_anim_loop) particle_frame=clamp(particle_frame,0.0,particle_total_frames-1.0); else particle_frame=mod(particle_frame,float(particle_total_frames));\n";
 			code += "\tUV /= vec2(float(particles_anim_h_frames),float(particles_anim_v_frames));\n";
-			code += "\tUV += vec2(mod(particle_frame,float(particles_anim_h_frames)) / float(particles_anim_h_frames),particle_frame / float(particles_anim_h_frames) / float(particles_anim_v_frames));\n";
+			code += "\tUV += vec2(mod(particle_frame,float(particles_anim_h_frames)) / float(particles_anim_h_frames), floor(particle_frame / float(particles_anim_h_frames)) / float(particles_anim_v_frames));\n";
 		} break;
 	}
 
@@ -697,7 +704,7 @@ void SpatialMaterial::_update_shader() {
 
 	if (features[FEATURE_DEPTH_MAPPING] && !flags[FLAG_UV1_USE_TRIPLANAR]) { //depthmap not supported with triplanar
 		code += "\t{\n";
-		code += "\t\tvec3 view_dir = normalize(normalize(-VERTEX)*mat3(TANGENT,-BINORMAL,NORMAL));\n"; //binormal is negative due to mikktpsace
+		code += "\t\tvec3 view_dir = normalize(normalize(-VERTEX)*mat3(TANGENT*depth_flip.x,-BINORMAL*depth_flip.y,NORMAL));\n"; // binormal is negative due to mikktspace, flip 'unflips' it ;-)
 
 		if (deep_parallax) {
 			code += "\t\tfloat num_layers = mix(float(depth_max_layers),float(depth_min_layers), abs(dot(vec3(0.0, 0.0, 1.0), view_dir)));\n";
@@ -1000,9 +1007,9 @@ void SpatialMaterial::flush_changes() {
 	if (material_mutex)
 		material_mutex->lock();
 
-	while (dirty_materials.first()) {
+	while (dirty_materials->first()) {
 
-		dirty_materials.first()->self()->_update_shader();
+		dirty_materials->first()->self()->_update_shader();
 	}
 
 	if (material_mutex)
@@ -1015,7 +1022,7 @@ void SpatialMaterial::_queue_shader_change() {
 		material_mutex->lock();
 
 	if (!element.in_list()) {
-		dirty_materials.add(&element);
+		dirty_materials->add(&element);
 	}
 
 	if (material_mutex)
@@ -1313,7 +1320,7 @@ void SpatialMaterial::set_flag(Flags p_flag, bool p_enabled) {
 		return;
 
 	flags[p_flag] = p_enabled;
-	if (p_flag == FLAG_USE_ALPHA_SCISSOR) {
+	if (p_flag == FLAG_USE_ALPHA_SCISSOR || p_flag == FLAG_UNSHADED) {
 		_change_notify();
 	}
 	_queue_shader_change();
@@ -1418,6 +1425,48 @@ void SpatialMaterial::_validate_property(PropertyInfo &property) const {
 
 	if ((property.name == "depth_min_layers" || property.name == "depth_max_layers") && !deep_parallax) {
 		property.usage = 0;
+	}
+
+	if (flags[FLAG_UNSHADED]) {
+		if (property.name.begins_with("anisotropy")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("ao")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("clearcoat")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("emission")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("metallic")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("normal")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("rim")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("roughness")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("subsurf_scatter")) {
+			property.usage = 0;
+		}
+
+		if (property.name.begins_with("transmission")) {
+			property.usage = 0;
+		}
 	}
 }
 
@@ -1541,13 +1590,13 @@ int SpatialMaterial::get_particles_anim_v_frames() const {
 	return particles_anim_v_frames;
 }
 
-void SpatialMaterial::set_particles_anim_loop(int p_frames) {
+void SpatialMaterial::set_particles_anim_loop(bool p_loop) {
 
-	particles_anim_loop = p_frames;
-	VS::get_singleton()->material_set_param(_get_material(), shader_names->particles_anim_loop, p_frames);
+	particles_anim_loop = p_loop;
+	VS::get_singleton()->material_set_param(_get_material(), shader_names->particles_anim_loop, particles_anim_loop);
 }
 
-int SpatialMaterial::get_particles_anim_loop() const {
+bool SpatialMaterial::get_particles_anim_loop() const {
 
 	return particles_anim_loop;
 }
@@ -1582,6 +1631,28 @@ void SpatialMaterial::set_depth_deep_parallax_max_layers(int p_layer) {
 int SpatialMaterial::get_depth_deep_parallax_max_layers() const {
 
 	return deep_parallax_max_layers;
+}
+
+void SpatialMaterial::set_depth_deep_parallax_flip_tangent(bool p_flip) {
+
+	depth_parallax_flip_tangent = p_flip;
+	VS::get_singleton()->material_set_param(_get_material(), shader_names->depth_flip, Vector2(depth_parallax_flip_tangent ? -1 : 1, depth_parallax_flip_binormal ? -1 : 1));
+}
+
+bool SpatialMaterial::get_depth_deep_parallax_flip_tangent() const {
+
+	return depth_parallax_flip_tangent;
+}
+
+void SpatialMaterial::set_depth_deep_parallax_flip_binormal(bool p_flip) {
+
+	depth_parallax_flip_binormal = p_flip;
+	VS::get_singleton()->material_set_param(_get_material(), shader_names->depth_flip, Vector2(depth_parallax_flip_tangent ? -1 : 1, depth_parallax_flip_binormal ? -1 : 1));
+}
+
+bool SpatialMaterial::get_depth_deep_parallax_flip_binormal() const {
+
+	return depth_parallax_flip_binormal;
 }
 
 void SpatialMaterial::set_grow_enabled(bool p_enable) {
@@ -1898,7 +1969,7 @@ void SpatialMaterial::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_particles_anim_v_frames", "frames"), &SpatialMaterial::set_particles_anim_v_frames);
 	ClassDB::bind_method(D_METHOD("get_particles_anim_v_frames"), &SpatialMaterial::get_particles_anim_v_frames);
 
-	ClassDB::bind_method(D_METHOD("set_particles_anim_loop", "frames"), &SpatialMaterial::set_particles_anim_loop);
+	ClassDB::bind_method(D_METHOD("set_particles_anim_loop", "loop"), &SpatialMaterial::set_particles_anim_loop);
 	ClassDB::bind_method(D_METHOD("get_particles_anim_loop"), &SpatialMaterial::get_particles_anim_loop);
 
 	ClassDB::bind_method(D_METHOD("set_depth_deep_parallax", "enable"), &SpatialMaterial::set_depth_deep_parallax);
@@ -1909,6 +1980,12 @@ void SpatialMaterial::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_depth_deep_parallax_max_layers", "layer"), &SpatialMaterial::set_depth_deep_parallax_max_layers);
 	ClassDB::bind_method(D_METHOD("get_depth_deep_parallax_max_layers"), &SpatialMaterial::get_depth_deep_parallax_max_layers);
+
+	ClassDB::bind_method(D_METHOD("set_depth_deep_parallax_flip_tangent", "flip"), &SpatialMaterial::set_depth_deep_parallax_flip_tangent);
+	ClassDB::bind_method(D_METHOD("get_depth_deep_parallax_flip_tangent"), &SpatialMaterial::get_depth_deep_parallax_flip_tangent);
+
+	ClassDB::bind_method(D_METHOD("set_depth_deep_parallax_flip_binormal", "flip"), &SpatialMaterial::set_depth_deep_parallax_flip_binormal);
+	ClassDB::bind_method(D_METHOD("get_depth_deep_parallax_flip_binormal"), &SpatialMaterial::get_depth_deep_parallax_flip_binormal);
 
 	ClassDB::bind_method(D_METHOD("set_grow", "amount"), &SpatialMaterial::set_grow);
 	ClassDB::bind_method(D_METHOD("get_grow"), &SpatialMaterial::get_grow);
@@ -2045,6 +2122,8 @@ void SpatialMaterial::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "depth_deep_parallax"), "set_depth_deep_parallax", "is_depth_deep_parallax_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "depth_min_layers", PROPERTY_HINT_RANGE, "1,32,1"), "set_depth_deep_parallax_min_layers", "get_depth_deep_parallax_min_layers");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "depth_max_layers", PROPERTY_HINT_RANGE, "1,32,1"), "set_depth_deep_parallax_max_layers", "get_depth_deep_parallax_max_layers");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "depth_flip_tangent"), "set_depth_deep_parallax_flip_tangent", "get_depth_deep_parallax_flip_tangent");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "depth_flip_binormal"), "set_depth_deep_parallax_flip_binormal", "get_depth_deep_parallax_flip_binormal");
 	ADD_PROPERTYI(PropertyInfo(Variant::OBJECT, "depth_texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture"), "set_texture", "get_texture", TEXTURE_DEPTH);
 
 	ADD_GROUP("Subsurf Scatter", "subsurf_scatter_");
@@ -2244,8 +2323,11 @@ SpatialMaterial::SpatialMaterial() :
 	set_grow(0.0);
 
 	deep_parallax = false;
+	depth_parallax_flip_tangent = false;
+	depth_parallax_flip_binormal = false;
 	set_depth_deep_parallax_min_layers(8);
 	set_depth_deep_parallax_max_layers(32);
+	set_depth_deep_parallax_flip_tangent(false); //also sets binormal
 
 	detail_uv = DETAIL_UV_1;
 	blend_mode = BLEND_MODE_MIX;

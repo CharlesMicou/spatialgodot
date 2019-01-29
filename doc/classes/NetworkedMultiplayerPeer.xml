@@ -7,7 +7,7 @@
 		Manages the connection to network peers. Assigns unique IDs to each client connected to the server.
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/3.0/tutorials/networking/high_level_multiplayer.html</link>
+		<link>https://docs.godotengine.org/en/latest/tutorials/networking/high_level_multiplayer.html</link>
 	</tutorials>
 	<demos>
 	</demos>
@@ -53,7 +53,7 @@
 	</methods>
 	<members>
 		<member name="refuse_new_connections" type="bool" setter="set_refuse_new_connections" getter="is_refusing_new_connections">
-			If [code]true[/code] this [code]NetworkedMultiplayerPeer[/code] refuses new connections. Default value: [code]false[/code].
+			If [code]true[/code], this [code]NetworkedMultiplayerPeer[/code] refuses new connections. Default value: [code]false[/code].
 		</member>
 		<member name="transfer_mode" type="int" setter="set_transfer_mode" getter="get_transfer_mode" enum="NetworkedMultiplayerPeer.TransferMode">
 			The manner in which to send packets to the [code]target_peer[/code]. See [enum TransferMode].
@@ -92,7 +92,7 @@
 	</signals>
 	<constants>
 		<constant name="TRANSFER_MODE_UNRELIABLE" value="0" enum="TransferMode">
-			Packets are not acknowledged, no resend attempts are made for lost packets. Packets may arrive in any order. Potentially faster than [code]TRANSFER_MODE_UNRELIABLE_ORDERED[/code]. Use for non-critical data, and always consider whether the order matters. 
+			Packets are not acknowledged, no resend attempts are made for lost packets. Packets may arrive in any order. Potentially faster than [code]TRANSFER_MODE_UNRELIABLE_ORDERED[/code]. Use for non-critical data, and always consider whether the order matters.
 		</constant>
 		<constant name="TRANSFER_MODE_UNRELIABLE_ORDERED" value="1" enum="TransferMode">
 			Packets are not acknowledged, no resend attempts are made for lost packets. Packets are received in the order they were sent in. Potentially faster than [code]TRANSFER_MODE_RELIABLE[/code]. Use for non-critical data or data that would be outdated if received late due to resend attempt(s) anyway, for example movement and positional data.

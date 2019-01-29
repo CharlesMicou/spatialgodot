@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -202,6 +202,12 @@ uint64_t OS_Unix::get_system_time_secs() const {
 	return uint64_t(tv_now.tv_sec);
 }
 
+uint64_t OS_Unix::get_system_time_msecs() const {
+	struct timeval tv_now;
+	gettimeofday(&tv_now, NULL);
+	return uint64_t(tv_now.tv_sec * 1000 + tv_now.tv_usec / 1000);
+}
+
 OS::Date OS_Unix::get_date(bool utc) const {
 
 	time_t t = time(NULL);
@@ -288,6 +294,11 @@ uint64_t OS_Unix::get_ticks_usec() const {
 
 Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr) {
 
+#ifdef __EMSCRIPTEN__
+	// Don't compile this code at all to avoid undefined references.
+	// Actual virtual call goes to OS_JavaScript.
+	ERR_FAIL_V(ERR_BUG);
+#else
 	if (p_blocking && r_pipe) {
 
 		String argss;
@@ -354,6 +365,7 @@ Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bo
 	}
 
 	return OK;
+#endif
 }
 
 Error OS_Unix::kill(const ProcessID &p_pid) {

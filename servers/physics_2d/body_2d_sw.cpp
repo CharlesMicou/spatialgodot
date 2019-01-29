@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -60,6 +60,10 @@ void Body2DSW::update_inertias() {
 			real_t _inertia = 0;
 
 			for (int i = 0; i < get_shape_count(); i++) {
+
+				if (is_shape_disabled(i)) {
+					continue;
+				}
 
 				const Shape2DSW *shape = get_shape(i);
 
@@ -511,8 +515,7 @@ void Body2DSW::integrate_forces(real_t p_step) {
 
 		if (continuous_cd_mode != Physics2DServer::CCD_MODE_DISABLED) {
 
-			motion = new_transform.get_origin() - get_transform().get_origin();
-			//linear_velocity*p_step;
+			motion = linear_velocity * p_step;
 			do_motion = true;
 		}
 	}

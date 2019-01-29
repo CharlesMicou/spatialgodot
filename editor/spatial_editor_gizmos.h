@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -214,7 +214,7 @@ public:
 	String get_handle_name(const EditorSpatialGizmo *p_gizmo, int p_idx) const;
 	Variant get_handle_value(EditorSpatialGizmo *p_gizmo, int p_idx) const;
 	void commit_handle(EditorSpatialGizmo *p_gizmo, int p_idx, const Variant &p_restore, bool p_cancel);
-	bool is_gizmo_handle_highlighted(const EditorSpatialGizmo *p_gizmo, int idx) const;
+	bool is_handle_highlighted(const EditorSpatialGizmo *p_gizmo, int idx) const;
 
 	SoftBodySpatialGizmoPlugin();
 };

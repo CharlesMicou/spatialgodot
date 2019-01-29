@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -468,7 +468,7 @@ String Color::to_html(bool p_alpha) const {
 	return txt;
 }
 
-Color Color::from_hsv(float p_h, float p_s, float p_v, float p_a) {
+Color Color::from_hsv(float p_h, float p_s, float p_v, float p_a) const {
 
 	p_h = Math::fmod(p_h * 360.0f, 360.0f);
 	if (p_h < 0.0)

@@ -2,6 +2,7 @@
 [vertex]
 
 #ifdef USE_GLES_OVER_GL
+#define lowp
 #define mediump
 #define highp
 #else
@@ -84,7 +85,7 @@ uniform highp mat4 world_transform;
 
 uniform highp float time;
 
-uniform float normal_mult;
+uniform highp vec2 viewport_size;
 
 #ifdef RENDER_DEPTH
 uniform float light_bias;
@@ -247,7 +248,7 @@ void light_compute(
 		float cLdotH = max(dot(L, H), 0.0);
 		float shininess = exp2(15.0 * (1.0 - roughness) + 1.0) * 0.25;
 		float blinn = pow(cNdotH, shininess);
-		blinn *= (shininess + 8.0) / (8.0 * 3.141592654);
+		blinn *= (shininess + 8.0) * (1.0 / (8.0 * M_PI));
 		specular_brdf_NL = (blinn) / max(4.0 * cNdotV * cNdotL, 0.75);
 #endif
 
@@ -330,11 +331,10 @@ void main() {
 
 #endif
 
-	vec3 normal = normal_attrib * normal_mult;
+	vec3 normal = normal_attrib;
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP)
 	vec3 tangent = tangent_attrib.xyz;
-	tangent *= normal_mult;
 	float binormalf = tangent_attrib.a;
 	vec3 binormal = normalize(cross(normal, tangent) * binormalf);
 #endif
@@ -354,12 +354,16 @@ void main() {
 	uv2_interp = uv2_attrib;
 #endif
 
+#ifdef OVERRIDE_POSITION
+	highp vec4 position;
+#endif
+
 #if !defined(SKIP_TRANSFORM_USED) && defined(VERTEX_WORLD_COORDS_USED)
 	vertex = world_matrix * vertex;
 	normal = normalize((world_matrix * vec4(normal, 0.0)).xyz);
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP)
 
-	tangent = normalize((world_matrix * vec4(tangent, 0.0)), xyz);
+	tangent = normalize((world_matrix * vec4(tangent, 0.0)).xyz);
 	binormal = normalize((world_matrix * vec4(binormal, 0.0)).xyz);
 #endif
 #endif
@@ -626,7 +630,7 @@ VERTEX_SHADER_CODE
 
 		float fog_z = smoothstep(fog_depth_begin, fog_max_distance, length(vertex));
 
-		fog_amount = pow(fog_z, fog_depth_curve);
+		fog_amount = pow(fog_z, fog_depth_curve) * fog_color_base.a;
 	}
 #endif
 
@@ -641,24 +645,51 @@ VERTEX_SHADER_CODE
 #endif //fog
 
 #endif //use vertex lighting
+
+#ifdef OVERRIDE_POSITION
+	gl_Position = position;
+#else
 	gl_Position = projection_matrix * vec4(vertex_interp, 1.0);
+#endif
 }
 
 /* clang-format off */
 [fragment]
-#extension GL_ARB_shader_texture_lod : enable
 
-#ifndef GL_ARB_shader_texture_lod
-#define texture2DLod(img, coord, lod) texture2D(img, coord)
-#define textureCubeLod(img, coord, lod) textureCube(img, coord)
+#ifndef USE_GLES_OVER_GL
+
+#ifdef GL_EXT_shader_texture_lod
+#extension GL_EXT_shader_texture_lod : enable
+#define texture2DLod(img, coord, lod) texture2DLodEXT(img, coord, lod)
+#define textureCubeLod(img, coord, lod) textureCubeLodEXT(img, coord, lod)
 #endif
 
+#endif
+
+#ifdef GL_ARB_shader_texture_lod
+#extension GL_ARB_shader_texture_lod : enable
+#endif
+
+#if !defined(GL_EXT_shader_texture_lod) && !defined(GL_ARB_shader_texture_lod)
+#define texture2DLod(img, coord, lod) texture2D(img, coord, lod)
+#define textureCubeLod(img, coord, lod) textureCube(img, coord, lod)
+#endif
+
+
+
+
 #ifdef USE_GLES_OVER_GL
+#define lowp
 #define mediump
 #define highp
 #else
-precision mediump float;
+#if defined(USE_HIGHP_PRECISION)
+precision highp float;
 precision highp int;
+#else
+precision mediump float;
+precision mediump int;
+#endif
 #endif
 
 #include "stdlib.glsl"
@@ -679,6 +710,8 @@ uniform highp mat4 projection_inverse_matrix;
 uniform highp mat4 world_transform;
 
 uniform highp float time;
+
+uniform highp vec2 viewport_size;
 
 #if defined(SCREEN_UV_USED)
 uniform vec2 screen_pixel_size;
@@ -1012,9 +1045,7 @@ float G_GGX_2cos(float cos_theta_m, float alpha) {
 // This approximates G_GGX_2cos(cos_theta_l, alpha) * G_GGX_2cos(cos_theta_v, alpha)
 // See Filament docs, Specular G section.
 float V_GGX(float cos_theta_l, float cos_theta_v, float alpha) {
-	float v = cos_theta_l * (cos_theta_v * (1.0 - alpha) + alpha);
-	float l = cos_theta_v * (cos_theta_l * (1.0 - alpha) + alpha);
-	return 0.5 / (v + l);
+	return 0.5 / mix(2.0 * cos_theta_l * cos_theta_v, cos_theta_l + cos_theta_v, alpha);
 }
 
 float D_GGX(float cos_theta_m, float alpha) {
@@ -1124,7 +1155,19 @@ LIGHT_SHADER_CODE
 	float NdotL = dot(N, L);
 	float cNdotL = max(NdotL, 0.0); // clamped NdotL
 	float NdotV = dot(N, V);
-	float cNdotV = max(NdotV, 0.0);
+	float cNdotV = max(abs(NdotV), 1e-6);
+
+#if defined(DIFFUSE_BURLEY) || defined(SPECULAR_BLINN) || defined(SPECULAR_SCHLICK_GGX) || defined(LIGHT_USE_CLEARCOAT)
+	vec3 H = normalize(V + L);
+#endif
+
+#if defined(SPECULAR_BLINN) || defined(SPECULAR_SCHLICK_GGX) || defined(LIGHT_USE_CLEARCOAT)
+	float cNdotH = max(dot(N, H), 0.0);
+#endif
+
+#if defined(DIFFUSE_BURLEY) || defined(SPECULAR_SCHLICK_GGX) || defined(LIGHT_USE_CLEARCOAT)
+	float cLdotH = max(dot(L, H), 0.0);
+#endif
 
 	if (metallic < 1.0) {
 #if defined(DIFFUSE_OREN_NAYAR)
@@ -1160,13 +1203,9 @@ LIGHT_SHADER_CODE
 #elif defined(DIFFUSE_BURLEY)
 
 		{
-
-			vec3 H = normalize(V + L);
-			float cLdotH = max(0.0, dot(L, H));
-
-			float FD90 = 0.5 + 2.0 * cLdotH * cLdotH * roughness;
-			float FdV = 1.0 + (FD90 - 1.0) * SchlickFresnel(cNdotV);
-			float FdL = 1.0 + (FD90 - 1.0) * SchlickFresnel(cNdotL);
+			float FD90_minus_1 = 2.0 * cLdotH * cLdotH * roughness - 0.5;
+			float FdV = 1.0 + FD90_minus_1 * SchlickFresnel(cNdotV);
+			float FdL = 1.0 + FD90_minus_1 * SchlickFresnel(cNdotL);
 			diffuse_brdf_NL = (1.0 / M_PI) * FdV * FdL * cNdotL;
 			/*
 			float energyBias = mix(roughness, 0.0, 0.5);
@@ -1209,13 +1248,9 @@ LIGHT_SHADER_CODE
 #if defined(SPECULAR_BLINN)
 
 		//normalized blinn
-		vec3 H = normalize(V + L);
-		float cNdotH = max(dot(N, H), 0.0);
-		float cVdotH = max(dot(V, H), 0.0);
-		float cLdotH = max(dot(L, H), 0.0);
 		float shininess = exp2(15.0 * (1.0 - roughness) + 1.0) * 0.25;
 		float blinn = pow(cNdotH, shininess);
-		blinn *= (shininess + 8.0) / (8.0 * 3.141592654);
+		blinn *= (shininess + 8.0) * (1.0 / (8.0 * M_PI));
 		specular_brdf_NL = (blinn) / max(4.0 * cNdotV * cNdotL, 0.75);
 
 #elif defined(SPECULAR_PHONG)
@@ -1224,7 +1259,7 @@ LIGHT_SHADER_CODE
 		float cRdotV = max(0.0, dot(R, V));
 		float shininess = exp2(15.0 * (1.0 - roughness) + 1.0) * 0.25;
 		float phong = pow(cRdotV, shininess);
-		phong *= (shininess + 8.0) / (8.0 * 3.141592654);
+		phong *= (shininess + 8.0) * (1.0 / (8.0 * M_PI));
 		specular_brdf_NL = (phong) / max(4.0 * cNdotV * cNdotL, 0.75);
 
 #elif defined(SPECULAR_TOON)
@@ -1240,11 +1275,6 @@ LIGHT_SHADER_CODE
 #elif defined(SPECULAR_SCHLICK_GGX)
 		// shlick+ggx as default
 
-		vec3 H = normalize(V + L);
-
-		float cNdotH = max(dot(N, H), 0.0);
-		float cLdotH = max(dot(L, H), 0.0);
-
 #if defined(LIGHT_USE_ANISOTROPY)
 		float alpha = roughness * roughness;
 		float aspect = sqrt(1.0 - anisotropy * 0.9);
@@ -1254,7 +1284,7 @@ LIGHT_SHADER_CODE
 		float YdotH = dot(B, H);
 		float D = D_GGX_anisotropic(cNdotH, ax, ay, XdotH, YdotH, cNdotH);
 		//float G = G_GGX_anisotropic_2cos(cNdotL, ax, ay, XdotH, YdotH) * G_GGX_anisotropic_2cos(cNdotV, ax, ay, XdotH, YdotH);
-		float G = V_GGX_anisotropic(ax, ay, dot(T, V), dot(T, L), dot(B, V), dot(B, L), cNdotV, cNdotL))
+		float G = V_GGX_anisotropic(ax, ay, dot(T, V), dot(T, L), dot(B, V), dot(B, L), cNdotV, cNdotL);
 
 #else
 		float alpha = roughness * roughness;
@@ -1275,24 +1305,18 @@ LIGHT_SHADER_CODE
 		specular_light += specular_brdf_NL * light_color * specular_blob_intensity * attenuation;
 
 #if defined(LIGHT_USE_CLEARCOAT)
-		if (clearcoat_gloss > 0.0) {
-#if !defined(SPECULAR_SCHLICK_GGX) && !defined(SPECULAR_BLINN)
-			vec3 H = normalize(V + L);
-#endif
+
 #if !defined(SPECULAR_SCHLICK_GGX)
-			float cNdotH = max(dot(N, H), 0.0);
-			float cLdotH = max(dot(L, H), 0.0);
-			float cLdotH5 = SchlickFresnel(cLdotH);
+		float cLdotH5 = SchlickFresnel(cLdotH);
 #endif
-			float Dr = GTR1(cNdotH, mix(.1, .001, clearcoat_gloss));
-			float Fr = mix(.04, 1.0, cLdotH5);
-			//float Gr = G_GGX_2cos(cNdotL, .25) * G_GGX_2cos(cNdotV, .25);
-			float Gr = V_GGX(cNdotL, cNdotV, 0.25);
+		float Dr = GTR1(cNdotH, mix(.1, .001, clearcoat_gloss));
+		float Fr = mix(.04, 1.0, cLdotH5);
+		//float Gr = G_GGX_2cos(cNdotL, .25) * G_GGX_2cos(cNdotV, .25);
+		float Gr = V_GGX(cNdotL, cNdotV, 0.25);
 
-			float clearcoat_specular_brdf_NL = 0.25 * clearcoat * Gr * Fr * Dr * cNdotL;
+		float clearcoat_specular_brdf_NL = 0.25 * clearcoat * Gr * Fr * Dr * cNdotL;
 
-			specular_light += clearcoat_specular_brdf_NL * light_color * specular_blob_intensity * attenuation;
-		}
+		specular_light += clearcoat_specular_brdf_NL * light_color * specular_blob_intensity * attenuation;
 #endif
 	}
 
@@ -1307,8 +1331,7 @@ LIGHT_SHADER_CODE
 #define SAMPLE_SHADOW_TEXEL(p_shadow, p_pos, p_depth) step(p_depth, texture2D(p_shadow, p_pos).r)
 #define SAMPLE_SHADOW_TEXEL_PROJ(p_shadow, p_pos) step(p_pos.z, texture2DProj(p_shadow, p_pos).r)
 
-float sample_shadow(
-		highp sampler2D shadow, highp vec4 spos) {
+float sample_shadow(highp sampler2D shadow, highp vec4 spos) {
 
 #ifdef SHADOW_MODE_PCF_13
 
@@ -1393,6 +1416,7 @@ void main() {
 		discard;
 #endif
 	highp vec3 vertex = vertex_interp;
+	vec3 view = -normalize(vertex_interp);
 	vec3 albedo = vec3(1.0);
 	vec3 transmission = vec3(0.0);
 	float metallic = 0.0;
@@ -1466,10 +1490,16 @@ FRAGMENT_SHADER_CODE
 	vec3 diffuse_light = vec3(0.0, 0.0, 0.0);
 	vec3 ambient_light = vec3(0.0, 0.0, 0.0);
 
-	vec3 eye_position = -normalize(vertex_interp);
+	vec3 eye_position = view;
 
 #if defined(ALPHA_SCISSOR_USED)
 	if (alpha < alpha_scissor) {
+		discard;
+	}
+#endif
+
+#ifdef USE_DEPTH_PREPASS
+	if (alpha < 0.99) {
 		discard;
 	}
 #endif
@@ -1921,14 +1951,13 @@ FRAGMENT_SHADER_CODE
 #ifdef USE_SHADOW
 	{
 		highp vec4 splane = shadow_coord;
-		splane.xyz /= splane.w;
 
-		float shadow = sample_shadow(light_shadow_atlas, splane.xy, splane.z);
+		float shadow = sample_shadow(light_shadow_atlas, splane);
 		light_att *= shadow;
 	}
 #endif
 
-#endif
+#endif // LIGHT_MODE_SPOT
 
 #ifdef USE_VERTEX_LIGHTING
 	//vertex lighting
@@ -2037,7 +2066,7 @@ FRAGMENT_SHADER_CODE
 
 		float fog_z = smoothstep(fog_depth_begin, fog_max_distance, length(vertex));
 
-		fog_amount = pow(fog_z, fog_depth_curve);
+		fog_amount = pow(fog_z, fog_depth_curve) * fog_color_base.a;
 
 		if (fog_transmit_enabled) {
 			vec3 total_light = gl_FragColor.rgb;

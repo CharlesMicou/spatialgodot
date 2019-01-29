@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -626,14 +626,14 @@ Error ResourceInteractiveLoaderText::poll() {
 		if (!packed_scene.is_valid())
 			return error;
 
-		error = OK;
+		error = ERR_FILE_EOF;
 		//get it here
 		resource = packed_scene;
 		if (!ResourceCache::has(res_path)) {
 			packed_scene->set_path(res_path);
 		}
 
-		return ERR_FILE_EOF;
+		return error;
 
 	} else {
 		error_text += "Unknown tag in file: " + next_tag.name;
@@ -1600,9 +1600,11 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 
 				String name = PE->get().name;
 				Variant value = res->get(name);
+				Variant default_value = ClassDB::class_get_default_property_value(res->get_class(), name);
 
-				if ((PE->get().usage & PROPERTY_USAGE_STORE_IF_NONZERO && value.is_zero()) || (PE->get().usage & PROPERTY_USAGE_STORE_IF_NONONE && value.is_one()))
+				if (default_value.get_type() != Variant::NIL && bool(Variant::evaluate(Variant::OP_EQUAL, value, default_value))) {
 					continue;
+				}
 
 				if (PE->get().type == Variant::OBJECT && value.is_zero() && !(PE->get().usage & PROPERTY_USAGE_STORE_IF_NULL))
 					continue;

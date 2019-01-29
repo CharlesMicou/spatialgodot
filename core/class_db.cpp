@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -936,9 +936,8 @@ void ClassDB::add_property(StringName p_class, const PropertyInfo &p_pinfo, cons
 	}
 
 #ifdef DEBUG_METHODS_ENABLED
-
 	if (type->property_setget.has(p_pinfo.name)) {
-		ERR_EXPLAIN("Object already has property: " + p_class);
+		ERR_EXPLAIN("Object " + p_class + " already has property: " + p_pinfo.name);
 		ERR_FAIL();
 	}
 #endif
@@ -1367,6 +1366,41 @@ void ClassDB::get_extensions_for_type(const StringName &p_class, List<String> *p
 	}
 }
 
+HashMap<StringName, HashMap<StringName, Variant> > ClassDB::default_values;
+
+Variant ClassDB::class_get_default_property_value(const StringName &p_class, const StringName &p_property) {
+
+	if (!default_values.has(p_class)) {
+
+		default_values[p_class] = HashMap<StringName, Variant>();
+
+		if (ClassDB::can_instance(p_class)) {
+
+			Object *c = ClassDB::instance(p_class);
+			List<PropertyInfo> plist;
+			c->get_property_list(&plist);
+			for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next()) {
+				if (E->get().usage & (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR)) {
+
+					Variant v = c->get(E->get().name);
+					default_values[p_class][E->get().name] = v;
+				}
+			}
+			memdelete(c);
+		}
+	}
+
+	if (!default_values.has(p_class)) {
+		return Variant();
+	}
+
+	if (!default_values[p_class].has(p_property)) {
+		return Variant();
+	}
+
+	return default_values[p_class][p_property];
+}
+
 RWLock *ClassDB::lock = NULL;
 
 void ClassDB::init() {
@@ -1393,6 +1427,7 @@ void ClassDB::cleanup() {
 	classes.clear();
 	resource_base_extensions.clear();
 	compat_classes.clear();
+	default_values.clear();
 
 	memdelete(lock);
 }

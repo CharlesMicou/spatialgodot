@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -157,7 +157,9 @@ void Area::_body_inout(int p_status, const RID &p_body, int p_instance, int p_bo
 
 	Map<ObjectID, BodyState>::Element *E = body_map.find(objid);
 
-	ERR_FAIL_COND(!body_in && !E);
+	if (!body_in && !E) {
+		return; //likely removed from the tree
+	}
 
 	locked = true;
 
@@ -290,7 +292,7 @@ void Area::_notification(int p_what) {
 void Area::set_monitoring(bool p_enable) {
 
 	if (locked) {
-		ERR_EXPLAIN("This function can't be used during the in/out signal.");
+		ERR_EXPLAIN("Function blocked during in/out signal. Use set_deferred(\"monitoring\",true/false)");
 	}
 	ERR_FAIL_COND(locked);
 
@@ -437,10 +439,10 @@ Array Area::get_overlapping_bodies() const {
 
 void Area::set_monitorable(bool p_enable) {
 
-	if (locked) {
-		ERR_EXPLAIN("This function can't be used during the in/out signal.");
+	if (locked || PhysicsServer::get_singleton()->is_flushing_queries()) {
+		ERR_EXPLAIN("Function blocked during in/out signal. Use set_deferred(\"monitorable\",true/false)");
 	}
-	ERR_FAIL_COND(locked);
+	ERR_FAIL_COND(locked || PhysicsServer::get_singleton()->is_flushing_queries());
 
 	if (p_enable == monitorable)
 		return;
@@ -751,6 +753,7 @@ Area::Area() :
 	angular_damp = 1;
 	priority = 0;
 	monitoring = false;
+	monitorable = false;
 	collision_mask = 1;
 	collision_layer = 1;
 	set_ray_pickable(false);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -474,7 +474,7 @@ public:
 	BIND2(viewport_set_transparent_background, RID, bool)
 
 	BIND2(viewport_set_global_canvas_transform, RID, const Transform2D &)
-	BIND3(viewport_set_canvas_layer, RID, RID, int)
+	BIND4(viewport_set_canvas_stacking, RID, RID, int, int)
 	BIND2(viewport_set_shadow_atlas_size, RID, int)
 	BIND3(viewport_set_shadow_atlas_quadrant_subdivision, RID, int, int)
 	BIND2(viewport_set_msaa, RID, ViewportMSAA)
@@ -495,6 +495,7 @@ public:
 	BIND2(environment_set_background, RID, EnvironmentBG)
 	BIND2(environment_set_sky, RID, RID)
 	BIND2(environment_set_sky_custom_fov, RID, float)
+	BIND2(environment_set_sky_orientation, RID, const Basis &)
 	BIND2(environment_set_bg_color, RID, const Color &)
 	BIND2(environment_set_bg_energy, RID, float)
 	BIND2(environment_set_canvas_max_layer, RID, int)
@@ -504,14 +505,14 @@ public:
 
 	BIND6(environment_set_dof_blur_near, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
 	BIND6(environment_set_dof_blur_far, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
-	BIND10(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, bool)
+	BIND11(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, float, bool)
 
 	BIND9(environment_set_tonemap, RID, EnvironmentToneMapper, float, float, bool, float, float, float, float)
 
 	BIND6(environment_set_adjustment, RID, bool, float, float, float, RID)
 
 	BIND5(environment_set_fog, RID, bool, const Color &, const Color &, float)
-	BIND6(environment_set_fog_depth, RID, bool, float, float, bool, float)
+	BIND7(environment_set_fog_depth, RID, bool, float, float, float, bool, float)
 	BIND5(environment_set_fog_height, RID, bool, float, float, float)
 
 	/* SCENARIO API */
@@ -599,7 +600,7 @@ public:
 	BIND10(canvas_item_add_triangle_array, RID, const Vector<int> &, const Vector<Point2> &, const Vector<Color> &, const Vector<Point2> &, const Vector<int> &, const Vector<float> &, RID, int, RID)
 	BIND4(canvas_item_add_mesh, RID, const RID &, RID, RID)
 	BIND4(canvas_item_add_multimesh, RID, RID, RID, RID)
-	BIND6(canvas_item_add_particles, RID, RID, RID, RID, int, int)
+	BIND4(canvas_item_add_particles, RID, RID, RID, RID)
 	BIND2(canvas_item_add_set_transform, RID, const Transform2D &)
 	BIND2(canvas_item_add_clip_ignore, RID, bool)
 	BIND2(canvas_item_set_sort_children_by_y, RID, bool)

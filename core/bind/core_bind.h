@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -185,6 +185,7 @@ public:
 	virtual bool is_window_always_on_top() const;
 	virtual void request_attention();
 	virtual void center_window();
+	virtual void move_window_to_foreground();
 
 	virtual void set_borderless_window(bool p_borderless);
 	virtual bool get_borderless_window() const;
@@ -194,6 +195,8 @@ public:
 
 	virtual void set_ime_active(const bool p_active);
 	virtual void set_ime_position(const Point2 &p_pos);
+	virtual Point2 get_ime_selection() const;
+	virtual String get_ime_text() const;
 
 	Error native_video_play(String p_path, float p_volume, String p_audio_track, String p_subtitle_track);
 	bool native_video_is_playing();
@@ -278,6 +281,7 @@ public:
 	Dictionary get_time_zone_info() const;
 	uint64_t get_unix_time() const;
 	uint64_t get_system_time_secs() const;
+	uint64_t get_system_time_msecs() const;
 
 	int get_static_memory_usage() const;
 	int get_static_memory_peak_usage() const;
@@ -454,6 +458,7 @@ public:
 
 	PoolVector<uint8_t> get_buffer(int p_length) const; ///< get an array of bytes
 	String get_line() const;
+	Vector<String> get_csv_line(const String &p_delim = ",") const;
 	String get_as_text() const;
 	String get_md5(const String &p_path) const;
 	String get_sha256(const String &p_path) const;
@@ -479,11 +484,10 @@ public:
 
 	void store_string(const String &p_string);
 	void store_line(const String &p_string);
+	void store_csv_line(const Vector<String> &p_values, const String &p_delim = ",");
 
 	virtual void store_pascal_string(const String &p_string);
 	virtual String get_pascal_string();
-
-	Vector<String> get_csv_line(String delim = ",") const;
 
 	void store_buffer(const PoolVector<uint8_t> &p_buffer); ///< store an array of bytes
 

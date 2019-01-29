@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,6 +32,7 @@
 
 #include "core/print_string.h"
 
+/* this implementation is very inefficient, commenting unless bugs happen. See the other one.
 bool Geometry::is_point_in_polygon(const Vector2 &p_point, const Vector<Vector2> &p_polygon) {
 
 	Vector<int> indices = Geometry::triangulate_polygon(p_polygon);
@@ -42,6 +43,7 @@ bool Geometry::is_point_in_polygon(const Vector2 &p_point, const Vector<Vector2>
 	}
 	return false;
 }
+*/
 
 void Geometry::MeshData::optimize_vertices() {
 

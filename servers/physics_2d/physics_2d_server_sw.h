@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -54,6 +54,8 @@ class Physics2DServerSW : public Physics2DServer {
 
 	bool using_threads;
 
+	bool flushing_queries;
+
 	Step2DSW *stepper;
 	Set<const Space2DSW *> active_spaces;
 
@@ -78,6 +80,7 @@ public:
 		real_t valid_depth;
 		int max;
 		int amount;
+		int passed;
 		int invalid_by_dir;
 		Vector2 *ptr;
 	};
@@ -144,6 +147,9 @@ public:
 	virtual void area_attach_object_instance_id(RID p_area, ObjectID p_ID);
 	virtual ObjectID area_get_object_instance_id(RID p_area) const;
 
+	virtual void area_attach_canvas_instance_id(RID p_area, ObjectID p_ID);
+	virtual ObjectID area_get_canvas_instance_id(RID p_area) const;
+
 	virtual void area_set_param(RID p_area, AreaParameter p_param, const Variant &p_value);
 	virtual void area_set_transform(RID p_area, const Transform2D &p_transform);
 
@@ -183,10 +189,13 @@ public:
 	virtual void body_clear_shapes(RID p_body);
 
 	virtual void body_set_shape_disabled(RID p_body, int p_shape_idx, bool p_disabled);
-	virtual void body_set_shape_as_one_way_collision(RID p_body, int p_shape_idx, bool p_enable);
+	virtual void body_set_shape_as_one_way_collision(RID p_body, int p_shape_idx, bool p_enable, float p_margin);
 
 	virtual void body_attach_object_instance_id(RID p_body, uint32_t p_ID);
 	virtual uint32_t body_get_object_instance_id(RID p_body) const;
+
+	virtual void body_attach_canvas_instance_id(RID p_body, uint32_t p_ID);
+	virtual uint32_t body_get_canvas_instance_id(RID p_body) const;
 
 	virtual void body_set_continuous_collision_detection_mode(RID p_body, CCDMode p_mode);
 	virtual CCDMode body_get_continuous_collision_detection_mode(RID p_body) const;
@@ -271,6 +280,8 @@ public:
 	virtual void flush_queries();
 	virtual void end_sync();
 	virtual void finish();
+
+	virtual bool is_flushing_queries() const { return flushing_queries; }
 
 	int get_process_info(ProcessInfo p_info);
 

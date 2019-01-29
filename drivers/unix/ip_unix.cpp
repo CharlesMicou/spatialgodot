@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -55,10 +55,12 @@
 #include <iphlpapi.h>
 #endif // MINGW hack
 #endif
-#else
+#else // UNIX
 #include <netdb.h>
 #ifdef ANDROID_ENABLED
-#include "platform/android/ifaddrs_android.h"
+// We could drop this file once we up our API level to 24,
+// where the NDK's ifaddrs.h supports to needed getifaddrs.
+#include "thirdparty/misc/ifaddrs-android.h"
 #else
 #ifdef __FreeBSD__
 #include <sys/types.h>
@@ -201,7 +203,7 @@ void IP_Unix::get_local_addresses(List<IP_Address> *r_addresses) const {
 
 #endif
 
-#else
+#else // UNIX
 
 void IP_Unix::get_local_addresses(List<IP_Address> *r_addresses) const {
 

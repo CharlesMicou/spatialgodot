@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -580,7 +580,7 @@ void EditorFileDialog::_item_list_item_rmb_selected(int p_item, const Vector2 &p
 	if (single_item_selected) {
 		item_menu->add_separator();
 		Dictionary item_meta = item_list->get_item_metadata(p_item);
-		String item_text = item_meta["dir"] ? TTR("Open In File Manager") : TTR("Show In File Manager");
+		String item_text = item_meta["dir"] ? TTR("Open in File Manager") : TTR("Show in File Manager");
 		item_menu->add_icon_item(get_icon("Filesystem", "EditorIcons"), item_text, ITEM_MENU_SHOW_IN_EXPLORER);
 	}
 
@@ -605,7 +605,7 @@ void EditorFileDialog::_item_list_rmb_clicked(const Vector2 &p_pos) {
 	}
 	item_menu->add_icon_item(get_icon("Reload", "EditorIcons"), TTR("Refresh"), ITEM_MENU_REFRESH, KEY_F5);
 	item_menu->add_separator();
-	item_menu->add_icon_item(get_icon("Filesystem", "EditorIcons"), TTR("Open In File Manager"), ITEM_MENU_SHOW_IN_EXPLORER);
+	item_menu->add_icon_item(get_icon("Filesystem", "EditorIcons"), TTR("Open in File Manager"), ITEM_MENU_SHOW_IN_EXPLORER);
 
 	item_menu->set_position(item_list->get_global_position() + p_pos);
 	item_menu->popup();
@@ -830,11 +830,12 @@ void EditorFileDialog::update_file_list() {
 			d["name"] = files.front()->get();
 			d["dir"] = false;
 			String fullpath = cdir.plus_file(files.front()->get());
+			d["path"] = fullpath;
+			item_list->set_item_metadata(item_list->get_item_count() - 1, d);
+
 			if (display_mode == DISPLAY_THUMBNAILS) {
 				EditorResourcePreview::get_singleton()->queue_resource_preview(fullpath, this, "_thumbnail_result", fullpath);
 			}
-			d["path"] = fullpath;
-			item_list->set_item_metadata(item_list->get_item_count() - 1, d);
 
 			if (file->get_text() == files.front()->get())
 				item_list->set_current(item_list->get_item_count() - 1);
@@ -1135,14 +1136,10 @@ void EditorFileDialog::_update_drives() {
 }
 
 void EditorFileDialog::_favorite_selected(int p_idx) {
-
-	Vector<String> favorited = EditorSettings::get_singleton()->get_favorites();
-	ERR_FAIL_INDEX(p_idx, favorited.size());
-
-	dir_access->change_dir(favorited[p_idx]);
+	dir_access->change_dir(favorites->get_item_metadata(p_idx));
 	file->set_text("");
-	invalidate();
 	update_dir();
+	invalidate();
 	_push_history();
 }
 
@@ -1192,7 +1189,7 @@ void EditorFileDialog::_update_favorites() {
 	bool res = access == ACCESS_RESOURCES;
 
 	String current = get_current_dir();
-	Ref<Texture> star = get_icon("Favorites", "EditorIcons");
+	Ref<Texture> folder_icon = get_icon("Folder", "EditorIcons");
 	favorites->clear();
 
 	favorite->set_pressed(false);
@@ -1203,16 +1200,23 @@ void EditorFileDialog::_update_favorites() {
 		if (cres != res)
 			continue;
 		String name = favorited[i];
-
-		bool setthis = name == current;
+		bool setthis = false;
 
 		if (res && name == "res://") {
+			if (name == current)
+				setthis = true;
 			name = "/";
+		} else if (name.ends_with("/")) {
+			if (name == current)
+				setthis = true;
+			name = name.substr(0, name.length() - 1);
+			name = name.get_file();
+
+			favorites->add_item(name, folder_icon);
 		} else {
-			name = name.get_file() + "/";
+			continue; // We don't handle favorite files here
 		}
 
-		favorites->add_item(name, star);
 		favorites->set_item_metadata(favorites->get_item_count() - 1, favorited[i]);
 
 		if (setthis) {
@@ -1695,6 +1699,12 @@ EditorFileDialog::~EditorFileDialog() {
 	memdelete(dir_access);
 }
 
+void EditorLineEditFileChooser::_notification(int p_what) {
+
+	if (p_what == NOTIFICATION_ENTER_TREE || p_what == NOTIFICATION_THEME_CHANGED)
+		button->set_icon(get_icon("Folder", "EditorIcons"));
+}
+
 void EditorLineEditFileChooser::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("_browse"), &EditorLineEditFileChooser::_browse);
@@ -1721,7 +1731,6 @@ EditorLineEditFileChooser::EditorLineEditFileChooser() {
 	add_child(line_edit);
 	line_edit->set_h_size_flags(SIZE_EXPAND_FILL);
 	button = memnew(Button);
-	button->set_text(" .. ");
 	add_child(button);
 	button->connect("pressed", this, "_browse");
 	dialog = memnew(EditorFileDialog);

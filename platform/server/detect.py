@@ -11,9 +11,15 @@ def get_name():
     return "Server"
 
 
+def get_program_suffix():
+    if (sys.platform == "darwin"):
+        return "osx"
+    return "x11"
+
+
 def can_build():
 
-    if (os.name != "posix" or sys.platform == "darwin"):
+    if (os.name != "posix"):
         return False
 
     return True
@@ -37,10 +43,10 @@ def configure(env):
     ## Build type
 
     if (env["target"] == "release"):
-        env.Append(CCFLAGS=['-O2', '-ffast-math', '-fomit-frame-pointer'])
+        env.Append(CCFLAGS=['-O2', '-fomit-frame-pointer'])
 
     elif (env["target"] == "release_debug"):
-        env.Append(CCFLAGS=['-O2', '-ffast-math', '-DDEBUG_ENABLED'])
+        env.Append(CCFLAGS=['-O2', '-DDEBUG_ENABLED'])
 
     elif (env["target"] == "debug"):
         env.Append(CCFLAGS=['-g2', '-DDEBUG_ENABLED', '-DDEBUG_MEMORY_ENABLED'])
@@ -147,6 +153,10 @@ def configure(env):
 
     env.Append(CPPPATH=['#platform/server'])
     env.Append(CPPFLAGS=['-DSERVER_ENABLED', '-DUNIX_ENABLED'])
+
+    if (platform.system() == "Darwin"):
+        env.Append(LINKFLAGS=['-framework', 'Cocoa', '-framework', 'Carbon', '-lz', '-framework', 'IOKit'])
+
     env.Append(LIBS=['pthread'])
 
     if (platform.system() == "Linux"):

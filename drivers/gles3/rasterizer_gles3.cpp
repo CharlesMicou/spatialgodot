@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -79,12 +79,6 @@ RasterizerScene *RasterizerGLES3::get_scene() {
 
 #ifdef GLAD_ENABLED
 // Restricting to GLAD as only used in initialize() with GLAD_GL_ARB_debug_output
-#if (defined WINDOWS_ENABLED) && !(defined UWP_ENABLED)
-#define GLAPIENTRY APIENTRY
-#else
-#define GLAPIENTRY
-#endif
-
 static void GLAPIENTRY _gl_debug_print(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const GLvoid *userParam) {
 
 	if (type == _EXT_DEBUG_TYPE_OTHER_ARB)
@@ -432,10 +426,10 @@ void RasterizerGLES3::make_current() {
 
 void RasterizerGLES3::register_config() {
 
-	GLOBAL_DEF("rendering/quality/filters/use_nearest_mipmap_filter", false);
 	GLOBAL_DEF("rendering/quality/filters/anisotropic_filter_level", 4);
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/filters/anisotropic_filter_level", PropertyInfo(Variant::INT, "rendering/quality/filters/anisotropic_filter_level", PROPERTY_HINT_RANGE, "1,16,1"));
 	GLOBAL_DEF("rendering/limits/time/time_rollover_secs", 3600);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/limits/time/time_rollover_secs", PropertyInfo(Variant::REAL, "rendering/limits/time/time_rollover_secs", PROPERTY_HINT_RANGE, "0,10000,1,or_greater"));
 }
 
 RasterizerGLES3::RasterizerGLES3() {

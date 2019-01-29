@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -113,7 +113,7 @@ public:
 	virtual Vector3 get_magnetometer() const = 0;
 	virtual Vector3 get_gyroscope() const = 0;
 
-	virtual void action_press(const StringName &p_action) = 0;
+	virtual void action_press(const StringName &p_action, float p_strength = 1.f) = 0;
 	virtual void action_release(const StringName &p_action) = 0;
 
 	void get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const;

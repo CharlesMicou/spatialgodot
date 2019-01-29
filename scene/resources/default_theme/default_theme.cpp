@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -307,10 +307,6 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	theme->set_constant("hseparation", "MenuButton", 3 * scale);
 
-	// ButtonGroup
-
-	theme->set_stylebox("panel", "ButtonGroup", memnew(StyleBoxEmpty));
-
 	// CheckBox
 
 	Ref<StyleBox> cbx_empty = memnew(StyleBoxEmpty);
@@ -604,6 +600,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_icon("resizer", "GraphNode", make_icon(window_resizer_png));
 	theme->set_font("title_font", "GraphNode", default_font);
 	theme->set_color("title_color", "GraphNode", Color(0, 0, 0, 1));
+	theme->set_color("close_color", "GraphNode", Color(0, 0, 0, 1));
 	theme->set_constant("title_offset", "GraphNode", 20 * scale);
 	theme->set_constant("close_offset", "GraphNode", 18 * scale);
 	theme->set_constant("port_offset", "GraphNode", 3 * scale);
@@ -653,6 +650,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_constant("item_margin", "Tree", 12 * scale);
 	theme->set_constant("button_margin", "Tree", 4 * scale);
 	theme->set_constant("draw_relationship_lines", "Tree", 0);
+	theme->set_constant("draw_guides", "Tree", 1);
 	theme->set_constant("scroll_border", "Tree", 4);
 	theme->set_constant("scroll_speed", "Tree", 12);
 

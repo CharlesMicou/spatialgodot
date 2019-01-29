@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -36,11 +36,35 @@
 #include "filesystem_dock.h"
 #include "servers/audio_server.h"
 
+void EditorAudioBus::_update_visible_channels() {
+
+	int i = 0;
+	for (; i < cc; i++) {
+
+		if (!channel[i].vu_l->is_visible()) {
+			channel[i].vu_l->show();
+		}
+		if (!channel[i].vu_r->is_visible()) {
+			channel[i].vu_r->show();
+		}
+	}
+
+	for (; i < CHANNELS_MAX; i++) {
+
+		if (channel[i].vu_l->is_visible()) {
+			channel[i].vu_l->hide();
+		}
+		if (channel[i].vu_r->is_visible()) {
+			channel[i].vu_r->hide();
+		}
+	}
+}
+
 void EditorAudioBus::_notification(int p_what) {
 
 	if (p_what == NOTIFICATION_READY) {
 
-		for (int i = 0; i < cc; i++) {
+		for (int i = 0; i < CHANNELS_MAX; i++) {
 			channel[i].vu_l->set_under_texture(get_icon("BusVuEmpty", "EditorIcons"));
 			channel[i].vu_l->set_progress_texture(get_icon("BusVuFull", "EditorIcons"));
 			channel[i].vu_r->set_under_texture(get_icon("BusVuEmpty", "EditorIcons"));
@@ -51,9 +75,16 @@ void EditorAudioBus::_notification(int p_what) {
 
 		disabled_vu = get_icon("BusVuFrozen", "EditorIcons");
 
+		Color solo_color = Color::html(EditorSettings::get_singleton()->is_dark_theme() ? "#ffe337" : "#ffeb70");
+		Color mute_color = Color::html(EditorSettings::get_singleton()->is_dark_theme() ? "#ff2929" : "#ff7070");
+		Color bypass_color = Color::html(EditorSettings::get_singleton()->is_dark_theme() ? "#22ccff" : "#70deff");
+
 		solo->set_icon(get_icon("AudioBusSolo", "EditorIcons"));
+		solo->add_color_override("icon_color_pressed", solo_color);
 		mute->set_icon(get_icon("AudioBusMute", "EditorIcons"));
+		mute->add_color_override("icon_color_pressed", mute_color);
 		bypass->set_icon(get_icon("AudioBusBypass", "EditorIcons"));
+		bypass->add_color_override("icon_color_pressed", bypass_color);
 
 		bus_options->set_icon(get_icon("GuiMiniTabMenu", "EditorIcons"));
 
@@ -71,6 +102,11 @@ void EditorAudioBus::_notification(int p_what) {
 	}
 
 	if (p_what == NOTIFICATION_PROCESS) {
+
+		if (cc != AudioServer::get_singleton()->get_bus_channels(get_index())) {
+			cc = AudioServer::get_singleton()->get_bus_channels(get_index());
+			_update_visible_channels();
+		}
 
 		for (int i = 0; i < cc; i++) {
 			float real_peak[2] = { -100, -100 };
@@ -113,7 +149,7 @@ void EditorAudioBus::_notification(int p_what) {
 
 	if (p_what == NOTIFICATION_VISIBILITY_CHANGED) {
 
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < CHANNELS_MAX; i++) {
 			channel[i].peak_l = -100;
 			channel[i].peak_r = -100;
 			channel[i].prev_active = true;
@@ -124,7 +160,7 @@ void EditorAudioBus::_notification(int p_what) {
 
 	if (p_what == NOTIFICATION_THEME_CHANGED) {
 
-		for (int i = 0; i < cc; i++) {
+		for (int i = 0; i < CHANNELS_MAX; i++) {
 			channel[i].vu_l->set_under_texture(get_icon("BusVuEmpty", "EditorIcons"));
 			channel[i].vu_l->set_progress_texture(get_icon("BusVuFull", "EditorIcons"));
 			channel[i].vu_r->set_under_texture(get_icon("BusVuEmpty", "EditorIcons"));
@@ -709,9 +745,8 @@ EditorAudioBus::EditorAudioBus(EditorAudioBuses *p_buses, bool p_is_master) {
 	slider->connect("value_changed", this, "_volume_db_changed");
 	hb->add_child(slider);
 
-	cc = AudioServer::get_singleton()->get_channel_count();
-
-	for (int i = 0; i < cc; i++) {
+	cc = 0;
+	for (int i = 0; i < CHANNELS_MAX; i++) {
 		channel[i].vu_l = memnew(TextureProgress);
 		channel[i].vu_l->set_fill_mode(TextureProgress::FILL_BOTTOM_TO_TOP);
 		hb->add_child(channel[i].vu_l);

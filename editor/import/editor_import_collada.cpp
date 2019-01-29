@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -43,8 +43,6 @@
 #include "scene/resources/animation.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/surface_tool.h"
-
-#include <iostream>
 
 struct ColladaImport {
 
@@ -1191,6 +1189,7 @@ Error ColladaImport::_create_resources(Collada::Node *p_node, bool p_use_compres
 							if (collada.state.mesh_data_map.has(meshid)) {
 								Ref<ArrayMesh> mesh = Ref<ArrayMesh>(memnew(ArrayMesh));
 								const Collada::MeshData &meshdata = collada.state.mesh_data_map[meshid];
+								mesh->set_name(meshdata.name);
 								Error err = _create_mesh_surfaces(false, mesh, ng->material_map, meshdata, apply_xform, bone_remap, skin, NULL, Vector<Ref<ArrayMesh> >(), false);
 								ERR_FAIL_COND_V(err, err);
 
@@ -1655,8 +1654,9 @@ void ColladaImport::create_animation(int p_clip, bool p_make_tracks_in_all_bones
 				}
 			}
 
-			Quat q = xform.basis.get_rotation_quat();
 			Vector3 s = xform.basis.get_scale();
+			bool singular_matrix = Math::is_equal_approx(s.x, 0.0f) || Math::is_equal_approx(s.y, 0.0f) || Math::is_equal_approx(s.z, 0.0f);
+			Quat q = singular_matrix ? Quat() : xform.basis.get_rotation_quat();
 			Vector3 l = xform.origin;
 
 			animation->transform_track_insert_key(track, snapshots[i], l, q, s);
@@ -1705,8 +1705,9 @@ void ColladaImport::create_animation(int p_clip, bool p_make_tracks_in_all_bones
 
 			xform = sk->get_bone_rest(nm.bone).affine_inverse() * xform;
 
-			Quat q = xform.basis.get_rotation_quat();
 			Vector3 s = xform.basis.get_scale();
+			bool singular_matrix = Math::is_equal_approx(s.x, 0.0f) || Math::is_equal_approx(s.y, 0.0f) || Math::is_equal_approx(s.z, 0.0f);
+			Quat q = singular_matrix ? Quat() : xform.basis.get_rotation_quat();
 			Vector3 l = xform.origin;
 
 			animation->transform_track_insert_key(track, 0, l, q, s);

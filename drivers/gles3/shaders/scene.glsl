@@ -42,8 +42,6 @@ layout(location = 4) in vec2 uv_attrib;
 layout(location = 5) in vec2 uv2_attrib;
 #endif
 
-uniform float normal_mult;
-
 #ifdef USE_SKELETON
 layout(location = 6) in uvec4 bone_indices; // attrib:6
 layout(location = 7) in vec4 bone_weights; // attrib:7
@@ -98,6 +96,8 @@ layout(std140) uniform SceneData { // ubo:0
 
 	bool fog_depth_enabled;
 	highp float fog_depth_begin;
+	highp float fog_depth_end;
+	mediump float fog_density;
 	highp float fog_depth_curve;
 	bool fog_transmit_enabled;
 	highp float fog_transmit_curve;
@@ -167,15 +167,61 @@ out vec4 specular_light_interp;
 
 void light_compute(vec3 N, vec3 L, vec3 V, vec3 light_color, float roughness, inout vec3 diffuse, inout vec3 specular) {
 
-	float dotNL = max(dot(N, L), 0.0);
-	diffuse += dotNL * light_color / M_PI;
+	float NdotL = dot(N, L);
+	float cNdotL = max(NdotL, 0.0); // clamped NdotL
+	float NdotV = dot(N, V);
+	float cNdotV = max(NdotV, 0.0);
+
+#if defined(DIFFUSE_OREN_NAYAR)
+	vec3 diffuse_brdf_NL;
+#else
+	float diffuse_brdf_NL; // BRDF times N.L for calculating diffuse radiance
+#endif
+
+#if defined(DIFFUSE_LAMBERT_WRAP)
+	// energy conserving lambert wrap shader
+	diffuse_brdf_NL = max(0.0, (NdotL + roughness) / ((1.0 + roughness) * (1.0 + roughness)));
+
+#elif defined(DIFFUSE_OREN_NAYAR)
+
+	{
+		// see http://mimosa-pudica.net/improved-oren-nayar.html
+		float LdotV = dot(L, V);
+
+		float s = LdotV - NdotL * NdotV;
+		float t = mix(1.0, max(NdotL, NdotV), step(0.0, s));
+
+		float sigma2 = roughness * roughness; // TODO: this needs checking
+		vec3 A = 1.0 + sigma2 * (-0.5 / (sigma2 + 0.33) + 0.17 * diffuse_color / (sigma2 + 0.13));
+		float B = 0.45 * sigma2 / (sigma2 + 0.09);
+
+		diffuse_brdf_NL = cNdotL * (A + vec3(B) * s / t) * (1.0 / M_PI);
+	}
+#else
+	// lambert by default for everything else
+	diffuse_brdf_NL = cNdotL * (1.0 / M_PI);
+#endif
+
+	diffuse += light_color * diffuse_brdf_NL;
 
 	if (roughness > 0.0) {
 
+		// D
+		float specular_brdf_NL = 0.0;
+
+#if !defined(SPECULAR_DISABLED)
+		//normalized blinn always unless disabled
 		vec3 H = normalize(V + L);
-		float dotNH = max(dot(N, H), 0.0);
-		float intensity = (roughness >= 1.0 ? 1.0 : pow(dotNH, (1.0 - roughness) * 256.0));
-		specular += light_color * intensity;
+		float cNdotH = max(dot(N, H), 0.0);
+		float cVdotH = max(dot(V, H), 0.0);
+		float cLdotH = max(dot(L, H), 0.0);
+		float shininess = exp2(15.0 * (1.0 - roughness) + 1.0) * 0.25;
+		float blinn = pow(cNdotH, shininess);
+		blinn *= (shininess + 8.0) * (1.0 / (8.0 * M_PI));
+		specular_brdf_NL = (blinn) / max(4.0 * cNdotV * cNdotL, 0.75);
+#endif
+
+		specular += specular_brdf_NL * light_color * (1.0 / M_PI);
 	}
 }
 
@@ -278,11 +324,10 @@ void main() {
 	}
 #endif
 
-	vec3 normal = normal_attrib * normal_mult;
+	vec3 normal = normal_attrib;
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
 	vec3 tangent = tangent_attrib.xyz;
-	tangent *= normal_mult;
 	float binormalf = tangent_attrib.a;
 #endif
 
@@ -305,6 +350,10 @@ void main() {
 
 #if defined(ENABLE_UV2_INTERP) || defined(USE_LIGHTMAP)
 	uv2_interp = uv2_attrib;
+#endif
+
+#ifdef OVERRIDE_POSITION
+	highp vec4 position;
 #endif
 
 #if defined(USE_INSTANCING) && defined(ENABLE_INSTANCE_CUSTOM)
@@ -462,7 +511,11 @@ VERTEX_SHADER_CODE
 
 #endif //RENDER_DEPTH
 
+#ifdef OVERRIDE_POSITION
+	gl_Position = position;
+#else
 	gl_Position = projection_matrix * vec4(vertex_interp, 1.0);
+#endif
 
 	position_interp = gl_Position;
 
@@ -675,6 +728,8 @@ layout(std140) uniform SceneData {
 
 	bool fog_depth_enabled;
 	highp float fog_depth_begin;
+	highp float fog_depth_end;
+	mediump float fog_density;
 	highp float fog_depth_curve;
 	bool fog_transmit_enabled;
 	highp float fog_transmit_curve;
@@ -949,6 +1004,18 @@ LIGHT_SHADER_CODE
 	float NdotV = dot(N, V);
 	float cNdotV = max(NdotV, 0.0);
 
+#if defined(DIFFUSE_BURLEY) || defined(SPECULAR_BLINN) || defined(SPECULAR_SCHLICK_GGX) || defined(LIGHT_USE_CLEARCOAT)
+	vec3 H = normalize(V + L);
+#endif
+
+#if defined(SPECULAR_BLINN) || defined(SPECULAR_SCHLICK_GGX) || defined(LIGHT_USE_CLEARCOAT)
+	float cNdotH = max(dot(N, H), 0.0);
+#endif
+
+#if defined(DIFFUSE_BURLEY) || defined(SPECULAR_SCHLICK_GGX) || defined(LIGHT_USE_CLEARCOAT)
+	float cLdotH = max(dot(L, H), 0.0);
+#endif
+
 	if (metallic < 1.0) {
 #if defined(DIFFUSE_OREN_NAYAR)
 		vec3 diffuse_brdf_NL;
@@ -983,13 +1050,9 @@ LIGHT_SHADER_CODE
 #elif defined(DIFFUSE_BURLEY)
 
 		{
-
-			vec3 H = normalize(V + L);
-			float cLdotH = max(0.0, dot(L, H));
-
-			float FD90 = 0.5 + 2.0 * cLdotH * cLdotH * roughness;
-			float FdV = 1.0 + (FD90 - 1.0) * SchlickFresnel(cNdotV);
-			float FdL = 1.0 + (FD90 - 1.0) * SchlickFresnel(cNdotL);
+			float FD90_minus_1 = 2.0 * cLdotH * cLdotH * roughness - 0.5;
+			float FdV = 1.0 + FD90_minus_1 * SchlickFresnel(cNdotV);
+			float FdL = 1.0 + FD90_minus_1 * SchlickFresnel(cNdotL);
 			diffuse_brdf_NL = (1.0 / M_PI) * FdV * FdL * cNdotL;
 			/*
 			float energyBias = mix(roughness, 0.0, 0.5);
@@ -1026,13 +1089,9 @@ LIGHT_SHADER_CODE
 #if defined(SPECULAR_BLINN)
 
 		//normalized blinn
-		vec3 H = normalize(V + L);
-		float cNdotH = max(dot(N, H), 0.0);
-		float cVdotH = max(dot(V, H), 0.0);
-		float cLdotH = max(dot(L, H), 0.0);
 		float shininess = exp2(15.0 * (1.0 - roughness) + 1.0) * 0.25;
 		float blinn = pow(cNdotH, shininess);
-		blinn *= (shininess + 8.0) / (8.0 * 3.141592654);
+		blinn *= (shininess + 8.0) * (1.0 / (8.0 * M_PI));
 		float intensity = (blinn) / max(4.0 * cNdotV * cNdotL, 0.75);
 
 		specular_light += light_color * intensity * specular_blob_intensity * attenuation;
@@ -1043,7 +1102,7 @@ LIGHT_SHADER_CODE
 		float cRdotV = max(0.0, dot(R, V));
 		float shininess = exp2(15.0 * (1.0 - roughness) + 1.0) * 0.25;
 		float phong = pow(cRdotV, shininess);
-		phong *= (shininess + 8.0) / (8.0 * 3.141592654);
+		phong *= (shininess + 8.0) * (1.0 / (8.0 * M_PI));
 		float intensity = (phong) / max(4.0 * cNdotV * cNdotL, 0.75);
 
 		specular_light += light_color * intensity * specular_blob_intensity * attenuation;
@@ -1062,11 +1121,6 @@ LIGHT_SHADER_CODE
 
 #elif defined(SPECULAR_SCHLICK_GGX)
 		// shlick+ggx as default
-
-		vec3 H = normalize(V + L);
-
-		float cNdotH = max(dot(N, H), 0.0);
-		float cLdotH = max(dot(L, H), 0.0);
 
 #if defined(LIGHT_USE_ANISOTROPY)
 
@@ -1095,23 +1149,17 @@ LIGHT_SHADER_CODE
 #endif
 
 #if defined(LIGHT_USE_CLEARCOAT)
-		if (clearcoat_gloss > 0.0) {
-#if !defined(SPECULAR_SCHLICK_GGX) && !defined(SPECULAR_BLINN)
-			vec3 H = normalize(V + L);
-#endif
+
 #if !defined(SPECULAR_SCHLICK_GGX)
-			float cNdotH = max(dot(N, H), 0.0);
-			float cLdotH = max(dot(L, H), 0.0);
-			float cLdotH5 = SchlickFresnel(cLdotH);
+		float cLdotH5 = SchlickFresnel(cLdotH);
 #endif
-			float Dr = GTR1(cNdotH, mix(.1, .001, clearcoat_gloss));
-			float Fr = mix(.04, 1.0, cLdotH5);
-			float Gr = G_GGX_2cos(cNdotL, .25) * G_GGX_2cos(cNdotV, .25);
+		float Dr = GTR1(cNdotH, mix(.1, .001, clearcoat_gloss));
+		float Fr = mix(.04, 1.0, cLdotH5);
+		float Gr = G_GGX_2cos(cNdotL, .25) * G_GGX_2cos(cNdotV, .25);
 
-			float specular_brdf_NL = 0.25 * clearcoat * Gr * Fr * Dr * cNdotL;
+		float clearcoat_specular_brdf_NL = 0.25 * clearcoat * Gr * Fr * Dr * cNdotL;
 
-			specular_light += specular_brdf_NL * light_color * specular_blob_intensity * attenuation;
-		}
+		specular_light += clearcoat_specular_brdf_NL * light_color * specular_blob_intensity * attenuation;
 #endif
 	}
 
@@ -1510,7 +1558,7 @@ void gi_probe_compute(mediump sampler3D probe, mat4 probe_xform, vec3 bounds, ve
 
 	//irradiance
 
-	vec3 irr_light = voxel_cone_trace(probe, cell_size, probe_pos, environment, blend_ambient, ref_vec, max(min_ref_tan, tan(roughness * 0.5 * M_PI)), max_distance, p_bias);
+	vec3 irr_light = voxel_cone_trace(probe, cell_size, probe_pos, environment, blend_ambient, ref_vec, max(min_ref_tan, tan(roughness * 0.5 * M_PI * 0.99)), max_distance, p_bias);
 
 	irr_light *= multiplier;
 	//irr_light=vec3(0.0);
@@ -1571,6 +1619,7 @@ void main() {
 
 	//lay out everything, whathever is unused is optimized away anyway
 	highp vec3 vertex = vertex_interp;
+	vec3 view = -normalize(vertex_interp);
 	vec3 albedo = vec3(1.0);
 	vec3 transmission = vec3(0.0);
 	float metallic = 0.0;
@@ -1591,24 +1640,24 @@ void main() {
 
 	float alpha = 1.0;
 
-#if defined(DO_SIDE_CHECK)
-	float side = gl_FrontFacing ? 1.0 : -1.0;
-#else
-	float side = 1.0;
-#endif
-
 #if defined(ALPHA_SCISSOR_USED)
 	float alpha_scissor = 0.5;
 #endif
 
 #if defined(ENABLE_TANGENT_INTERP) || defined(ENABLE_NORMALMAP) || defined(LIGHT_USE_ANISOTROPY)
-	vec3 binormal = normalize(binormal_interp) * side;
-	vec3 tangent = normalize(tangent_interp) * side;
+	vec3 binormal = normalize(binormal_interp);
+	vec3 tangent = normalize(tangent_interp);
 #else
 	vec3 binormal = vec3(0.0);
 	vec3 tangent = vec3(0.0);
 #endif
-	vec3 normal = normalize(normal_interp) * side;
+	vec3 normal = normalize(normal_interp);
+
+#if defined(DO_SIDE_CHECK)
+	if (!gl_FrontFacing) {
+		normal = -normal;
+	}
+#endif
 
 #if defined(ENABLE_UV_INTERP)
 	vec2 uv = uv_interp;
@@ -1664,7 +1713,7 @@ FRAGMENT_SHADER_CODE
 	normalmap.xy = normalmap.xy * 2.0 - 1.0;
 	normalmap.z = sqrt(max(0.0, 1.0 - dot(normalmap.xy, normalmap.xy))); //always ignore Z, as it can be RG packed, Z may be pos/neg, etc.
 
-	normal = normalize(mix(normal_interp, tangent * normalmap.x + binormal * normalmap.y + normal * normalmap.z, normaldepth)) * side;
+	normal = normalize(mix(normal, tangent * normalmap.x + binormal * normalmap.y + normal * normalmap.z, normaldepth));
 
 #endif
 
@@ -1705,7 +1754,7 @@ FRAGMENT_SHADER_CODE
 	vec3 ambient_light;
 	vec3 env_reflection_light = vec3(0.0, 0.0, 0.0);
 
-	vec3 eye_vec = -normalize(vertex_interp);
+	vec3 eye_vec = view;
 
 #ifdef USE_RADIANCE_MAP
 
@@ -2033,10 +2082,11 @@ FRAGMENT_SHADER_CODE
 		//apply fog
 
 		if (fog_depth_enabled) {
+			float fog_far = fog_depth_end > 0.0 ? fog_depth_end : z_far;
 
-			float fog_z = smoothstep(fog_depth_begin, z_far, length(vertex));
+			float fog_z = smoothstep(fog_depth_begin, fog_far, length(vertex));
 
-			fog_amount = pow(fog_z, fog_depth_curve);
+			fog_amount = pow(fog_z, fog_depth_curve) * fog_density;
 			if (fog_transmit_enabled) {
 				vec3 total_light = emission + ambient_light + specular_light + diffuse_light;
 				float transmit = pow(fog_z, fog_transmit_curve);
@@ -2053,7 +2103,7 @@ FRAGMENT_SHADER_CODE
 
 		emission = emission * rev_amount + fog_color * fog_amount;
 		ambient_light *= rev_amount;
-		specular_light *rev_amount;
+		specular_light *= rev_amount;
 		diffuse_light *= rev_amount;
 	}
 

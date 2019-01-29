@@ -92,11 +92,6 @@ const bool at_light_pass = true;
 const bool at_light_pass = false;
 #endif
 
-#ifdef USE_PARTICLES
-uniform int h_frames;
-uniform int v_frames;
-#endif
-
 #if defined(USE_MATERIAL)
 
 /* clang-format off */
@@ -146,19 +141,12 @@ void main() {
 #ifdef USE_PARTICLES
 	//scale by texture size
 	outvec.xy /= color_texpixel_size;
-
-	//compute h and v frames and adjust UV interp for animation
-	int total_frames = h_frames * v_frames;
-	int frame = min(int(float(total_frames) * instance_custom.z), total_frames - 1);
-	float frame_w = 1.0 / float(h_frames);
-	float frame_h = 1.0 / float(v_frames);
-	uv_interp.x = uv_interp.x * frame_w + frame_w * float(frame % h_frames);
-	uv_interp.y = uv_interp.y * frame_h + frame_h * float(frame / h_frames);
-
 #endif
 
 #define extra_matrix extra_matrix_instance
 
+	//for compatibility with the fragment shader we need to use uv here
+	vec2 uv = uv_interp;
 	{
 		/* clang-format off */
 
@@ -166,6 +154,8 @@ VERTEX_SHADER_CODE
 
 		/* clang-format on */
 	}
+
+	uv_interp = uv;
 
 #ifdef USE_NINEPATCH
 
@@ -491,6 +481,7 @@ void main() {
 
 #if defined(NORMALMAP_USED)
 		vec3 normal_map = vec3(0.0, 0.0, 1.0);
+		normal_used = true;
 #endif
 
 		/* clang-format off */

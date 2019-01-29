@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -97,6 +97,8 @@ public:
 		TEXT_PRINTERR,
 		TEXT_PRINTRAW,
 		TEXT_PRINT_DEBUG,
+		PUSH_ERROR,
+		PUSH_WARNING,
 		VAR_TO_STR,
 		STR_TO_VAR,
 		VAR_TO_BYTES,
@@ -117,7 +119,6 @@ public:
 		LEN,
 		IS_INSTANCE_VALID,
 		FUNC_MAX
-
 	};
 
 	static const char *get_func_name(Function p_func);

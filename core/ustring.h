@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,9 +40,44 @@
 	@author Juan Linietsky <reduzio@gmail.com>
 */
 
+template <class T>
+class CharProxy {
+	friend class CharString;
+	friend class String;
+
+	const int _index;
+	CowData<T> &_cowdata;
+	static const T _null = 0;
+
+	_FORCE_INLINE_ CharProxy(const int &p_index, CowData<T> &cowdata) :
+			_index(p_index),
+			_cowdata(cowdata) {}
+
+public:
+	_FORCE_INLINE_ operator T() const {
+		if (unlikely(_index == _cowdata.size()))
+			return _null;
+
+		return _cowdata.get(_index);
+	}
+
+	_FORCE_INLINE_ const T *operator&() const {
+		return _cowdata.ptr() + _index;
+	}
+
+	_FORCE_INLINE_ void operator=(const T &other) const {
+		_cowdata.set(_index, other);
+	}
+
+	_FORCE_INLINE_ void operator=(const CharProxy<T> &other) const {
+		_cowdata.set(_index, other.operator T());
+	}
+};
+
 class CharString {
 
 	CowData<char> _cowdata;
+	static const char _null;
 
 public:
 	_FORCE_INLINE_ char *ptrw() { return _cowdata.ptrw(); }
@@ -53,8 +88,13 @@ public:
 	_FORCE_INLINE_ char get(int p_index) { return _cowdata.get(p_index); }
 	_FORCE_INLINE_ const char get(int p_index) const { return _cowdata.get(p_index); }
 	_FORCE_INLINE_ void set(int p_index, const char &p_elem) { _cowdata.set(p_index, p_elem); }
-	_FORCE_INLINE_ char &operator[](int p_index) { return _cowdata.get_m(p_index); }
-	_FORCE_INLINE_ const char &operator[](int p_index) const { return _cowdata.get(p_index); }
+	_FORCE_INLINE_ const char &operator[](int p_index) const {
+		if (unlikely(p_index == _cowdata.size()))
+			return _null;
+
+		return _cowdata.get(p_index);
+	}
+	_FORCE_INLINE_ CharProxy<char> operator[](int p_index) { return CharProxy<char>(p_index, _cowdata); }
 
 	_FORCE_INLINE_ CharString() {}
 	_FORCE_INLINE_ CharString(const CharString &p_str) { _cowdata._ref(p_str._cowdata); }
@@ -63,7 +103,7 @@ public:
 	CharString &operator+=(char p_char);
 	int length() const { return size() ? size() - 1 : 0; }
 	const char *get_data() const;
-	operator const char *() { return get_data(); };
+	operator const char *() const { return get_data(); };
 };
 
 typedef wchar_t CharType;
@@ -82,6 +122,7 @@ struct StrRange {
 class String {
 
 	CowData<CharType> _cowdata;
+	static const CharType _null;
 
 	void copy_from(const char *p_cstr);
 	void copy_from(const CharType *p_cstr, const int p_clip_to = -1);
@@ -107,8 +148,14 @@ public:
 	_FORCE_INLINE_ void set(int p_index, const CharType &p_elem) { _cowdata.set(p_index, p_elem); }
 	_FORCE_INLINE_ int size() const { return _cowdata.size(); }
 	Error resize(int p_size) { return _cowdata.resize(p_size); }
-	_FORCE_INLINE_ CharType &operator[](int p_index) { return _cowdata.get_m(p_index); }
-	_FORCE_INLINE_ const CharType &operator[](int p_index) const { return _cowdata.get(p_index); }
+
+	_FORCE_INLINE_ const CharType &operator[](int p_index) const {
+		if (unlikely(p_index == _cowdata.size()))
+			return _null;
+
+		return _cowdata.get(p_index);
+	}
+	_FORCE_INLINE_ CharProxy<CharType> operator[](int p_index) { return CharProxy<CharType>(p_index, _cowdata); }
 
 	bool operator==(const String &p_str) const;
 	bool operator!=(const String &p_str) const;
@@ -149,7 +196,8 @@ public:
 	/* complex helpers */
 	String substr(int p_from, int p_chars) const;
 	int find(const String &p_str, int p_from = 0) const; ///< return <0 if failed
-	int find(const char *p_str, int p_from) const; ///< return <0 if failed
+	int find(const char *p_str, int p_from = 0) const; ///< return <0 if failed
+	int find_char(CharType p_char, int p_from = 0) const; ///< return <0 if failed
 	int find_last(const String &p_str) const; ///< return <0 if failed
 	int findn(const String &p_str, int p_from = 0) const; ///< return <0 if failed, case insensitive
 	int rfind(const String &p_str, int p_from = -1) const; ///< return <0 if failed

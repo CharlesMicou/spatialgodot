@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,6 +32,7 @@
 #define BINDINGS_GENERATOR_H
 
 #include "core/class_db.h"
+#include "dotnet_solution.h"
 #include "editor/doc/doc_data.h"
 #include "editor/editor_help.h"
 
@@ -556,8 +557,9 @@ class BindingsGenerator {
 	static BindingsGenerator *singleton;
 
 public:
-	Error generate_cs_core_project(const String &p_output_dir, bool p_verbose_output = true);
-	Error generate_cs_editor_project(const String &p_output_dir, const String &p_core_dll_path, bool p_verbose_output = true);
+	Error generate_cs_core_project(const String &p_solution_dir, DotNetSolution &r_solution, bool p_verbose_output = true);
+	Error generate_cs_editor_project(const String &p_solution_dir, DotNetSolution &r_solution, bool p_verbose_output = true);
+	Error generate_cs_api(const String &p_output_dir, bool p_verbose_output = true);
 	Error generate_glue(const String &p_output_dir);
 
 	static uint32_t get_version();

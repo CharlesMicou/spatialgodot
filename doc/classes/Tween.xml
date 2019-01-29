@@ -14,7 +14,7 @@
 		tween.start()
 		[/codeblock]
 		Many methods require a property name, such as "position" above. You can find the correct property name by hovering over the property in the Inspector.
-		Many of the methods accept [code]trans_type[/code] and [code]ease_type[/code]. The first accepts an [enum TransitionType] constant, and refers to the way the timing of the animation is handled (see [code]http://easings.net/[/code] for some examples). The second accepts an [enum EaseType] constant, and controls the where [code]trans_type[/code] is applied to the interpolation (in the beginning, the end, or both). If you don't know which transition and easing to pick, you can try different [enum TransitionType] constants with [enum EASE_IN_OUT], and use the one that looks best.
+		Many of the methods accept [code]trans_type[/code] and [code]ease_type[/code]. The first accepts an [enum TransitionType] constant, and refers to the way the timing of the animation is handled (see [code]http://easings.net/[/code] for some examples). The second accepts an [enum EaseType] constant, and controls the where [code]trans_type[/code] is applied to the interpolation (in the beginning, the end, or both). If you don't know which transition and easing to pick, you can try different [enum TransitionType] constants with [code]EASE_IN_OUT[/code], and use the one that looks best.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -340,13 +340,13 @@
 	</methods>
 	<members>
 		<member name="playback_process_mode" type="int" setter="set_tween_process_mode" getter="get_tween_process_mode" enum="Tween.TweenProcessMode">
-			The tween's animation process thread. See [enum TweenProcessMode]. Default value: [enum TWEEN_PROCESS_IDLE].
+			The tween's animation process thread. See [enum TweenProcessMode]. Default value: [constant TWEEN_PROCESS_IDLE].
 		</member>
 		<member name="playback_speed" type="float" setter="set_speed_scale" getter="get_speed_scale">
 			The tween's speed multiplier. For example, set it to [code]1.0[/code] for normal speed, [code]2.0[/code] for two times normal speed, or [code]0.5[/code] for half of the normal speed. A value of [code]0[/code] pauses the animation, but see also [method set_active] or [method stop_all] for this.
 		</member>
 		<member name="repeat" type="bool" setter="set_repeat" getter="is_repeat">
-			If [code]true[/code] the tween loops.
+			If [code]true[/code], the tween loops.
 		</member>
 	</members>
 	<signals>

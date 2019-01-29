@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -417,8 +417,8 @@ void PluginScriptLanguage::unlock() {
 
 PluginScriptLanguage::PluginScriptLanguage(const godot_pluginscript_language_desc *desc) :
 		_desc(*desc) {
-	_resource_loader = memnew(ResourceFormatLoaderPluginScript(this));
-	_resource_saver = memnew(ResourceFormatSaverPluginScript(this));
+	_resource_loader = Ref<ResourceFormatLoaderPluginScript>(memnew(ResourceFormatLoaderPluginScript(this)));
+	_resource_saver = Ref<ResourceFormatSaverPluginScript>(memnew(ResourceFormatSaverPluginScript(this)));
 
 // TODO: totally remove _lock attribute if NO_THREADS is set
 #ifdef NO_THREADS
@@ -429,8 +429,6 @@ PluginScriptLanguage::PluginScriptLanguage(const godot_pluginscript_language_des
 }
 
 PluginScriptLanguage::~PluginScriptLanguage() {
-	memdelete(_resource_loader);
-	memdelete(_resource_saver);
 #ifndef NO_THREADS
 	if (_lock) {
 		memdelete(_lock);

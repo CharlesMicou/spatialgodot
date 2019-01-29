@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -48,9 +48,11 @@ public:
 		Transform2D shape_transform;
 		Vector2 autotile_coord;
 		bool one_way_collision;
+		float one_way_collision_margin;
 
 		ShapeData() {
 			one_way_collision = false;
+			one_way_collision_margin = 1.0;
 		}
 	};
 
@@ -87,6 +89,7 @@ public:
 		Map<Vector2, Ref<OccluderPolygon2D> > occluder_map;
 		Map<Vector2, Ref<NavigationPolygon> > navpoly_map;
 		Map<Vector2, int> priority_map;
+		Map<Vector2, int> z_index_map;
 
 		// Default size to prevent invalid value
 		explicit AutotileData() :
@@ -172,6 +175,10 @@ public:
 	int autotile_get_subtile_priority(int p_id, const Vector2 &p_coord);
 	const Map<Vector2, int> &autotile_get_priority_map(int p_id) const;
 
+	void autotile_set_z_index(int p_id, const Vector2 &p_coord, int p_z_index);
+	int autotile_get_z_index(int p_id, const Vector2 &p_coord);
+	const Map<Vector2, int> &autotile_get_z_index_map(int p_id) const;
+
 	void autotile_set_bitmask(int p_id, Vector2 p_coord, uint16_t p_flag);
 	uint16_t autotile_get_bitmask(int p_id, Vector2 p_coord);
 	const Map<Vector2, uint16_t> &autotile_get_bitmask_map(int p_id);
@@ -188,6 +195,9 @@ public:
 
 	void tile_set_shape_one_way(int p_id, int p_shape_id, bool p_one_way);
 	bool tile_get_shape_one_way(int p_id, int p_shape_id) const;
+
+	void tile_set_shape_one_way_margin(int p_id, int p_shape_id, float p_margin);
+	float tile_get_shape_one_way_margin(int p_id, int p_shape_id) const;
 
 	void tile_clear_shapes(int p_id);
 	void tile_add_shape(int p_id, const Ref<Shape2D> &p_shape, const Transform2D &p_transform, bool p_one_way = false, const Vector2 &p_autotile_coord = Vector2());

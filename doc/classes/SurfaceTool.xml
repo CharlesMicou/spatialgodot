@@ -75,14 +75,6 @@
 				Specify a Tangent for the next Vertex to use.
 			</description>
 		</method>
-		<method name="add_to_format">
-			<return type="void">
-			</return>
-			<argument index="0" name="flags" type="int">
-			</argument>
-			<description>
-			</description>
-		</method>
 		<method name="add_triangle_fan">
 			<return type="void">
 			</return>
@@ -149,7 +141,7 @@
 			<argument index="2" name="transform" type="Transform">
 			</argument>
 			<description>
-				Append vertices from a given [Mesh] surface onto the current vertex array with specified [Transform]. 
+				Append vertices from a given [Mesh] surface onto the current vertex array with specified [Transform].
 			</description>
 		</method>
 		<method name="begin">
@@ -187,7 +179,7 @@
 			<argument index="1" name="surface" type="int">
 			</argument>
 			<description>
-				Creates a vertex array from an existing [Mesh]. 
+				Creates a vertex array from an existing [Mesh].
 			</description>
 		</method>
 		<method name="deindex">

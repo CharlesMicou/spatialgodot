@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -2120,6 +2120,10 @@ Error Expression::parse(const String &p_expression, const Vector<String> &p_inpu
 }
 
 Variant Expression::execute(Array p_inputs, Object *p_base, bool p_show_error) {
+	if (error_set) {
+		ERR_EXPLAIN("There was previously a parse error: " + error_str);
+		ERR_FAIL_V(Variant());
+	}
 
 	execution_error = false;
 	Variant output;
@@ -2153,13 +2157,13 @@ void Expression::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_error_text"), &Expression::get_error_text);
 }
 
-Expression::Expression() {
-	output_type = Variant::NIL;
-	error_set = true;
-	root = NULL;
-	nodes = NULL;
-	sequenced = false;
-	execution_error = false;
+Expression::Expression() :
+		output_type(Variant::NIL),
+		sequenced(false),
+		error_set(true),
+		root(NULL),
+		nodes(NULL),
+		execution_error(false) {
 }
 
 Expression::~Expression() {

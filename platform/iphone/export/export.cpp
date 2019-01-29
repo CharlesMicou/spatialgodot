@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -99,6 +99,70 @@ class EditorExportPlatformIOS : public EditorExportPlatform {
 	Error _export_additional_assets(const String &p_out_dir, const Vector<String> &p_assets, bool p_is_framework, Vector<IOSExportAsset> &r_exported_assets);
 	Error _export_additional_assets(const String &p_out_dir, const Vector<SharedObject> &p_libraries, Vector<IOSExportAsset> &r_exported_assets);
 
+	bool is_package_name_valid(const String &p_package, String *r_error = NULL) const {
+
+		String pname = p_package;
+
+		if (pname.length() == 0) {
+			if (r_error) {
+				*r_error = TTR("Identifier is missing.");
+			}
+			return false;
+		}
+
+		int segments = 0;
+		bool first = true;
+		for (int i = 0; i < pname.length(); i++) {
+			CharType c = pname[i];
+			if (first && c == '.') {
+				if (r_error) {
+					*r_error = TTR("Identifier segments must be of non-zero length.");
+				}
+				return false;
+			}
+			if (c == '.') {
+				segments++;
+				first = true;
+				continue;
+			}
+			if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')) {
+				if (r_error) {
+					*r_error = vformat(TTR("The character '%s' is not allowed in Identifier."), String::chr(c));
+				}
+				return false;
+			}
+			if (first && (c >= '0' && c <= '9')) {
+				if (r_error) {
+					*r_error = TTR("A digit cannot be the first character in a Identifier segment.");
+				}
+				return false;
+			}
+			if (first && c == '_') {
+				if (r_error) {
+					*r_error = vformat(TTR("The character '%s' cannot be the first character in a Identifier segment."), String::chr(c));
+				}
+				return false;
+			}
+			first = false;
+		}
+
+		if (segments == 0) {
+			if (r_error) {
+				*r_error = TTR("The Identifier must have at least one '.' separator.");
+			}
+			return false;
+		}
+
+		if (first) {
+			if (r_error) {
+				*r_error = TTR("Identifier segments must be of non-zero length.");
+			}
+			return false;
+		}
+
+		return true;
+	}
+
 protected:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features);
 	virtual void get_export_options(List<ExportOption> *r_options);
@@ -108,7 +172,11 @@ public:
 	virtual String get_os_name() const { return "iOS"; }
 	virtual Ref<Texture> get_logo() const { return logo; }
 
-	virtual String get_binary_extension(const Ref<EditorExportPreset> &p_preset) const { return "ipa"; }
+	virtual List<String> get_binary_extensions(const Ref<EditorExportPreset> &p_preset) const {
+		List<String> list;
+		list.push_back("ipa");
+		return list;
+	}
 	virtual Error export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int p_flags = 0);
 
 	virtual bool can_export(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates) const;
@@ -961,27 +1029,55 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 
 bool EditorExportPlatformIOS::can_export(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates) const {
 
-	bool valid = true;
 	String err;
+	r_missing_templates = find_export_template("iphone.zip") == String();
 
-	if (!exists_export_template("iphone.zip", &err)) {
+	if (p_preset->get("custom_package/debug") != "") {
+		if (FileAccess::exists(p_preset->get("custom_package/debug"))) {
+			r_missing_templates = false;
+		} else {
+			err += TTR("Custom debug template not found.") + "\n";
+		}
+	}
+
+	if (p_preset->get("custom_package/release") != "") {
+		if (FileAccess::exists(p_preset->get("custom_package/release"))) {
+			r_missing_templates = false;
+		} else {
+			err += TTR("Custom release template not found.") + "\n";
+		}
+	}
+
+	bool valid = !r_missing_templates;
+
+	String team_id = p_preset->get("application/app_store_team_id");
+	if (team_id.length() == 0) {
+		err += TTR("App Store Team ID not specified - cannot configure the project.") + "\n";
 		valid = false;
 	}
 
-	if (p_preset->get("custom_package/debug") != "" && !FileAccess::exists(p_preset->get("custom_package/debug"))) {
+	String identifier = p_preset->get("application/identifier");
+	String pn_err;
+	if (!is_package_name_valid(identifier, &pn_err)) {
+		err += TTR("Invalid Identifier:") + " " + pn_err + "\n";
 		valid = false;
-		err += "Custom debug package not found.\n";
 	}
 
-	if (p_preset->get("custom_package/release") != "" && !FileAccess::exists(p_preset->get("custom_package/release"))) {
-		valid = false;
-		err += "Custom release package not found.\n";
+	for (unsigned int i = 0; i < (sizeof(icon_infos) / sizeof(icon_infos[0])); ++i) {
+		IconInfo info = icon_infos[i];
+		String icon_path = p_preset->get(info.preset_key);
+		if (icon_path.length() == 0) {
+			if (info.is_required) {
+				err += TTR("Required icon is not specified in the preset.") + "\n";
+				valid = false;
+			}
+			break;
+		}
 	}
 
 	if (!err.empty())
 		r_error = err;
 
-	r_missing_templates = !valid;
 	return valid;
 }
 

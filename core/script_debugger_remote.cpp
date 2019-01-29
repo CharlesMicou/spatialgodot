@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -108,7 +108,7 @@ void ScriptDebuggerRemote::_put_variable(const String &p_name, const Variant &p_
 	}
 
 	int len = 0;
-	Error err = encode_variant(var, NULL, len);
+	Error err = encode_variant(var, NULL, len, true);
 	if (err != OK)
 		ERR_PRINT("Failed to encode variant");
 
@@ -1100,7 +1100,7 @@ ScriptDebuggerRemote::ScriptDebuggerRemote() :
 	eh.userdata = this;
 	add_error_handler(&eh);
 
-	profile_info.resize(CLAMP(int(ProjectSettings::get_singleton()->get("debug/settings/profiler/max_functions")), 128, 65535));
+	profile_info.resize(GLOBAL_GET("debug/settings/profiler/max_functions"));
 	profile_info_ptrs.resize(profile_info.size());
 }
 

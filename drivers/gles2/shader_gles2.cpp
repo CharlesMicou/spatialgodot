@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -99,7 +99,7 @@ void ShaderGLES2::bind_uniforms() {
 	const Map<uint32_t, CameraMatrix>::Element *C = uniform_cameras.front();
 
 	while (C) {
-		int idx = E->key();
+		int idx = C->key();
 		int location = version->uniform_location[idx];
 
 		if (location < 0) {
@@ -196,6 +196,12 @@ static void _display_error_with_code(const String &p_error, const Vector<const c
 	ERR_PRINTS(p_error);
 }
 
+static String _mkid(const String &p_id) {
+
+	String id = "m_" + p_id;
+	return id.replace("__", "_dus_"); //doubleunderscore is reserverd in glsl
+}
+
 ShaderGLES2::Version *ShaderGLES2::get_current_version() {
 
 	Version *_v = version_map.getptr(conditional_version);
@@ -236,6 +242,11 @@ ShaderGLES2::Version *ShaderGLES2::get_current_version() {
 	strings.push_back("#define USE_GLES_OVER_GL\n");
 #else
 	strings.push_back("#version 100\n");
+//angle does not like
+#ifdef JAVASCRIPT_ENABLED
+	strings.push_back("#define USE_HIGHP_PRECISION\n");
+#endif
+
 #endif
 
 	int define_line_ofs = 1;
@@ -358,14 +369,14 @@ ShaderGLES2::Version *ShaderGLES2::get_current_version() {
 	strings.push_back(fragment_code1.get_data());
 
 	if (cc) {
-		code_string = cc->fragment.ascii();
+		code_string = cc->light.ascii();
 		strings.push_back(code_string.get_data());
 	}
 
 	strings.push_back(fragment_code2.get_data());
 
 	if (cc) {
-		code_string2 = cc->light.ascii();
+		code_string2 = cc->fragment.ascii();
 		strings.push_back(code_string2.get_data());
 	}
 
@@ -492,21 +503,25 @@ ShaderGLES2::Version *ShaderGLES2::get_current_version() {
 	if (cc) {
 		// uniforms
 		for (int i = 0; i < cc->custom_uniforms.size(); i++) {
-			StringName native_uniform_name = "m_" + cc->custom_uniforms[i];
-			GLint location = glGetUniformLocation(v.id, ((String)native_uniform_name).ascii().get_data());
+			String native_uniform_name = _mkid(cc->custom_uniforms[i]);
+			GLint location = glGetUniformLocation(v.id, (native_uniform_name).ascii().get_data());
 			v.custom_uniform_locations[cc->custom_uniforms[i]] = location;
 		}
 
 		// textures
 		for (int i = 0; i < cc->texture_uniforms.size(); i++) {
-			StringName native_uniform_name = "m_" + cc->texture_uniforms[i];
-			GLint location = glGetUniformLocation(v.id, ((String)native_uniform_name).ascii().get_data());
+			String native_uniform_name = _mkid(cc->texture_uniforms[i]);
+			GLint location = glGetUniformLocation(v.id, (native_uniform_name).ascii().get_data());
 			v.custom_uniform_locations[cc->texture_uniforms[i]] = location;
 		}
 	}
 
 	glUseProgram(0);
 	v.ok = true;
+
+	if (cc) {
+		cc->versions.insert(conditional_version.version);
+	}
 
 	return &v;
 }
@@ -582,22 +597,24 @@ void ShaderGLES2::setup(
 			fragment_code0 = code.substr(0, cpos).ascii();
 			code = code.substr(cpos + globals_tag.length(), code.length());
 
-			cpos = code.find(code_tag);
+			cpos = code.find(light_code_tag);
 
-			if (cpos == -1) {
-				fragment_code1 = code.ascii();
-			} else {
+			String code2;
+
+			if (cpos != -1) {
 
 				fragment_code1 = code.substr(0, cpos).ascii();
-				String code2 = code.substr(cpos + code_tag.length(), code.length());
+				code2 = code.substr(cpos + light_code_tag.length(), code.length());
+			} else {
+				code2 = code;
+			}
 
-				cpos = code2.find(light_code_tag);
-				if (cpos == -1) {
-					fragment_code2 = code2.ascii();
-				} else {
-					fragment_code2 = code2.substr(0, cpos).ascii();
-					fragment_code3 = code2.substr(cpos + light_code_tag.length(), code2.length()).ascii();
-				}
+			cpos = code2.find(code_tag);
+			if (cpos == -1) {
+				fragment_code2 = code2.ascii();
+			} else {
+				fragment_code2 = code2.substr(0, cpos).ascii();
+				fragment_code3 = code2.substr(cpos + code_tag.length(), code2.length()).ascii();
 			}
 		}
 	}
@@ -670,9 +687,28 @@ void ShaderGLES2::set_custom_shader(uint32_t p_code_id) {
 }
 
 void ShaderGLES2::free_custom_shader(uint32_t p_code_id) {
+
 	ERR_FAIL_COND(!custom_code_map.has(p_code_id));
-	if (conditional_version.code_version == p_code_id)
-		conditional_version.code_version = 0;
+	if (conditional_version.code_version == p_code_id) {
+		conditional_version.code_version = 0; //do not keep using a version that is going away
+		unbind();
+	}
+
+	VersionKey key;
+	key.code_version = p_code_id;
+	for (Set<uint32_t>::Element *E = custom_code_map[p_code_id].versions.front(); E; E = E->next()) {
+		key.version = E->get();
+		ERR_CONTINUE(!version_map.has(key));
+		Version &v = version_map[key];
+
+		glDeleteShader(v.vert_id);
+		glDeleteShader(v.frag_id);
+		glDeleteProgram(v.id);
+		memdelete_arr(v.uniform_location);
+		v.id = 0;
+
+		version_map.erase(key);
+	}
 
 	custom_code_map.erase(p_code_id);
 }

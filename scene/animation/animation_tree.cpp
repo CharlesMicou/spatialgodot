@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -37,9 +37,20 @@
 #include "servers/audio/audio_stream.h"
 
 void AnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
+	if (get_script_instance()) {
+		Array parameters = get_script_instance()->call("get_parameter_list");
+		for (int i = 0; i < parameters.size(); i++) {
+			Dictionary d = parameters[i];
+			ERR_CONTINUE(d.empty());
+			r_list->push_back(PropertyInfo::from_dict(d));
+		}
+	}
 }
 
 Variant AnimationNode::get_parameter_default_value(const StringName &p_parameter) const {
+	if (get_script_instance()) {
+		return get_script_instance()->call("get_parameter_default_value");
+	}
 	return Variant();
 }
 
@@ -62,6 +73,18 @@ Variant AnimationNode::get_parameter(const StringName &p_name) const {
 }
 
 void AnimationNode::get_child_nodes(List<ChildNode> *r_child_nodes) {
+
+	if (get_script_instance()) {
+		Dictionary cn = get_script_instance()->call("get_child_nodes");
+		List<Variant> keys;
+		cn.get_key_list(&keys);
+		for (List<Variant>::Element *E = keys.front(); E; E = E->next()) {
+			ChildNode child;
+			child.name = E->get();
+			child.node = cn[E->get()];
+			r_child_nodes->push_back(child);
+		}
+	}
 }
 
 void AnimationNode::blend_animation(const StringName &p_animation, float p_time, float p_delta, bool p_seeked, float p_blend) {
@@ -373,6 +396,9 @@ void AnimationNode::_validate_property(PropertyInfo &property) const {
 }
 
 Ref<AnimationNode> AnimationNode::get_child_by_name(const StringName &p_name) {
+	if (get_script_instance()) {
+		return get_script_instance()->call("get_child_by_name");
+	}
 	return Ref<AnimationNode>();
 }
 
@@ -403,6 +429,14 @@ void AnimationNode::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "filter_enabled", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_filter_enabled", "is_filter_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "filters", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_filters", "_get_filters");
 
+	BIND_VMETHOD(MethodInfo(Variant::DICTIONARY, "get_child_nodes"));
+	BIND_VMETHOD(MethodInfo(Variant::ARRAY, "get_parameter_list"));
+	BIND_VMETHOD(MethodInfo(Variant::OBJECT, "get_child_by_name", PropertyInfo(Variant::STRING, "name")));
+	{
+		MethodInfo mi = MethodInfo(Variant::NIL, "get_parameter_default_value", PropertyInfo(Variant::STRING, "name"));
+		mi.return_val.usage = PROPERTY_USAGE_NIL_IS_VARIANT;
+		BIND_VMETHOD(mi);
+	}
 	BIND_VMETHOD(MethodInfo("process", PropertyInfo(Variant::REAL, "time"), PropertyInfo(Variant::BOOL, "seek")));
 	BIND_VMETHOD(MethodInfo(Variant::STRING, "get_caption"));
 	BIND_VMETHOD(MethodInfo(Variant::STRING, "has_filter"));
@@ -651,6 +685,10 @@ bool AnimationTree::_update_caches(AnimationPlayer *player) {
 						track = track_animation;
 
 					} break;
+					default: {
+						ERR_PRINT("Animation corrupted (invalid track type)");
+						continue;
+					}
 				}
 
 				track_cache[path] = track;
@@ -819,6 +857,9 @@ void AnimationTree::_process_graph(float p_delta) {
 			for (int i = 0; i < a->get_track_count(); i++) {
 
 				NodePath path = a->track_get_path(i);
+
+				ERR_CONTINUE(!track_cache.has(path));
+
 				TrackCache *track = track_cache[path];
 				if (track->type != a->track_get_type(i)) {
 					continue; //may happen should not

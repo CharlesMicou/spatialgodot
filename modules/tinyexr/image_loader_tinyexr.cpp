@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -131,7 +131,7 @@ Error ImageLoaderTinyEXR::load_image(Ref<Image> p_image, FileAccess *f, bool p_f
 	Image::Format format;
 	int output_channels = 0;
 
-	if (idxA > 0) {
+	if (idxA != -1) {
 
 		imgdata.resize(exr_image.width * exr_image.height * 8); //RGBA16
 		format = Image::FORMAT_RGBAH;
@@ -187,7 +187,7 @@ Error ImageLoaderTinyEXR::load_image(Ref<Image> p_image, FileAccess *f, bool p_f
 			const float *b_channel_start = reinterpret_cast<const float *>(tile.images[idxB]);
 			const float *a_channel_start = NULL;
 
-			if (idxA > 0) {
+			if (idxA != -1) {
 				a_channel_start = reinterpret_cast<const float *>(tile.images[idxA]);
 			}
 
@@ -216,7 +216,7 @@ Error ImageLoaderTinyEXR::load_image(Ref<Image> p_image, FileAccess *f, bool p_f
 					*row_w++ = Math::make_half_float(color.g);
 					*row_w++ = Math::make_half_float(color.b);
 
-					if (idxA > 0) {
+					if (idxA != -1) {
 						*row_w++ = Math::make_half_float(*a_channel++);
 					}
 				}

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -59,6 +59,7 @@ class EditorAudioBus : public PanelContainer {
 	VSlider *slider;
 
 	int cc;
+	static const int CHANNELS_MAX = 4;
 
 	struct {
 		bool prev_active;
@@ -68,7 +69,7 @@ class EditorAudioBus : public PanelContainer {
 
 		TextureProgress *vu_l;
 		TextureProgress *vu_r;
-	} channel[4];
+	} channel[CHANNELS_MAX];
 
 	TextureRect *scale;
 	OptionButton *send;
@@ -102,6 +103,7 @@ class EditorAudioBus : public PanelContainer {
 	void _effect_selected();
 	void _delete_effect_pressed(int p_option);
 	void _effect_rmb(const Vector2 &p_pos);
+	void _update_visible_channels();
 
 	virtual Variant get_drag_data(const Point2 &p_point);
 	virtual bool can_drop_data(const Point2 &p_point, const Variant &p_data) const;

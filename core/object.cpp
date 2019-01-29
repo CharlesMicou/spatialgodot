@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -440,16 +440,6 @@ void Object::set(const StringName &p_name, const Variant &p_value, bool *r_valid
 		if (r_valid)
 			*r_valid = true;
 		return;
-#ifdef TOOLS_ENABLED
-	} else if (p_name == CoreStringNames::get_singleton()->_sections_unfolded) {
-		Array arr = p_value;
-		for (int i = 0; i < arr.size(); i++) {
-			editor_section_folding.insert(arr[i]);
-		}
-		if (r_valid)
-			*r_valid = true;
-		return;
-#endif
 	}
 
 	//something inside the object... :|
@@ -520,16 +510,7 @@ Variant Object::get(const StringName &p_name, bool *r_valid) const {
 		if (r_valid)
 			*r_valid = true;
 		return ret;
-#ifdef TOOLS_ENABLED
-	} else if (p_name == CoreStringNames::get_singleton()->_sections_unfolded) {
-		Array array;
-		for (Set<String>::Element *E = editor_section_folding.front(); E; E = E->next()) {
-			array.push_back(E->get());
-		}
-		if (r_valid)
-			*r_valid = true;
-		return array;
-#endif
+
 	} else {
 		//something inside the object... :|
 		bool success = _getv(p_name, ret);
@@ -655,15 +636,11 @@ void Object::get_property_list(List<PropertyInfo> *p_list, bool p_reversed) cons
 #ifdef TOOLS_ENABLED
 		p_list->push_back(PropertyInfo(Variant::NIL, "Script", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_GROUP));
 #endif
-		p_list->push_back(PropertyInfo(Variant::OBJECT, "script", PROPERTY_HINT_RESOURCE_TYPE, "Script", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_STORE_IF_NONZERO));
+		p_list->push_back(PropertyInfo(Variant::OBJECT, "script", PROPERTY_HINT_RESOURCE_TYPE, "Script", PROPERTY_USAGE_DEFAULT));
 	}
-#ifdef TOOLS_ENABLED
-	if (editor_section_folding.size()) {
-		p_list->push_back(PropertyInfo(Variant::ARRAY, CoreStringNames::get_singleton()->_sections_unfolded, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL));
+	if (!metadata.empty()) {
+		p_list->push_back(PropertyInfo(Variant::DICTIONARY, "__meta__", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL));
 	}
-#endif
-	if (!metadata.empty())
-		p_list->push_back(PropertyInfo(Variant::DICTIONARY, "__meta__", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL | PROPERTY_USAGE_STORE_IF_NONZERO));
 	if (script_instance && !p_reversed) {
 		p_list->push_back(PropertyInfo(Variant::NIL, "Script Variables", PROPERTY_HINT_NONE, String(), PROPERTY_USAGE_CATEGORY));
 		script_instance->get_property_list(p_list);
@@ -1466,8 +1443,20 @@ Error Object::connect(const StringName &p_signal, Object *p_to_object, const Str
 	if (!s) {
 		bool signal_is_valid = ClassDB::has_signal(get_class_name(), p_signal);
 		//check in script
-		if (!signal_is_valid && !script.is_null() && Ref<Script>(script)->has_script_signal(p_signal))
-			signal_is_valid = true;
+		if (!signal_is_valid && !script.is_null()) {
+
+			if (Ref<Script>(script)->has_script_signal(p_signal)) {
+				signal_is_valid = true;
+			}
+#ifdef TOOLS_ENABLED
+			else {
+				//allow connecting signals anyway if script is invalid, see issue #17070
+				if (!Ref<Script>(script)->is_valid()) {
+					signal_is_valid = true;
+				}
+			}
+#endif
+		}
 
 		if (!signal_is_valid) {
 			ERR_EXPLAIN("In Object of type '" + String(get_class()) + "': Attempt to connect nonexistent signal '" + p_signal + "' to method '" + p_to_object->get_class() + "." + p_to_method + "'");
@@ -1738,6 +1727,8 @@ void Object::_bind_methods() {
 		ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "call_deferred", &Object::_call_deferred_bind, mi);
 	}
 
+	ClassDB::bind_method(D_METHOD("set_deferred", "property", "value"), &Object::set_deferred);
+
 	ClassDB::bind_method(D_METHOD("callv", "method", "arg_array"), &Object::callv);
 
 	ClassDB::bind_method(D_METHOD("has_method", "method"), &Object::has_method);
@@ -1792,6 +1783,10 @@ void Object::_bind_methods() {
 void Object::call_deferred(const StringName &p_method, VARIANT_ARG_DECLARE) {
 
 	MessageQueue::get_singleton()->push_call(this, p_method, VARIANT_ARG_PASS);
+}
+
+void Object::set_deferred(const StringName &p_property, const Variant &p_value) {
+	MessageQueue::get_singleton()->push_set(this, p_property, p_value);
 }
 
 void Object::set_block_signals(bool p_block) {
@@ -1958,30 +1953,30 @@ Object::~Object() {
 		memdelete(script_instance);
 	script_instance = NULL;
 
-	List<Connection> sconnections;
 	const StringName *S = NULL;
 
-	while ((S = signal_map.next(S))) {
+	while ((S = signal_map.next(NULL))) {
 
 		Signal *s = &signal_map[*S];
 
-		ERR_EXPLAIN("Attempt to delete an object in the middle of a signal emission from it");
-		ERR_CONTINUE(s->lock > 0);
-
-		for (int i = 0; i < s->slot_map.size(); i++) {
-
-			sconnections.push_back(s->slot_map.getv(i).conn);
+		if (s->lock) {
+			ERR_EXPLAIN("Attempt to delete an object in the middle of a signal emission from it");
+			ERR_CONTINUE(s->lock > 0);
 		}
+
+		//brute force disconnect for performance
+		int slot_count = s->slot_map.size();
+		const VMap<Signal::Target, Signal::Slot>::Pair *slot_list = s->slot_map.get_array();
+
+		for (int i = 0; i < slot_count; i++) {
+
+			slot_list[i].value.conn.target->connections.erase(slot_list[i].value.cE);
+		}
+
+		signal_map.erase(*S);
 	}
 
-	for (List<Connection>::Element *E = sconnections.front(); E; E = E->next()) {
-
-		Connection &c = E->get();
-		ERR_CONTINUE(c.source != this); //bug?
-
-		this->_disconnect(c.signal, c.target, c.method, true);
-	}
-
+	//signals from nodes that connect to this node
 	while (connections.size()) {
 
 		Connection c = connections.front()->get();

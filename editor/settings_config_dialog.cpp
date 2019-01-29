@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -94,8 +94,9 @@ void EditorSettingsDialog::popup_edit_settings() {
 	set_process_unhandled_input(true);
 
 	// Restore valid window bounds or pop up at default size.
-	if (EditorSettings::get_singleton()->has_setting("interface/dialogs/editor_settings_bounds")) {
-		popup(EditorSettings::get_singleton()->get("interface/dialogs/editor_settings_bounds"));
+	Rect2 saved_size = EditorSettings::get_singleton()->get_project_metadata("dialog_bounds", "editor_settings", Rect2());
+	if (saved_size != Rect2()) {
+		popup(saved_size);
 	} else {
 
 		Size2 popup_size = Size2(900, 700) * editor_get_scale();
@@ -132,7 +133,7 @@ void EditorSettingsDialog::_notification(int p_what) {
 			_update_icons();
 		} break;
 		case NOTIFICATION_POPUP_HIDE: {
-			EditorSettings::get_singleton()->set("interface/dialogs/editor_settings_bounds", get_rect());
+			EditorSettings::get_singleton()->set_project_metadata("dialog_bounds", "editor_settings", get_rect());
 			set_process_unhandled_input(false);
 		} break;
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
@@ -374,7 +375,8 @@ void EditorSettingsDialog::_focus_current_search_box() {
 }
 
 void EditorSettingsDialog::_editor_restart() {
-	EditorNode::get_singleton()->save_all_scenes_and_restart();
+	EditorNode::get_singleton()->save_all_scenes();
+	EditorNode::get_singleton()->restart_editor();
 }
 
 void EditorSettingsDialog::_editor_restart_request() {

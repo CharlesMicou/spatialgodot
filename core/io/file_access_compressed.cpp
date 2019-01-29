@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -373,24 +373,23 @@ uint64_t FileAccessCompressed::_get_modified_time(const String &p_file) {
 		return 0;
 }
 
-FileAccessCompressed::FileAccessCompressed() {
-
-	f = NULL;
-	magic = "GCMP";
-	cmode = Compression::MODE_ZSTD;
-	writing = false;
-	write_ptr = 0;
-	write_buffer_size = 0;
-	write_max = 0;
-	block_size = 0;
-	read_eof = false;
-	at_end = false;
-	read_total = 0;
-	read_ptr = NULL;
-	read_block = 0;
-	read_block_count = 0;
-	read_block_size = 0;
-	read_pos = 0;
+FileAccessCompressed::FileAccessCompressed() :
+		cmode(Compression::MODE_ZSTD),
+		writing(false),
+		write_ptr(0),
+		write_buffer_size(0),
+		write_max(0),
+		block_size(0),
+		read_eof(false),
+		at_end(false),
+		read_ptr(NULL),
+		read_block(0),
+		read_block_count(0),
+		read_block_size(0),
+		read_pos(0),
+		read_total(0),
+		magic("GCMP"),
+		f(NULL) {
 }
 
 FileAccessCompressed::~FileAccessCompressed() {

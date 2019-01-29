@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1253,14 +1253,14 @@ void AnimationTrackEdit::_notification(int p_what) {
 
 				float offset = animation->track_get_key_time(track, i) - timeline->get_value();
 				if (editor->is_key_selected(track, i) && editor->is_moving_selection()) {
-					offset += editor->get_moving_selection_offset();
+					offset = editor->snap_time(offset + editor->get_moving_selection_offset());
 				}
 				offset = offset * scale + limit;
 				if (i < animation->track_get_key_count(track) - 1) {
 
 					float offset_n = animation->track_get_key_time(track, i + 1) - timeline->get_value();
 					if (editor->is_key_selected(track, i + 1) && editor->is_moving_selection()) {
-						offset_n += editor->get_moving_selection_offset();
+						offset_n = editor->snap_time(offset_n + editor->get_moving_selection_offset());
 					}
 					offset_n = offset_n * scale + limit;
 
@@ -1685,15 +1685,10 @@ void AnimationTrackEdit::_zoom_changed() {
 }
 
 void AnimationTrackEdit::_path_entered(const String &p_text) {
-
-	*block_animation_update_ptr = true;
 	undo_redo->create_action("Change Track Path");
 	undo_redo->add_do_method(animation.ptr(), "track_set_path", track, p_text);
 	undo_redo->add_undo_method(animation.ptr(), "track_set_path", track, animation->track_get_path(track));
 	undo_redo->commit_action();
-	*block_animation_update_ptr = false;
-	update();
-	path->hide();
 }
 
 String AnimationTrackEdit::get_tooltip(const Point2 &p_pos) const {
@@ -3192,7 +3187,8 @@ int AnimationTrackEditor::_confirm_insert(InsertData p_id, int p_last_track, boo
 		case Animation::TYPE_ANIMATION: {
 			value = p_id.value;
 		} break;
-		default: {}
+		default: {
+		}
 	}
 
 	undo_redo->add_do_method(animation.ptr(), "track_insert_key", p_id.track_idx, time, value);
@@ -3881,9 +3877,7 @@ void AnimationTrackEditor::_move_selection_begin() {
 
 void AnimationTrackEditor::_move_selection(float p_offset) {
 	moving_selection_offset = p_offset;
-	if (snap->is_pressed() && step->get_value() != 0) {
-		moving_selection_offset = Math::stepify(moving_selection_offset, step->get_value());
-	}
+
 	for (int i = 0; i < track_edits.size(); i++) {
 		track_edits[i]->update();
 	}
@@ -4003,7 +3997,7 @@ void AnimationTrackEditor::_move_selection_commit() {
 	// 2- remove overlapped keys
 	for (Map<SelectedKey, KeyInfo>::Element *E = selection.back(); E; E = E->prev()) {
 
-		float newtime = E->get().pos + motion;
+		float newtime = snap_time(E->get().pos + motion);
 		int idx = animation->track_find_key(E->key().track, newtime, true);
 		if (idx == -1)
 			continue;
@@ -4027,7 +4021,7 @@ void AnimationTrackEditor::_move_selection_commit() {
 	// 3-move the keys (re insert them)
 	for (Map<SelectedKey, KeyInfo>::Element *E = selection.back(); E; E = E->prev()) {
 
-		float newpos = E->get().pos + motion;
+		float newpos = snap_time(E->get().pos + motion);
 		/*
 		if (newpos<0)
 			continue; //no add at the beginning
@@ -4038,7 +4032,7 @@ void AnimationTrackEditor::_move_selection_commit() {
 	// 4-(undo) remove inserted keys
 	for (Map<SelectedKey, KeyInfo>::Element *E = selection.back(); E; E = E->prev()) {
 
-		float newpos = E->get().pos + motion;
+		float newpos = snap_time(E->get().pos + motion);
 		/*
 		if (newpos<0)
 			continue; //no remove what no inserted
@@ -4059,22 +4053,14 @@ void AnimationTrackEditor::_move_selection_commit() {
 		undo_redo->add_undo_method(animation.ptr(), "track_insert_key", amr.track, amr.time, amr.key, amr.transition);
 	}
 
-	// 6-(undo) reinsert overlapped keys
-	for (List<_AnimMoveRestore>::Element *E = to_restore.front(); E; E = E->next()) {
-
-		_AnimMoveRestore &amr = E->get();
-		undo_redo->add_undo_method(animation.ptr(), "track_insert_key", amr.track, amr.time, amr.key, amr.transition);
-	}
-
 	undo_redo->add_do_method(this, "_clear_selection_for_anim", animation);
 	undo_redo->add_undo_method(this, "_clear_selection_for_anim", animation);
 
 	// 7-reselect
-
 	for (Map<SelectedKey, KeyInfo>::Element *E = selection.back(); E; E = E->prev()) {
 
 		float oldpos = E->get().pos;
-		float newpos = oldpos + motion;
+		float newpos = snap_time(oldpos + motion);
 		//if (newpos>=0)
 		undo_redo->add_do_method(this, "_select_at_anim", animation, E->key().track, newpos);
 		undo_redo->add_undo_method(this, "_select_at_anim", animation, E->key().track, oldpos);
@@ -4351,7 +4337,8 @@ void AnimationTrackEditor::_edit_menu_pressed(int p_option) {
 					case Animation::TYPE_METHOD: text += " (Methods)"; break;
 					case Animation::TYPE_BEZIER: text += " (Bezier)"; break;
 					case Animation::TYPE_AUDIO: text += " (Audio)"; break;
-					default: {};
+					default: {
+					};
 				}
 
 				TreeItem *it = track_copy_select->create_item(troot);
@@ -4540,18 +4527,10 @@ void AnimationTrackEditor::_edit_menu_pressed(int p_option) {
 				undo_redo->add_undo_method(animation.ptr(), "track_insert_key", amr.track, amr.time, amr.key, amr.transition);
 			}
 
-			// 6-(undo) reinsert overlapped keys
-			for (List<_AnimMoveRestore>::Element *E = to_restore.front(); E; E = E->next()) {
-
-				_AnimMoveRestore &amr = E->get();
-				undo_redo->add_undo_method(animation.ptr(), "track_insert_key", amr.track, amr.time, amr.key, amr.transition);
-			}
-
 			undo_redo->add_do_method(this, "_clear_selection_for_anim", animation);
 			undo_redo->add_undo_method(this, "_clear_selection_for_anim", animation);
 
 			// 7-reselect
-
 			for (Map<SelectedKey, KeyInfo>::Element *E = selection.back(); E; E = E->prev()) {
 
 				float oldpos = E->get().pos;

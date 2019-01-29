@@ -61,17 +61,33 @@ in vec3 cube_interp;
 #else
 in vec2 uv_interp;
 #endif
-/* clang-format on */
 
 #ifdef USE_ASYM_PANO
 uniform highp mat4 pano_transform;
 uniform highp vec4 asym_proj;
 #endif
 
+// These definitions are here because the shader-wrapper builder does
+// not understand `#elif defined()`
+#ifdef USE_TEXTURE3D
+#endif
+#ifdef USE_TEXTURE2DARRAY
+#endif
+
 #ifdef USE_CUBEMAP
 uniform samplerCube source_cube; //texunit:0
+#elif defined(USE_TEXTURE3D)
+uniform sampler3D source_3d; //texunit:0
+#elif defined(USE_TEXTURE2DARRAY)
+uniform sampler2DArray source_2d_array; //texunit:0
 #else
 uniform sampler2D source; //texunit:0
+#endif
+
+/* clang-format on */
+
+#if defined(USE_TEXTURE3D) || defined(USE_TEXTURE2DARRAY)
+uniform float layer;
 #endif
 
 #ifdef USE_MULTIPLIER
@@ -79,6 +95,7 @@ uniform float multiplier;
 #endif
 
 #if defined(USE_PANORAMA) || defined(USE_ASYM_PANO)
+uniform highp mat4 sky_transform;
 
 vec4 texturePanorama(vec3 normal, sampler2D pano) {
 
@@ -96,7 +113,6 @@ vec4 texturePanorama(vec3 normal, sampler2D pano) {
 
 #endif
 
-uniform float stuff;
 uniform vec2 pixel_size;
 
 in vec2 uv2_interp;
@@ -121,7 +137,12 @@ void main() {
 
 #ifdef USE_PANORAMA
 
-	vec4 color = texturePanorama(normalize(cube_interp), source);
+	vec3 cube_normal = normalize(cube_interp);
+	cube_normal.z = -cube_normal.z;
+	cube_normal = mat3(sky_transform) * cube_normal;
+	cube_normal.z = -cube_normal.z;
+
+	vec4 color = texturePanorama(cube_normal, source);
 
 #elif defined(USE_ASYM_PANO)
 
@@ -133,7 +154,7 @@ void main() {
 	cube_normal.z = -1000000.0;
 	cube_normal.x = (cube_normal.z * (-uv_interp.x - asym_proj.x)) / asym_proj.y;
 	cube_normal.y = (cube_normal.z * (-uv_interp.y - asym_proj.z)) / asym_proj.a;
-	cube_normal = mat3(pano_transform) * cube_normal;
+	cube_normal = mat3(sky_transform) * mat3(pano_transform) * cube_normal;
 	cube_normal.z = -cube_normal.z;
 
 	vec4 color = texturePanorama(normalize(cube_normal.xyz), source);
@@ -141,6 +162,10 @@ void main() {
 #elif defined(USE_CUBEMAP)
 	vec4 color = texture(source_cube, normalize(cube_interp));
 
+#elif defined(USE_TEXTURE3D)
+	vec4 color = textureLod(source_3d, vec3(uv_interp, layer), 0.0);
+#elif defined(USE_TEXTURE2DARRAY)
+	vec4 color = textureLod(source_2d_array, vec3(uv_interp, layer), 0.0);
 #else
 	vec4 color = textureLod(source, uv_interp, 0.0);
 #endif

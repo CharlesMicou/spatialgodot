@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -607,7 +607,7 @@ private:
 
 	DataType _reduce_node_type(Node *p_node);
 	DataType _reduce_function_call_type(const OperatorNode *p_call);
-	DataType _reduce_identifier_type(const DataType *p_base_type, const StringName &p_identifier, int p_line);
+	DataType _reduce_identifier_type(const DataType *p_base_type, const StringName &p_identifier, int p_line, bool p_is_indexing);
 	void _check_class_level_types(ClassNode *p_class);
 	void _check_class_blocks_types(ClassNode *p_class);
 	void _check_function_types(FunctionNode *p_function);

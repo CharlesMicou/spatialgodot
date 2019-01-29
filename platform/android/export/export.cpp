@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -395,7 +395,7 @@ class EditorExportAndroid : public EditorExportPlatform {
 		return aname;
 	}
 
-	String get_package_name(const String &p_package) {
+	String get_package_name(const String &p_package) const {
 
 		String pname = p_package;
 		String basename = ProjectSettings::get_singleton()->get("application/config/name");
@@ -418,6 +418,70 @@ class EditorExportAndroid : public EditorExportPlatform {
 
 		pname = pname.replace("$genname", name);
 		return pname;
+	}
+
+	bool is_package_name_valid(const String &p_package, String *r_error = NULL) const {
+
+		String pname = p_package;
+
+		if (pname.length() == 0) {
+			if (r_error) {
+				*r_error = TTR("Package name is missing.");
+			}
+			return false;
+		}
+
+		int segments = 0;
+		bool first = true;
+		for (int i = 0; i < pname.length(); i++) {
+			CharType c = pname[i];
+			if (first && c == '.') {
+				if (r_error) {
+					*r_error = TTR("Package segments must be of non-zero length.");
+				}
+				return false;
+			}
+			if (c == '.') {
+				segments++;
+				first = true;
+				continue;
+			}
+			if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')) {
+				if (r_error) {
+					*r_error = vformat(TTR("The character '%s' is not allowed in Android application package names."), String::chr(c));
+				}
+				return false;
+			}
+			if (first && (c >= '0' && c <= '9')) {
+				if (r_error) {
+					*r_error = TTR("A digit cannot be the first character in a package segment.");
+				}
+				return false;
+			}
+			if (first && c == '_') {
+				if (r_error) {
+					*r_error = vformat(TTR("The character '%s' cannot be the first character in a package segment."), String::chr(c));
+				}
+				return false;
+			}
+			first = false;
+		}
+
+		if (segments == 0) {
+			if (r_error) {
+				*r_error = TTR("The package must have at least one '.' separator.");
+			}
+			return false;
+		}
+
+		if (first) {
+			if (r_error) {
+				*r_error = TTR("Package segments must be of non-zero length.");
+			}
+			return false;
+		}
+
+		return true;
 	}
 
 	static bool _should_compress_asset(const String &p_path, const Vector<uint8_t> &p_data) {
@@ -487,8 +551,10 @@ class EditorExportAndroid : public EditorExportPlatform {
 	}
 
 	static Vector<String> get_abis() {
-		// mips and armv6 are dead (especially for games), so not including them
 		Vector<String> abis;
+		// We can still build armv6 in theory, but it doesn't make much
+		// sense for games, so disabling for now.
+		//abis.push_back("armeabi");
 		abis.push_back("armeabi-v7a");
 		abis.push_back("arm64-v8a");
 		abis.push_back("x86");
@@ -518,7 +584,7 @@ class EditorExportAndroid : public EditorExportPlatform {
 	static Error save_apk_so(void *p_userdata, const SharedObject &p_so) {
 		if (!p_so.path.get_file().begins_with("lib")) {
 			String err = "Android .so file names must start with \"lib\", but got: " + p_so.path;
-			ERR_PRINT(err.utf8().get_data());
+			ERR_PRINTS(err);
 			return FAILED;
 		}
 		APKExportData *ed = (APKExportData *)p_userdata;
@@ -539,7 +605,7 @@ class EditorExportAndroid : public EditorExportPlatform {
 		if (!exported) {
 			String abis_string = String(" ").join(abis);
 			String err = "Cannot determine ABI for library \"" + p_so.path + "\". One of the supported ABIs must be used as a tag: " + abis_string;
-			ERR_PRINT(err.utf8().get_data());
+			ERR_PRINTS(err);
 			return FAILED;
 		}
 		return OK;
@@ -608,10 +674,13 @@ class EditorExportAndroid : public EditorExportPlatform {
 			aperms++;
 		}
 
-		for (int i = 0; i < MAX_USER_PERMISSIONS; i++) {
-			String user_perm = p_preset->get("user_permissions/" + itos(i));
-			if (user_perm.strip_edges() != "" && user_perm.strip_edges() != "False")
-				perms.push_back(user_perm.strip_edges());
+		PoolStringArray user_perms = p_preset->get("permissions/custom_permissions");
+
+		for (int i = 0; i < user_perms.size(); i++) {
+			String user_perm = user_perms[i].strip_edges();
+			if (!user_perm.empty()) {
+				perms.push_back(user_perm);
+			}
 		}
 
 		if (p_give_internet) {
@@ -1040,10 +1109,6 @@ class EditorExportAndroid : public EditorExportPlatform {
 	}
 
 public:
-	enum {
-		MAX_USER_PERMISSIONS = 20
-	};
-
 	typedef Error (*EditorExportSaveFunction)(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total);
 
 public:
@@ -1055,9 +1120,10 @@ public:
 			r_features->push_back("etc");
 		else*/
 		String driver = ProjectSettings::get_singleton()->get("rendering/quality/driver/driver_name");
-		if (driver == "GLES2") {
+		if (driver == "GLES2" || driver == "GLES3") {
 			r_features->push_back("etc");
-		} else {
+		}
+		if (driver == "GLES3") {
 			r_features->push_back("etc2");
 		}
 
@@ -1091,6 +1157,9 @@ public:
 			r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, launcher_icons[i].option_id, PROPERTY_HINT_FILE, "*.png"), ""));
 		}
 
+		r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "keystore/debug", PROPERTY_HINT_GLOBAL_FILE, "*.keystore"), ""));
+		r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "keystore/debug_user"), ""));
+		r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "keystore/debug_password"), ""));
 		r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "keystore/release", PROPERTY_HINT_GLOBAL_FILE, "*.keystore"), ""));
 		r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "keystore/release_user"), ""));
 		r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "keystore/release_password"), ""));
@@ -1101,20 +1170,17 @@ public:
 		Vector<String> abis = get_abis();
 		for (int i = 0; i < abis.size(); ++i) {
 			String abi = abis[i];
-			bool is_default = (abi == "armeabi-v7a");
+			bool is_default = (abi == "armeabi-v7a" || abi == "arm64-v8a");
 			r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "architectures/" + abi), is_default));
 		}
+
+		r_options->push_back(ExportOption(PropertyInfo(Variant::POOL_STRING_ARRAY, "permissions/custom_permissions"), PoolStringArray()));
 
 		const char **perms = android_perms;
 		while (*perms) {
 
 			r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "permissions/" + String(*perms).to_lower()), false));
 			perms++;
-		}
-
-		for (int i = 0; i < MAX_USER_PERMISSIONS; i++) {
-
-			r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "user_permissions/" + itos(i)), false));
 		}
 	}
 
@@ -1324,7 +1390,7 @@ public:
 			if (FileAccess::exists(p_preset->get("custom_package/debug"))) {
 				r_missing_templates = false;
 			} else {
-				err += "Custom debug package not found.\n";
+				err += TTR("Custom debug template not found.") + "\n";
 			}
 		}
 
@@ -1332,7 +1398,7 @@ public:
 			if (FileAccess::exists(p_preset->get("custom_package/release"))) {
 				r_missing_templates = false;
 			} else {
-				err += "Custom release package not found.\n";
+				err += TTR("Custom release template not found.") + "\n";
 			}
 		}
 
@@ -1343,7 +1409,7 @@ public:
 		if (!FileAccess::exists(adb)) {
 
 			valid = false;
-			err += "ADB executable not configured in the Editor Settings.\n";
+			err += TTR("ADB executable not configured in the Editor Settings.") + "\n";
 		}
 
 		String js = EditorSettings::get_singleton()->get("export/android/jarsigner");
@@ -1351,43 +1417,50 @@ public:
 		if (!FileAccess::exists(js)) {
 
 			valid = false;
-			err += "OpenJDK 8 jarsigner not configured in the Editor Settings.\n";
+			err += TTR("OpenJDK jarsigner not configured in the Editor Settings.") + "\n";
 		}
 
-		String dk = EditorSettings::get_singleton()->get("export/android/debug_keystore");
+		String dk = p_preset->get("keystore/debug");
 
 		if (!FileAccess::exists(dk)) {
 
-			valid = false;
-			err += "Debug keystore not configured in the Editor Settings.\n";
+			dk = EditorSettings::get_singleton()->get("export/android/debug_keystore");
+			if (!FileAccess::exists(dk)) {
+				valid = false;
+				err += TTR("Debug keystore not configured in the Editor Settings nor in the preset.") + "\n";
+			}
 		}
 
 		bool apk_expansion = p_preset->get("apk_expansion/enable");
 
 		if (apk_expansion) {
 
-			/*
-			 if (apk_expansion_salt=="") {
-				 valid=false;
-				 err+="Invalid SALT for apk expansion.\n";
-			 }
-			 */
-
 			String apk_expansion_pkey = p_preset->get("apk_expansion/public_key");
 
 			if (apk_expansion_pkey == "") {
 				valid = false;
 
-				err += "Invalid public key for APK expansion.\n";
+				err += TTR("Invalid public key for APK expansion.") + "\n";
 			}
+		}
+
+		String pn = p_preset->get("package/unique_name");
+		String pn_err;
+
+		if (!is_package_name_valid(get_package_name(pn), &pn_err)) {
+
+			valid = false;
+			err += TTR("Invalid package name:") + " " + pn_err + "\n";
 		}
 
 		r_error = err;
 		return valid;
 	}
 
-	virtual String get_binary_extension(const Ref<EditorExportPreset> &p_preset) const {
-		return "apk";
+	virtual List<String> get_binary_extensions(const Ref<EditorExportPreset> &p_preset) const {
+		List<String> list;
+		list.push_back("apk");
+		return list;
 	}
 
 	virtual Error export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int p_flags = 0) {
@@ -1490,7 +1563,7 @@ public:
 				_fix_resources(p_preset, data);
 			}
 
-			if (file == "res/drawable/icon.png") {
+			if (file == "res/drawable-nodpi-v4/icon.png") {
 				bool found = false;
 				for (unsigned int i = 0; i < sizeof(launcher_icons) / sizeof(launcher_icons[0]); ++i) {
 					String icon_path = String(p_preset->get(launcher_icons[i].option_id)).strip_edges();
@@ -1575,16 +1648,6 @@ public:
 		gen_export_flags(cl, p_flags);
 
 		if (p_flags & DEBUG_FLAG_DUMB_CLIENT) {
-
-			/*String host = EditorSettings::get_singleton()->get("filesystem/file_server/host");
-			int port = EditorSettings::get_singleton()->get("filesystem/file_server/post");
-			String passwd = EditorSettings::get_singleton()->get("filesystem/file_server/password");
-			cl.push_back("--remote-fs");
-			cl.push_back(host+":"+itos(port));
-			if (passwd!="") {
-				cl.push_back("--remote-fs-password");
-				cl.push_back(passwd);
-			}*/
 
 			APKExportData ed;
 			ed.ep = &ep;
@@ -1698,9 +1761,17 @@ public:
 			String password;
 			String user;
 			if (p_debug) {
-				keystore = EditorSettings::get_singleton()->get("export/android/debug_keystore");
-				password = EditorSettings::get_singleton()->get("export/android/debug_keystore_pass");
-				user = EditorSettings::get_singleton()->get("export/android/debug_keystore_user");
+
+				keystore = p_preset->get("keystore/debug");
+				password = p_preset->get("keystore/debug_password");
+				user = p_preset->get("keystore/debug_user");
+
+				if (keystore.empty()) {
+
+					keystore = EditorSettings::get_singleton()->get("export/android/debug_keystore");
+					password = EditorSettings::get_singleton()->get("export/android/debug_keystore_pass");
+					user = EditorSettings::get_singleton()->get("export/android/debug_keystore_user");
+				}
 
 				ep.step("Signing debug APK...", 103);
 

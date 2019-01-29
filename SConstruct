@@ -21,7 +21,6 @@ active_platforms = []
 active_platform_ids = []
 platform_exporters = []
 platform_apis = []
-global_defaults = []
 
 for x in sorted(glob.glob("platform/*")):
     if (not os.path.isdir(x) or not os.path.exists(x + "/detect.py")):
@@ -35,8 +34,6 @@ for x in sorted(glob.glob("platform/*")):
         platform_exporters.append(x[9:])
     if (os.path.exists(x + "/api/api.cpp")):
         platform_apis.append(x[9:])
-    if (os.path.exists(x + "/globals/global_defaults.cpp")):
-        global_defaults.append(x[9:])
     if (detect.is_active()):
         active_platforms.append(detect.get_name())
         active_platform_ids.append(x)
@@ -68,7 +65,6 @@ if 'TERM' in os.environ:
     env_base['ENV']['TERM'] = os.environ['TERM']
 env_base.AppendENVPath('PATH', os.getenv('PATH'))
 env_base.AppendENVPath('PKG_CONFIG_PATH', os.getenv('PKG_CONFIG_PATH'))
-env_base.global_defaults = global_defaults
 env_base.android_maven_repos = []
 env_base.android_flat_dirs = []
 env_base.android_dependencies = []
@@ -168,7 +164,7 @@ opts.Add('extra_suffix', "Custom extra suffix added to the base filename of all 
 opts.Add(BoolVariable('vsproj', "Generate a Visual Studio solution", False))
 opts.Add(EnumVariable('macports_clang', "Build using Clang from MacPorts", 'no', ('no', '5.0', 'devel')))
 opts.Add(BoolVariable('disable_3d', "Disable 3D nodes for a smaller executable", False))
-opts.Add(BoolVariable('disable_advanced_gui', "Disable advanced 3D GUI nodes and behaviors", False))
+opts.Add(BoolVariable('disable_advanced_gui', "Disable advanced GUI nodes and behaviors", False))
 opts.Add(BoolVariable('no_editor_splash', "Don't use the custom splash screen for the editor", False))
 opts.Add('system_certs_path', "Use this path as SSL certificates default for editor (for package maintainers)", '')
 
@@ -349,7 +345,10 @@ if selected_platform in platform_list:
         else: # always enable those errors
             env.Append(CCFLAGS=['-Werror=return-type'])
 
-    suffix = "." + selected_platform
+    if (hasattr(detect, 'get_program_suffix')):
+        suffix = "." + detect.get_program_suffix()
+    else:
+        suffix = "." + selected_platform
 
     if (env["target"] == "release"):
         if env["tools"]:
@@ -422,8 +421,13 @@ if selected_platform in platform_list:
     # (SH)LIBSUFFIX will be used for our own built libraries
     # LIBSUFFIXES contains LIBSUFFIX and SHLIBSUFFIX by default,
     # so we need to append the default suffixes to keep the ability
-    # to link against thirdparty libraries (.a, .so, .dll, etc.).
-    env["LIBSUFFIXES"] += [env["LIBSUFFIX"], env["SHLIBSUFFIX"]]
+    # to link against thirdparty libraries (.a, .so, .lib, etc.).
+    if os.name == "nt":
+        # On Windows, only static libraries and import libraries can be
+        # statically linked - both using .lib extension
+        env["LIBSUFFIXES"] += [env["LIBSUFFIX"]]
+    else:
+        env["LIBSUFFIXES"] += [env["LIBSUFFIX"], env["SHLIBSUFFIX"]]
     env["LIBSUFFIX"] = suffix + env["LIBSUFFIX"]
     env["SHLIBSUFFIX"] = suffix + env["SHLIBSUFFIX"]
 
@@ -544,7 +548,7 @@ if 'env' in locals():
             [os.remove(f) for f in files]
 
         def file_list(self):
-            if self.path == None:
+            if self.path is None:
                 # Nothing to do
                 return []
             # Gather a list of (filename, (size, atime)) within the
@@ -569,7 +573,7 @@ if 'env' in locals():
                 if sum > self.limit:
                     mark = i
                     break
-            if mark == None:
+            if mark is None:
                 return []
             else:
                 return [x[0] for x in file_stat[mark:]]

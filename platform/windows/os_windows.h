@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -93,6 +93,7 @@ class OS_Windows : public OS {
 	HDC hDC; // Private GDI Device Context
 	HINSTANCE hInstance; // Holds The Instance Of The Application
 	HWND hWnd;
+	Point2 last_pos;
 
 	HBITMAP hBitmap; //DIB section for layered window
 	uint8_t *dib_data;
@@ -156,6 +157,8 @@ class OS_Windows : public OS {
 	void _touch_event(bool p_pressed, float p_x, float p_y, int idx);
 
 	void _update_window_style(bool repaint = true);
+
+	void _set_mouse_mode_impl(MouseMode p_mode);
 
 	// functions used by main to initialize/deinitialize the OS
 protected:
@@ -251,6 +254,7 @@ public:
 	virtual TimeZoneInfo get_time_zone_info() const;
 	virtual uint64_t get_unix_time() const;
 	virtual uint64_t get_system_time_secs() const;
+	virtual uint64_t get_system_time_msecs() const;
 
 	virtual bool can_draw() const;
 	virtual Error set_cwd(const String &p_cwd);

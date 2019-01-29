@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -665,6 +665,13 @@ void SceneTreeEditor::_renamed() {
 	Node *n = get_node(np);
 	ERR_FAIL_COND(!n);
 
+	// Empty node names are not allowed, so resets it to previous text and show warning
+	if (which->get_text(0).strip_edges().empty()) {
+		which->set_text(0, n->get_name());
+		EditorNode::get_singleton()->show_warning(TTR("No name provided."));
+		return;
+	}
+
 	String new_name = which->get_text(0);
 	if (!Node::_validate_node_name(new_name)) {
 
@@ -973,8 +980,11 @@ void SceneTreeEditor::_editor_settings_changed() {
 	if (enable_rl) {
 		tree->add_constant_override("draw_relationship_lines", 1);
 		tree->add_color_override("relationship_line_color", rl_color);
-	} else
+		tree->add_constant_override("draw_guides", 0);
+	} else {
 		tree->add_constant_override("draw_relationship_lines", 0);
+		tree->add_constant_override("draw_guides", 1);
+	}
 }
 
 void SceneTreeEditor::_bind_methods() {
@@ -1138,7 +1148,7 @@ SceneTreeDialog::SceneTreeDialog() {
 
 	set_title(TTR("Select a Node"));
 
-	tree = memnew(SceneTreeEditor(false, false));
+	tree = memnew(SceneTreeEditor(false, false, true));
 	add_child(tree);
 	//set_child_rect(tree);
 

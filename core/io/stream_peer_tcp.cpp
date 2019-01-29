@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -349,12 +349,11 @@ void StreamPeerTCP::_bind_methods() {
 	BIND_ENUM_CONSTANT(STATUS_ERROR);
 }
 
-StreamPeerTCP::StreamPeerTCP() {
-
-	_sock = Ref<NetSocket>(NetSocket::create());
-	status = STATUS_NONE;
-	peer_host = IP_Address();
-	peer_port = 0;
+StreamPeerTCP::StreamPeerTCP() :
+		_sock(Ref<NetSocket>(NetSocket::create())),
+		status(STATUS_NONE),
+		peer_host(IP_Address()),
+		peer_port(0) {
 }
 
 StreamPeerTCP::~StreamPeerTCP() {

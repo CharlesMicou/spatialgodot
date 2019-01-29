@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -631,36 +631,36 @@ void set_pending_exception(MonoException *p_exc) {
 _THREAD_LOCAL_(int)
 current_invoke_count = 0;
 
-MonoObject *runtime_invoke(MonoMethod *p_method, void *p_obj, void **p_params, MonoException **p_exc) {
+MonoObject *runtime_invoke(MonoMethod *p_method, void *p_obj, void **p_params, MonoException **r_exc) {
 	GD_MONO_BEGIN_RUNTIME_INVOKE;
-	MonoObject *ret = mono_runtime_invoke(p_method, p_obj, p_params, (MonoObject **)p_exc);
+	MonoObject *ret = mono_runtime_invoke(p_method, p_obj, p_params, (MonoObject **)r_exc);
 	GD_MONO_END_RUNTIME_INVOKE;
 	return ret;
 }
 
-MonoObject *runtime_invoke_array(MonoMethod *p_method, void *p_obj, MonoArray *p_params, MonoException **p_exc) {
+MonoObject *runtime_invoke_array(MonoMethod *p_method, void *p_obj, MonoArray *p_params, MonoException **r_exc) {
 	GD_MONO_BEGIN_RUNTIME_INVOKE;
-	MonoObject *ret = mono_runtime_invoke_array(p_method, p_obj, p_params, (MonoObject **)p_exc);
+	MonoObject *ret = mono_runtime_invoke_array(p_method, p_obj, p_params, (MonoObject **)r_exc);
 	GD_MONO_END_RUNTIME_INVOKE;
 	return ret;
 }
 
-MonoString *object_to_string(MonoObject *p_obj, MonoException **p_exc) {
+MonoString *object_to_string(MonoObject *p_obj, MonoException **r_exc) {
 	GD_MONO_BEGIN_RUNTIME_INVOKE;
-	MonoString *ret = mono_object_to_string(p_obj, (MonoObject **)p_exc);
+	MonoString *ret = mono_object_to_string(p_obj, (MonoObject **)r_exc);
 	GD_MONO_END_RUNTIME_INVOKE;
 	return ret;
 }
 
-void property_set_value(MonoProperty *p_prop, void *p_obj, void **p_params, MonoException **p_exc) {
+void property_set_value(MonoProperty *p_prop, void *p_obj, void **p_params, MonoException **r_exc) {
 	GD_MONO_BEGIN_RUNTIME_INVOKE;
-	mono_property_set_value(p_prop, p_obj, p_params, (MonoObject **)p_exc);
+	mono_property_set_value(p_prop, p_obj, p_params, (MonoObject **)r_exc);
 	GD_MONO_END_RUNTIME_INVOKE;
 }
 
-MonoObject *property_get_value(MonoProperty *p_prop, void *p_obj, void **p_params, MonoException **p_exc) {
+MonoObject *property_get_value(MonoProperty *p_prop, void *p_obj, void **p_params, MonoException **r_exc) {
 	GD_MONO_BEGIN_RUNTIME_INVOKE;
-	MonoObject *ret = mono_property_get_value(p_prop, p_obj, p_params, (MonoObject **)p_exc);
+	MonoObject *ret = mono_property_get_value(p_prop, p_obj, p_params, (MonoObject **)r_exc);
 	GD_MONO_END_RUNTIME_INVOKE;
 	return ret;
 }
@@ -692,6 +692,10 @@ uint64_t unbox_enum_value(MonoObject *p_boxed, MonoType *p_enum_basetype, bool &
 			r_error = true;
 			return 0;
 	}
+}
+
+void dispose(MonoObject *p_mono_object, MonoException **r_exc) {
+	invoke_method_thunk(CACHED_METHOD_THUNK(GodotObject, Dispose), p_mono_object, (MonoObject **)r_exc);
 }
 
 } // namespace GDMonoUtils

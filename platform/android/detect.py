@@ -27,7 +27,7 @@ def get_opts():
     return [
         ('ANDROID_NDK_ROOT', 'Path to the Android NDK', os.environ.get("ANDROID_NDK_ROOT", 0)),
         ('ndk_platform', 'Target platform (android-<api>, e.g. "android-18")', "android-18"),
-        EnumVariable('android_arch', 'Target architecture', "armv7", ('armv7', 'armv6', 'arm64v8', 'x86')),
+        EnumVariable('android_arch', 'Target architecture', "armv7", ('armv7', 'armv6', 'arm64v8', 'x86', 'x86_64')),
         BoolVariable('android_neon', 'Enable NEON support (armv7 only)', True),
         BoolVariable('android_stl', 'Enable Android STL support (for modules)', True)
     ]
@@ -94,7 +94,7 @@ def configure(env):
 
     ## Architecture
 
-    if env['android_arch'] not in ['armv7', 'armv6', 'arm64v8', 'x86']:
+    if env['android_arch'] not in ['armv7', 'armv6', 'arm64v8', 'x86', 'x86_64']:
         env['android_arch'] = 'armv7'
 
     neon_text = ""
@@ -109,6 +109,16 @@ def configure(env):
         target_subpath = "x86-4.9"
         abi_subpath = "i686-linux-android"
         arch_subpath = "x86"
+        env["x86_libtheora_opt_gcc"] = True
+    if env['android_arch'] == 'x86_64':
+        if get_platform(env["ndk_platform"]) < 21:
+            print("WARNING: android_arch=x86_64 is not supported by ndk_platform lower than android-21; setting ndk_platform=android-21")
+            env["ndk_platform"] = "android-21"
+        env['ARCH'] = 'arch-x86_64'
+        env.extra_suffix = ".x86_64" + env.extra_suffix
+        target_subpath = "x86_64-4.9"
+        abi_subpath = "x86_64-linux-android"
+        arch_subpath = "x86_64"
         env["x86_libtheora_opt_gcc"] = True
     elif env['android_arch'] == 'armv6':
         env['ARCH'] = 'arch-arm'
@@ -141,7 +151,7 @@ def configure(env):
     if (env["target"].startswith("release")):
         if (env["optimize"] == "speed"): #optimize for speed (default)
             env.Append(LINKFLAGS=['-O2'])
-            env.Append(CPPFLAGS=['-O2', '-DNDEBUG', '-ffast-math', '-funsafe-math-optimizations', '-fomit-frame-pointer'])
+            env.Append(CPPFLAGS=['-O2', '-DNDEBUG', '-fomit-frame-pointer'])
         else: #optimize for size
             env.Append(CPPFLAGS=['-Os', '-DNDEBUG'])
             env.Append(LINKFLAGS=['-Os'])
@@ -186,7 +196,7 @@ def configure(env):
     env.PrependENVPath('PATH', tools_path)
 
     ccache_path = os.environ.get("CCACHE")
-    if ccache_path == None:
+    if ccache_path is None:
         env['CC'] = compiler_path + '/clang'
         env['CXX'] = compiler_path + '/clang++'
     else:
@@ -223,7 +233,7 @@ def configure(env):
     else:
         print("Using NDK deprecated headers")
         env.Append(CPPFLAGS=["-isystem", lib_sysroot + "/usr/include"])
-     
+
     env.Append(CPPFLAGS='-fpic -ffunction-sections -funwind-tables -fstack-protector-strong -fvisibility=hidden -fno-strict-aliasing'.split())
     env.Append(CPPFLAGS='-DNO_STATVFS -DGLES_ENABLED'.split())
 
@@ -232,6 +242,9 @@ def configure(env):
         target_opts = ['-target', 'i686-none-linux-android']
         # The NDK adds this if targeting API < 21, so we can drop it when Godot targets it at least
         env.Append(CPPFLAGS=['-mstackrealign'])
+
+    elif env['android_arch'] == 'x86_64':
+        target_opts = ['-target', 'x86_64-none-linux-android']
 
     elif env["android_arch"] == "armv6":
         target_opts = ['-target', 'armv6-none-linux-androideabi']
@@ -267,12 +280,12 @@ def configure(env):
         env.Append(LINKFLAGS=['-shared', '--sysroot=' + lib_sysroot, '-Wl,--warn-shared-textrel'])
         if mt_link:
             env.Append(LINKFLAGS=['-Wl,--threads'])
-            
+
     if env["android_arch"] == "armv7":
         env.Append(LINKFLAGS='-Wl,--fix-cortex-a8'.split())
     env.Append(LINKFLAGS='-Wl,--no-undefined -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now'.split())
     env.Append(LINKFLAGS='-Wl,-soname,libgodot_android.so -Wl,--gc-sections'.split())
-    
+
     env.Append(LINKFLAGS=target_opts)
     env.Append(LINKFLAGS=common_opts)
 
@@ -282,7 +295,7 @@ def configure(env):
                         '/toolchains/' + target_subpath + '/prebuilt/' + host_subpath + '/' + abi_subpath + '/lib'])
 
     env.Append(CPPPATH=['#platform/android'])
-    env.Append(CPPFLAGS=['-DANDROID_ENABLED', '-DUNIX_ENABLED', '-DNO_FCNTL', '-DMPC_FIXED_POINT'])
+    env.Append(CPPFLAGS=['-DANDROID_ENABLED', '-DUNIX_ENABLED', '-DNO_FCNTL'])
     env.Append(LIBS=['OpenSLES', 'EGL', 'GLESv3', 'android', 'log', 'z', 'dl'])
 
     # TODO: Move that to opus module's config
@@ -293,7 +306,7 @@ def configure(env):
 
 # Return NDK version string in source.properties (adapted from the Chromium project).
 def get_ndk_version(path):
-    if path == None:
+    if path is None:
         return None
     prop_file_path = os.path.join(path, "source.properties")
     try:

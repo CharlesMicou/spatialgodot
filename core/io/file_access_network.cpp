@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -500,8 +500,9 @@ uint64_t FileAccessNetwork::_get_modified_time(const String &p_file) {
 void FileAccessNetwork::configure() {
 
 	GLOBAL_DEF("network/remote_fs/page_size", 65536);
+	ProjectSettings::get_singleton()->set_custom_property_info("network/remote_fs/page_size", PropertyInfo(Variant::INT, "network/remote_fs/page_size", PROPERTY_HINT_RANGE, "1,65536,1,or_greater")); //is used as denominator and can't be zero
 	GLOBAL_DEF("network/remote_fs/page_read_ahead", 4);
-	GLOBAL_DEF("network/remote_fs/max_pages", 20);
+	ProjectSettings::get_singleton()->set_custom_property_info("network/remote_fs/page_read_ahead", PropertyInfo(Variant::INT, "network/remote_fs/page_read_ahead", PROPERTY_HINT_RANGE, "0,8,1,or_greater"));
 }
 
 FileAccessNetwork::FileAccessNetwork() {
@@ -519,7 +520,6 @@ FileAccessNetwork::FileAccessNetwork() {
 	nc->unlock_mutex();
 	page_size = GLOBAL_GET("network/remote_fs/page_size");
 	read_ahead = GLOBAL_GET("network/remote_fs/page_read_ahead");
-	max_pages = GLOBAL_GET("network/remote_fs/max_pages");
 	last_activity_val = 0;
 	waiting_on_page = -1;
 	last_page = -1;

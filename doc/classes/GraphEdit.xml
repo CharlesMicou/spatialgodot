@@ -5,7 +5,7 @@
 	</brief_description>
 	<description>
 		GraphEdit manages the showing of GraphNodes it contains, as well as connections and disconnections between them. Signals are sent for each of these two events. Disconnection between GraphNodes slots is disabled by default.
-		It is greatly advised to enable low processor usage mode (see [method OS.set_low_processor_usage_mode]) when using GraphEdits.
+		It is greatly advised to enable low processor usage mode (see [member OS.low_processor_usage_mode]) when using GraphEdits.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -82,7 +82,7 @@
 			<return type="Array">
 			</return>
 			<description>
-				Return an Array containing the list of connections. A connection consists in a structure of the form {from_slot: 0, from: "GraphNode name 0", to_slot: 1, to: "GraphNode name 1" }
+				Return an Array containing the list of connections. A connection consists in a structure of the form {from_port: 0, from: "GraphNode name 0", to_port: 1, to: "GraphNode name 1" }
 			</description>
 		</method>
 		<method name="get_zoom_hbox">
@@ -254,7 +254,7 @@
 			</description>
 		</signal>
 		<signal name="popup_request">
-			<argument index="0" name="p_position" type="Vector2">
+			<argument index="0" name="position" type="Vector2">
 			</argument>
 			<description>
 				Signal sent when a popup is requested. Happens on right-clicking in the GraphEdit. 'p_position' is the position of the mouse pointer when the signal is sent.

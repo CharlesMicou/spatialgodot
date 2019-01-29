@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -272,12 +272,18 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 			for (int i = 0; i < 10; i++)
 				file->get_32(); // i wish to know why should i do this... no doc!
 
-			// only read 0x00 (loop forward) and 0x01 (loop ping-pong) and skip anything else because
-			// it's not supported (loop backward), reserved for future uses or sampler specific
+			// only read 0x00 (loop forward), 0x01 (loop ping-pong) and 0x02 (loop backward)
+			// Skip anything else because it's not supported, reserved for future uses or sampler specific
 			// from https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#smpl (loop type values table)
 			int loop_type = file->get_32();
-			if (loop_type == 0x00 || loop_type == 0x01) {
-				loop = loop_type ? AudioStreamSample::LOOP_PING_PONG : AudioStreamSample::LOOP_FORWARD;
+			if (loop_type == 0x00 || loop_type == 0x01 || loop_type == 0x02) {
+				if (loop_type == 0x00) {
+					loop = AudioStreamSample::LOOP_FORWARD;
+				} else if (loop_type == 0x01) {
+					loop = AudioStreamSample::LOOP_PING_PONG;
+				} else if (loop_type == 0x02) {
+					loop = AudioStreamSample::LOOP_BACKWARD;
+				}
 				loop_begin = file->get_32();
 				loop_end = file->get_32();
 			}

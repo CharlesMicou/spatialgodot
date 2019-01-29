@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -56,6 +56,7 @@ public:
 	void environment_set_background(RID p_env, VS::EnvironmentBG p_bg) {}
 	void environment_set_sky(RID p_env, RID p_sky) {}
 	void environment_set_sky_custom_fov(RID p_env, float p_scale) {}
+	void environment_set_sky_orientation(RID p_env, const Basis &p_orientation) {}
 	void environment_set_bg_color(RID p_env, const Color &p_color) {}
 	void environment_set_bg_energy(RID p_env, float p_energy) {}
 	void environment_set_canvas_max_layer(RID p_env, int p_max_layer) {}
@@ -63,7 +64,8 @@ public:
 
 	void environment_set_dof_blur_near(RID p_env, bool p_enable, float p_distance, float p_transition, float p_far_amount, VS::EnvironmentDOFBlurQuality p_quality) {}
 	void environment_set_dof_blur_far(RID p_env, bool p_enable, float p_distance, float p_transition, float p_far_amount, VS::EnvironmentDOFBlurQuality p_quality) {}
-	void environment_set_glow(RID p_env, bool p_enable, int p_level_flags, float p_intensity, float p_strength, float p_bloom_threshold, VS::EnvironmentGlowBlendMode p_blend_mode, float p_hdr_bleed_threshold, float p_hdr_bleed_scale, bool p_bicubic_upscale) {}
+	void environment_set_glow(RID p_env, bool p_enable, int p_level_flags, float p_intensity, float p_strength, float p_bloom_threshold, VS::EnvironmentGlowBlendMode p_blend_mode, float p_hdr_bleed_threshold, float p_hdr_bleed_scale, float p_hdr_luminance_cap, bool p_bicubic_upscale) {}
+
 	void environment_set_fog(RID p_env, bool p_enable, float p_begin, float p_end, RID p_gradient_texture) {}
 
 	void environment_set_ssr(RID p_env, bool p_enable, int p_max_steps, float p_fade_int, float p_fade_out, float p_depth_tolerance, bool p_roughness) {}
@@ -74,7 +76,7 @@ public:
 	void environment_set_adjustment(RID p_env, bool p_enable, float p_brightness, float p_contrast, float p_saturation, RID p_ramp) {}
 
 	void environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount) {}
-	void environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_curve, bool p_transmit, float p_transmit_curve) {}
+	void environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_end, float p_depth_curve, bool p_transmit, float p_transmit_curve) {}
 	void environment_set_fog_height(RID p_env, bool p_enable, float p_min_height, float p_max_height, float p_height_curve) {}
 
 	bool is_environment(RID p_env) { return false; }
@@ -239,6 +241,7 @@ public:
 	void textures_keep_original(bool p_enable) {}
 
 	void texture_set_proxy(RID p_proxy, RID p_base) {}
+	virtual Size2 texture_size_with_proxy(RID p_texture) const { return Size2(); }
 	void texture_set_force_redraw_if_visible(RID p_texture, bool p_enable) {}
 
 	/* SKY API */
@@ -584,22 +587,12 @@ public:
 
 		SelfList<RasterizerScene::InstanceBase>::List instance_list;
 
-		_FORCE_INLINE_ void instance_change_notify() {
+		_FORCE_INLINE_ void instance_change_notify(bool p_aabb = true, bool p_materials = true) {
 
 			SelfList<RasterizerScene::InstanceBase> *instances = instance_list.first();
 			while (instances) {
 
-				instances->self()->base_changed();
-				instances = instances->next();
-			}
-		}
-
-		_FORCE_INLINE_ void instance_material_change_notify() {
-
-			SelfList<RasterizerScene::InstanceBase> *instances = instance_list.first();
-			while (instances) {
-
-				instances->self()->base_material_changed();
+				instances->self()->base_changed(p_aabb, p_materials);
 				instances = instances->next();
 			}
 		}
@@ -690,6 +683,8 @@ public:
 	bool particles_get_emitting(RID p_particles) { return false; }
 	int particles_get_draw_passes(RID p_particles) const { return 0; }
 	RID particles_get_draw_pass_mesh(RID p_particles, int p_pass) const { return RID(); }
+
+	virtual bool particles_is_inactive(RID p_particles) const { return false; }
 
 	/* RENDER TARGET */
 

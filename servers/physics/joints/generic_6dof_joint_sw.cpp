@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -503,6 +503,24 @@ void Generic6DOFJointSW::set_param(Vector3::Axis p_axis, PhysicsServer::G6DOFJoi
 		case PhysicsServer::G6DOF_JOINT_LINEAR_MOTOR_FORCE_LIMIT: {
 			// Not implemented in GodotPhysics backend
 		} break;
+		case PhysicsServer::G6DOF_JOINT_LINEAR_SPRING_STIFFNESS: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_LINEAR_SPRING_DAMPING: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_LINEAR_SPRING_EQUILIBRIUM_POINT: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_ANGULAR_SPRING_STIFFNESS: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_ANGULAR_SPRING_DAMPING: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_ANGULAR_SPRING_EQUILIBRIUM_POINT: {
+			// Not implemented in GodotPhysics backend
+		} break;
 		case PhysicsServer::G6DOF_JOINT_MAX: break; // Can't happen, but silences warning
 	}
 }
@@ -585,6 +603,24 @@ real_t Generic6DOFJointSW::get_param(Vector3::Axis p_axis, PhysicsServer::G6DOFJ
 		case PhysicsServer::G6DOF_JOINT_LINEAR_MOTOR_FORCE_LIMIT: {
 			// Not implemented in GodotPhysics backend
 		} break;
+		case PhysicsServer::G6DOF_JOINT_LINEAR_SPRING_STIFFNESS: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_LINEAR_SPRING_DAMPING: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_LINEAR_SPRING_EQUILIBRIUM_POINT: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_ANGULAR_SPRING_STIFFNESS: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_ANGULAR_SPRING_DAMPING: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_ANGULAR_SPRING_EQUILIBRIUM_POINT: {
+			// Not implemented in GodotPhysics backend
+		} break;
 		case PhysicsServer::G6DOF_JOINT_MAX: break; // Can't happen, but silences warning
 	}
 	return 0;
@@ -610,6 +646,12 @@ void Generic6DOFJointSW::set_flag(Vector3::Axis p_axis, PhysicsServer::G6DOFJoin
 		case PhysicsServer::G6DOF_JOINT_FLAG_ENABLE_LINEAR_MOTOR: {
 			// Not implemented in GodotPhysics backend
 		} break;
+		case PhysicsServer::G6DOF_JOINT_FLAG_ENABLE_LINEAR_SPRING: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_FLAG_ENABLE_ANGULAR_SPRING: {
+			// Not implemented in GodotPhysics backend
+		} break;
 		case PhysicsServer::G6DOF_JOINT_FLAG_MAX: break; // Can't happen, but silences warning
 	}
 }
@@ -630,6 +672,12 @@ bool Generic6DOFJointSW::get_flag(Vector3::Axis p_axis, PhysicsServer::G6DOFJoin
 			return m_angularLimits[p_axis].m_enableMotor;
 		} break;
 		case PhysicsServer::G6DOF_JOINT_FLAG_ENABLE_LINEAR_MOTOR: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_FLAG_ENABLE_LINEAR_SPRING: {
+			// Not implemented in GodotPhysics backend
+		} break;
+		case PhysicsServer::G6DOF_JOINT_FLAG_ENABLE_ANGULAR_SPRING: {
 			// Not implemented in GodotPhysics backend
 		} break;
 		case PhysicsServer::G6DOF_JOINT_FLAG_MAX: break; // Can't happen, but silences warning

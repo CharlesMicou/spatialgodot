@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -84,10 +84,10 @@ public:
 	bool build(const MonoBuildInfo &p_build_info);
 	bool build_async(const MonoBuildInfo &p_build_info, GodotSharpBuild_ExitCallback p_callback = NULL);
 
-	static bool build_api_sln(const String &p_name, const String &p_api_sln_dir, const String &p_config);
+	static bool build_api_sln(const String &p_api_sln_dir, const String &p_config);
 	static bool copy_api_assembly(const String &p_src_dir, const String &p_dst_dir, const String &p_assembly_name, APIAssembly::Type p_api_type);
 
-	static bool make_api_sln(APIAssembly::Type p_api_type);
+	static bool make_api_assembly(APIAssembly::Type p_api_type);
 
 	static bool build_project_blocking(const String &p_config);
 

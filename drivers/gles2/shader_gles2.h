@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -104,6 +104,7 @@ private:
 		Vector<StringName> texture_uniforms;
 		Vector<StringName> custom_uniforms;
 		Vector<CharString> custom_defines;
+		Set<uint32_t> versions;
 	};
 
 	struct Version {
@@ -464,6 +465,8 @@ public:
 
 	void set_custom_shader(uint32_t p_code_id);
 	void free_custom_shader(uint32_t p_code_id);
+
+	uint32_t get_version_key() const { return conditional_version.version; }
 
 	void set_uniform_default(int p_idx, const Variant &p_value) {
 

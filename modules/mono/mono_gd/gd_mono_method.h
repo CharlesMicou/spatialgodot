@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -42,6 +42,9 @@ class GDMonoMethod : public GDMonoClassMember {
 	int params_count;
 	ManagedType return_type;
 	Vector<ManagedType> param_types;
+
+	bool method_info_fetched;
+	MethodInfo method_info;
 
 	bool attrs_fetched;
 	MonoCustomAttrInfo *attributes;
@@ -82,6 +85,8 @@ public:
 
 	void get_parameter_names(Vector<StringName> &names) const;
 	void get_parameter_types(Vector<ManagedType> &types) const;
+
+	const MethodInfo &get_method_info();
 
 	GDMonoMethod(StringName p_name, MonoMethod *p_method);
 	~GDMonoMethod();

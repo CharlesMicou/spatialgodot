@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -327,6 +327,11 @@ void TileMap::update_dirty_quadrants() {
 			Ref<ShaderMaterial> mat = tile_set->tile_get_material(c.id);
 			int z_index = tile_set->tile_get_z_index(c.id);
 
+			if (tile_set->tile_get_tile_mode(c.id) == TileSet::AUTO_TILE ||
+					tile_set->tile_get_tile_mode(c.id) == TileSet::ATLAS_TILE) {
+				z_index += tile_set->autotile_get_z_index(c.id, Vector2(c.autotile_coord_x, c.autotile_coord_y));
+			}
+
 			RID canvas_item;
 			RID debug_canvas_item;
 
@@ -372,13 +377,12 @@ void TileMap::update_dirty_quadrants() {
 				r.size = tile_set->autotile_get_size(c.id);
 				r.position += (r.size + Vector2(spacing, spacing)) * Vector2(c.autotile_coord_x, c.autotile_coord_y);
 			}
-			Size2 s = tex->get_size();
 
+			Size2 s;
 			if (r == Rect2())
 				s = tex->get_size();
-			else {
+			else
 				s = r.size;
-			}
 
 			Rect2 rect;
 			rect.position = offset.floor();
@@ -477,7 +481,7 @@ void TileMap::update_dirty_quadrants() {
 						}
 						ps->body_add_shape(q.body, shape->get_rid(), xform);
 						ps->body_set_shape_metadata(q.body, shape_idx, Vector2(E->key().x, E->key().y));
-						ps->body_set_shape_as_one_way_collision(q.body, shape_idx, shapes[i].one_way_collision);
+						ps->body_set_shape_as_one_way_collision(q.body, shape_idx, shapes[i].one_way_collision, shapes[i].one_way_collision_margin);
 						shape_idx++;
 					}
 				}
@@ -835,7 +839,7 @@ void TileMap::update_cell_bitmask(int p_x, int p_y) {
 	Map<PosKey, Cell>::Element *E = tile_map.find(p);
 	if (E != NULL) {
 		int id = get_cell(p_x, p_y);
-		if (tile_set->tile_get_tile_mode(id) == TileSet::AUTO_TILE || tile_set->tile_get_tile_mode(id) == TileSet::ATLAS_TILE) {
+		if (tile_set->tile_get_tile_mode(id) == TileSet::AUTO_TILE) {
 			uint16_t mask = 0;
 			if (tile_set->autotile_get_bitmask_mode(id) == TileSet::BITMASK_2X2) {
 				if (tile_set->is_tile_bound(id, get_cell(p_x - 1, p_y - 1)) && tile_set->is_tile_bound(id, get_cell(p_x, p_y - 1)) && tile_set->is_tile_bound(id, get_cell(p_x - 1, p_y))) {
@@ -899,7 +903,8 @@ void TileMap::update_cell_bitmask(int p_x, int p_y) {
 			PosKey qk(p_x / _get_quadrant_size(), p_y / _get_quadrant_size());
 			Map<PosKey, Quadrant>::Element *Q = quadrant_map.find(qk);
 			_make_quadrant_dirty(Q);
-		} else {
+
+		} else if (tile_set->tile_get_tile_mode(id) == TileSet::SINGLE_TILE) {
 			E->get().autotile_coord_x = 0;
 			E->get().autotile_coord_y = 0;
 		}
@@ -1114,6 +1119,8 @@ void TileMap::_set_tile_data(const PoolVector<int> &p_data) {
 		*/
 		set_cell(x, y, v, flip_h, flip_v, transpose, Vector2(coord_x, coord_y));
 	}
+
+	format = FORMAT_2;
 }
 
 PoolVector<int> TileMap::_get_tile_data() const {
@@ -1403,7 +1410,7 @@ bool TileMap::_set(const StringName &p_name, const Variant &p_value) {
 bool TileMap::_get(const StringName &p_name, Variant &r_ret) const {
 
 	if (p_name == "format") {
-		r_ret = FORMAT_2;
+		r_ret = format;
 		return true;
 	} else if (p_name == "tile_data") {
 		r_ret = _get_tile_data();
@@ -1445,6 +1452,11 @@ Vector2 TileMap::world_to_map(const Vector2 &p_pos) const {
 		default: {}
 	}
 
+	// Account for precision errors on the border (GH-23250).
+	// 0.00005 is 5*CMP_EPSILON, results would start being unpredictible if
+	// cell size is > 15,000, but we can hardly have more precision anyway with
+	// floating point.
+	ret += Vector2(0.00005, 0.00005);
 	return ret.floor();
 }
 
@@ -1617,6 +1629,8 @@ void TileMap::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_cell_x_flipped", "x", "y"), &TileMap::is_cell_x_flipped);
 	ClassDB::bind_method(D_METHOD("is_cell_y_flipped", "x", "y"), &TileMap::is_cell_y_flipped);
 	ClassDB::bind_method(D_METHOD("is_cell_transposed", "x", "y"), &TileMap::is_cell_transposed);
+
+	ClassDB::bind_method(D_METHOD("get_cell_autotile_coord", "x", "y"), &TileMap::get_cell_autotile_coord);
 
 	ClassDB::bind_method(D_METHOD("fix_invalid_tiles"), &TileMap::fix_invalid_tiles);
 	ClassDB::bind_method(D_METHOD("clear"), &TileMap::clear);

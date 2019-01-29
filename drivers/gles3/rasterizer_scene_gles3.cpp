@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -791,6 +791,14 @@ void RasterizerSceneGLES3::environment_set_sky_custom_fov(RID p_env, float p_sca
 	env->sky_custom_fov = p_scale;
 }
 
+void RasterizerSceneGLES3::environment_set_sky_orientation(RID p_env, const Basis &p_orientation) {
+
+	Environment *env = environment_owner.getornull(p_env);
+	ERR_FAIL_COND(!env);
+
+	env->sky_orientation = p_orientation;
+}
+
 void RasterizerSceneGLES3::environment_set_bg_color(RID p_env, const Color &p_color) {
 
 	Environment *env = environment_owner.getornull(p_env);
@@ -846,7 +854,7 @@ void RasterizerSceneGLES3::environment_set_dof_blur_near(RID p_env, bool p_enabl
 	env->dof_blur_near_amount = p_amount;
 	env->dof_blur_near_quality = p_quality;
 }
-void RasterizerSceneGLES3::environment_set_glow(RID p_env, bool p_enable, int p_level_flags, float p_intensity, float p_strength, float p_bloom_threshold, VS::EnvironmentGlowBlendMode p_blend_mode, float p_hdr_bleed_threshold, float p_hdr_bleed_scale, bool p_bicubic_upscale) {
+void RasterizerSceneGLES3::environment_set_glow(RID p_env, bool p_enable, int p_level_flags, float p_intensity, float p_strength, float p_bloom_threshold, VS::EnvironmentGlowBlendMode p_blend_mode, float p_hdr_bleed_threshold, float p_hdr_bleed_scale, float p_hdr_luminance_cap, bool p_bicubic_upscale) {
 
 	Environment *env = environment_owner.getornull(p_env);
 	ERR_FAIL_COND(!env);
@@ -859,6 +867,7 @@ void RasterizerSceneGLES3::environment_set_glow(RID p_env, bool p_enable, int p_
 	env->glow_blend_mode = p_blend_mode;
 	env->glow_hdr_bleed_threshold = p_hdr_bleed_threshold;
 	env->glow_hdr_bleed_scale = p_hdr_bleed_scale;
+	env->glow_hdr_luminance_cap = p_hdr_luminance_cap;
 	env->glow_bicubic_upscale = p_bicubic_upscale;
 }
 void RasterizerSceneGLES3::environment_set_fog(RID p_env, bool p_enable, float p_begin, float p_end, RID p_gradient_texture) {
@@ -934,13 +943,14 @@ void RasterizerSceneGLES3::environment_set_fog(RID p_env, bool p_enable, const C
 	env->fog_sun_amount = p_sun_amount;
 }
 
-void RasterizerSceneGLES3::environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_curve, bool p_transmit, float p_transmit_curve) {
+void RasterizerSceneGLES3::environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_end, float p_depth_curve, bool p_transmit, float p_transmit_curve) {
 
 	Environment *env = environment_owner.getornull(p_env);
 	ERR_FAIL_COND(!env);
 
 	env->fog_depth_enabled = p_enable;
 	env->fog_depth_begin = p_depth_begin;
+	env->fog_depth_end = p_depth_end;
 	env->fog_depth_curve = p_depth_curve;
 	env->fog_transmit_enabled = p_transmit;
 	env->fog_transmit_curve = p_transmit_curve;
@@ -1189,11 +1199,12 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 
 		if (t) {
 
+			t = t->get_ptr(); //resolve for proxies
+
 			if (t->redraw_if_visible) { //must check before proxy because this is often used with proxies
 				VisualServerRaster::redraw_request();
 			}
 
-			t = t->get_ptr(); //resolve for proxies
 #ifdef TOOLS_ENABLED
 			if (t->detect_3d) {
 				t->detect_3d(t->detect_3d_ud);
@@ -1257,7 +1268,14 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 				case ShaderLanguage::TYPE_ISAMPLER2DARRAY:
 				case ShaderLanguage::TYPE_USAMPLER2DARRAY:
 				case ShaderLanguage::TYPE_SAMPLER2DARRAY: {
+
+					target = GL_TEXTURE_2D_ARRAY;
+					tex = storage->resources.white_tex_array;
+
+					//switch (texture_hints[i]) {
 					// TODO
+					//}
+
 				} break;
 
 				default: {}
@@ -1428,7 +1446,16 @@ void RasterizerSceneGLES3::_setup_geometry(RenderList::Element *e, const Transfo
 			if (particles->draw_order == VS::PARTICLES_DRAW_ORDER_VIEW_DEPTH && particles->particle_valid_histories[1]) {
 
 				glBindBuffer(GL_ARRAY_BUFFER, particles->particle_buffer_histories[1]); //modify the buffer, this was used 2 frames ago so it should be good enough for flushing
-				RasterizerGLES3Particle *particle_array = (RasterizerGLES3Particle *)glMapBufferRange(GL_ARRAY_BUFFER, 0, particles->amount * 24 * sizeof(float), GL_MAP_READ_BIT | GL_MAP_WRITE_BIT);
+				RasterizerGLES3Particle *particle_array;
+#ifndef __EMSCRIPTEN__
+				particle_array = static_cast<RasterizerGLES3Particle *>(glMapBufferRange(GL_ARRAY_BUFFER, 0, particles->amount * 24 * sizeof(float), GL_MAP_READ_BIT | GL_MAP_WRITE_BIT));
+#else
+				PoolVector<RasterizerGLES3Particle> particle_vector;
+				particle_vector.resize(particles->amount);
+				PoolVector<RasterizerGLES3Particle>::Write w = particle_vector.write();
+				particle_array = w.ptr();
+				glGetBufferSubData(GL_ARRAY_BUFFER, 0, particles->amount * sizeof(RasterizerGLES3Particle), particle_array);
+#endif
 
 				SortArray<RasterizerGLES3Particle, RasterizerGLES3ParticleSort> sorter;
 
@@ -1440,7 +1467,17 @@ void RasterizerSceneGLES3::_setup_geometry(RenderList::Element *e, const Transfo
 
 				sorter.sort(particle_array, particles->amount);
 
+#ifndef __EMSCRIPTEN__
 				glUnmapBuffer(GL_ARRAY_BUFFER);
+#else
+				w = PoolVector<RasterizerGLES3Particle>::Write();
+				particle_array = NULL;
+				{
+					PoolVector<RasterizerGLES3Particle>::Read r = particle_vector.read();
+					glBufferSubData(GL_ARRAY_BUFFER, 0, particles->amount * sizeof(RasterizerGLES3Particle), r.ptr());
+				}
+				particle_vector = PoolVector<RasterizerGLES3Particle>();
+#endif
 #ifdef DEBUG_ENABLED
 				if (state.debug_draw == VS::VIEWPORT_DEBUG_DRAW_WIREFRAME && s->instancing_array_wireframe_id) {
 					glBindVertexArray(s->instancing_array_wireframe_id); // use the wireframe instancing array ID
@@ -1795,6 +1832,7 @@ void RasterizerSceneGLES3::_render_geometry(RenderList::Element *e) {
 					storage->info.render.vertices_count += s->index_array_len * amount;
 				} else
 #endif
+
 						if (s->index_array_len > 0) {
 
 					glDrawElementsInstanced(gl_primitive[s->primitive], s->index_array_len, (s->array_len >= (1 << 16)) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT, 0, amount);
@@ -2202,7 +2240,6 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 
 		_set_cull(e->sort_key & RenderList::SORT_KEY_MIRROR_FLAG, e->sort_key & RenderList::SORT_KEY_CULL_DISABLED_FLAG, p_reverse_cull);
 
-		state.scene_shader.set_uniform(SceneShaderGLES3::NORMAL_MULT, e->instance->mirror ? -1.0 : 1.0);
 		state.scene_shader.set_uniform(SceneShaderGLES3::WORLD_TRANSFORM, e->instance->transform);
 
 		_render_geometry(e);
@@ -2406,7 +2443,7 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 	}
 }
 
-void RasterizerSceneGLES3::_draw_sky(RasterizerStorageGLES3::Sky *p_sky, const CameraMatrix &p_projection, const Transform &p_transform, bool p_vflip, float p_custom_fov, float p_energy) {
+void RasterizerSceneGLES3::_draw_sky(RasterizerStorageGLES3::Sky *p_sky, const CameraMatrix &p_projection, const Transform &p_transform, bool p_vflip, float p_custom_fov, float p_energy, const Basis &p_sky_orientation) {
 
 	ERR_FAIL_COND(!p_sky);
 
@@ -2498,7 +2535,12 @@ void RasterizerSceneGLES3::_draw_sky(RasterizerStorageGLES3::Sky *p_sky, const C
 	storage->shaders.copy.set_conditional(CopyShaderGLES3::USE_PANORAMA, !asymmetrical);
 	storage->shaders.copy.set_conditional(CopyShaderGLES3::USE_MULTIPLIER, true);
 	storage->shaders.copy.bind();
+
 	storage->shaders.copy.set_uniform(CopyShaderGLES3::MULTIPLIER, p_energy);
+
+	// don't know why but I always have problems setting a uniform mat3, so we're using a transform
+	storage->shaders.copy.set_uniform(CopyShaderGLES3::SKY_TRANSFORM, Transform(p_sky_orientation, Vector3(0.0, 0.0, 0.0)).affine_inverse());
+
 	if (asymmetrical) {
 		// pack the bits we need from our projection matrix
 		storage->shaders.copy.set_uniform(CopyShaderGLES3::ASYM_PROJ, camera.matrix[2][0], camera.matrix[0][0], camera.matrix[2][1], camera.matrix[1][1]);
@@ -2517,6 +2559,7 @@ void RasterizerSceneGLES3::_draw_sky(RasterizerStorageGLES3::Sky *p_sky, const C
 }
 
 void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatrix &p_cam_projection, const Transform &p_cam_transform, bool p_no_fog) {
+	Transform sky_orientation;
 
 	//store camera into ubo
 	store_camera(p_cam_projection, state.ubo_data.projection_matrix);
@@ -2557,6 +2600,9 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 		state.ubo_data.bg_color[2] = bg_color.b;
 		state.ubo_data.bg_color[3] = bg_color.a;
 
+		//use the inverse of our sky_orientation, we may need to skip this if we're using a reflection probe?
+		sky_orientation = Transform(env->sky_orientation, Vector3(0.0, 0.0, 0.0)).affine_inverse();
+
 		state.env_radiance_data.ambient_contribution = env->ambient_sky_contribution;
 		state.ubo_data.ambient_occlusion_affect_light = env->ssao_light_affect;
 		state.ubo_data.ambient_occlusion_affect_ssao = env->ssao_ao_channel_affect;
@@ -2568,6 +2614,7 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 		state.ubo_data.fog_color_enabled[1] = linear_fog.g;
 		state.ubo_data.fog_color_enabled[2] = linear_fog.b;
 		state.ubo_data.fog_color_enabled[3] = (!p_no_fog && env->fog_enabled) ? 1.0 : 0.0;
+		state.ubo_data.fog_density = linear_fog.a;
 
 		Color linear_sun = env->fog_sun_color.to_linear();
 		state.ubo_data.fog_sun_color_amount[0] = linear_sun.r;
@@ -2576,6 +2623,7 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 		state.ubo_data.fog_sun_color_amount[3] = env->fog_sun_amount;
 		state.ubo_data.fog_depth_enabled = env->fog_depth_enabled;
 		state.ubo_data.fog_depth_begin = env->fog_depth_begin;
+		state.ubo_data.fog_depth_end = env->fog_depth_end;
 		state.ubo_data.fog_depth_curve = env->fog_depth_curve;
 		state.ubo_data.fog_transmit_enabled = env->fog_transmit_enabled;
 		state.ubo_data.fog_transmit_curve = env->fog_transmit_curve;
@@ -2623,7 +2671,7 @@ void RasterizerSceneGLES3::_setup_environment(Environment *env, const CameraMatr
 
 	//fill up environment
 
-	store_transform(p_cam_transform, state.env_radiance_data.transform);
+	store_transform(sky_orientation * p_cam_transform, state.env_radiance_data.transform);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, state.env_radiance_ubo);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(State::EnvironmentRadianceUBO), &state.env_radiance_data);
@@ -2730,7 +2778,7 @@ void RasterizerSceneGLES3::_setup_directional_light(int p_index, const Transform
 
 			CameraMatrix shadow_mtx = rectm * bias * li->shadow_transform[j].camera * modelview;
 
-			store_camera(shadow_mtx, &ubo_data.shadow_matrix1[16 * j]);
+			store_camera(shadow_mtx, &ubo_data.shadow.matrix[16 * j]);
 
 			ubo_data.light_clamp[0] = atlas_rect.position.x;
 			ubo_data.light_clamp[1] = atlas_rect.position.y;
@@ -2841,7 +2889,7 @@ void RasterizerSceneGLES3::_setup_lights(RID *p_light_cull_result, int p_light_c
 
 					Transform proj = (p_camera_inverse_transform * li->transform).inverse();
 
-					store_transform(proj, ubo_data.shadow_matrix1);
+					store_transform(proj, ubo_data.shadow.matrix1);
 
 					ubo_data.light_params[3] = 1.0; //means it has shadow
 					ubo_data.light_clamp[0] = float(x) / atlas_size;
@@ -2930,7 +2978,7 @@ void RasterizerSceneGLES3::_setup_lights(RID *p_light_cull_result, int p_light_c
 
 					CameraMatrix shadow_mtx = rectm * bias * li->shadow_transform[0].camera * modelview;
 
-					store_camera(shadow_mtx, ubo_data.shadow_matrix1);
+					store_camera(shadow_mtx, ubo_data.shadow.matrix1);
 				}
 
 				li->light_index = state.spot_light_count;
@@ -3017,20 +3065,17 @@ void RasterizerSceneGLES3::_setup_reflections(RID *p_reflection_probe_cull_resul
 			reflection_ubo.ambient[3] = rpi->probe_ptr->interior_ambient_probe_contrib;
 		} else {
 			Color ambient_linear;
-			// FIXME: contrib was retrieved but never used, is it meant to be set as ambient[3]? (GH-20361)
-			//float contrib = 0;
 			if (p_env) {
 				ambient_linear = p_env->ambient_color.to_linear();
 				ambient_linear.r *= p_env->ambient_energy;
 				ambient_linear.g *= p_env->ambient_energy;
 				ambient_linear.b *= p_env->ambient_energy;
-				//contrib = p_env->ambient_sky_contribution;
 			}
 
 			reflection_ubo.ambient[0] = ambient_linear.r;
 			reflection_ubo.ambient[1] = ambient_linear.g;
 			reflection_ubo.ambient[2] = ambient_linear.b;
-			reflection_ubo.ambient[3] = 0;
+			reflection_ubo.ambient[3] = 0; //not used in exterior mode, since it just blends with regular ambient light
 		}
 
 		int cell_size = reflection_atlas->size / reflection_atlas->subdiv;
@@ -3577,7 +3622,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	}
 
-	if (!env || storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_TRANSPARENT]) {
+	if (!env || storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_TRANSPARENT] || storage->frame.current_rt->width < 4 || storage->frame.current_rt->height < 4) { //no post process on small render targets
 		//no environment or transparent render, simply return and convert to SRGB
 		glBindFramebuffer(GL_FRAMEBUFFER, storage->frame.current_rt->fbo);
 		glActiveTexture(GL_TEXTURE0);
@@ -3879,6 +3924,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 			state.effect_blur_shader.set_uniform(EffectBlurShaderGLES3::PIXEL_SIZE, Vector2(1.0 / vp_w, 1.0 / vp_h));
 			state.effect_blur_shader.set_uniform(EffectBlurShaderGLES3::LOD, float(i));
 			state.effect_blur_shader.set_uniform(EffectBlurShaderGLES3::GLOW_STRENGTH, env->glow_strength);
+			state.effect_blur_shader.set_uniform(EffectBlurShaderGLES3::LUMINANCE_CAP, env->glow_hdr_luminance_cap);
 
 			glActiveTexture(GL_TEXTURE0);
 			if (i == 0) {
@@ -4086,9 +4132,19 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 
 	glDepthFunc(GL_LEQUAL);
 
-	state.used_contact_shadows = true;
+	state.used_contact_shadows = false;
 
-	if (!storage->config.no_depth_prepass && storage->frame.current_rt && state.debug_draw != VS::VIEWPORT_DEBUG_DRAW_OVERDRAW) { //detect with state.used_contact_shadows too
+	for (int i = 0; i < p_light_cull_count; i++) {
+
+		ERR_BREAK(i >= RenderList::MAX_LIGHTS);
+
+		LightInstance *li = light_instance_owner.getptr(p_light_cull_result[i]);
+		if (li->light_ptr->param[VS::LIGHT_PARAM_CONTACT_SHADOW_SIZE] > CMP_EPSILON) {
+			state.used_contact_shadows = true;
+		}
+	}
+
+	if (!storage->config.no_depth_prepass && storage->frame.current_rt && state.debug_draw != VS::VIEWPORT_DEBUG_DRAW_OVERDRAW && !storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_NO_3D_EFFECTS]) { //detect with state.used_contact_shadows too
 		//pre z pass
 
 		glDisable(GL_BLEND);
@@ -4275,8 +4331,10 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 		glClearBufferfv(GL_COLOR, 0, clear_color.components); // specular
 	}
 
+	VS::EnvironmentBG bg_mode = (!env || (probe && env->bg_mode == VS::ENV_BG_CANVAS)) ? VS::ENV_BG_CLEAR_COLOR : env->bg_mode; //if no environment, or canvas while rendering a probe (invalid use case), use color.
+
 	if (env) {
-		switch (env->bg_mode) {
+		switch (bg_mode) {
 			case VS::ENV_BG_COLOR_SKY:
 			case VS::ENV_BG_SKY:
 
@@ -4317,6 +4375,10 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 				break;
 			default: {}
 		}
+	}
+
+	if (probe && probe->probe_ptr->interior) {
+		env_radiance_tex = 0; //for rendering probe interiors, radiance must not be used.
 	}
 
 	state.texscreen_copied = false;
@@ -4362,7 +4424,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 		*/
 
 		if (sky && sky->panorama.is_valid())
-			_draw_sky(sky, p_cam_projection, p_cam_transform, false, env->sky_custom_fov, env->bg_energy);
+			_draw_sky(sky, p_cam_projection, p_cam_transform, false, env->sky_custom_fov, env->bg_energy, env->sky_orientation);
 	}
 
 	//_render_list_forward(&alpha_render_list,camera_transform,camera_transform_inverse,camera_projection,false,fragment_lighting,true);
@@ -4852,10 +4914,7 @@ void RasterizerSceneGLES3::initialize() {
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	render_list.max_elements = GLOBAL_DEF_RST("rendering/limits/rendering/max_renderable_elements", (int)RenderList::DEFAULT_MAX_ELEMENTS);
-	if (render_list.max_elements > 1000000)
-		render_list.max_elements = 1000000;
-	if (render_list.max_elements < 1024)
-		render_list.max_elements = 1024;
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/limits/rendering/max_renderable_elements", PropertyInfo(Variant::INT, "rendering/limits/rendering/max_renderable_elements", PROPERTY_HINT_RANGE, "1024,1000000,1"));
 
 	{
 		//quad buffers
@@ -5054,6 +5113,7 @@ void RasterizerSceneGLES3::initialize() {
 	{
 
 		uint32_t immediate_buffer_size = GLOBAL_DEF("rendering/limits/buffers/immediate_buffer_size_kb", 2048);
+		ProjectSettings::get_singleton()->set_custom_property_info("rendering/limits/buffers/immediate_buffer_size_kb", PropertyInfo(Variant::INT, "rendering/limits/buffers/immediate_buffer_size_kb", PROPERTY_HINT_RANGE, "0,8192,1,or_greater"));
 
 		glGenBuffers(1, &state.immediate_buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, state.immediate_buffer);

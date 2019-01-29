@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -147,17 +147,18 @@ class CodeTextEditor : public VBoxContainer {
 
 	Label *line_nb;
 	Label *col_nb;
-	Label *zoom_nb;
+	Label *font_size_nb;
 	Label *info;
 	Timer *idle;
 	Timer *code_complete_timer;
-	bool enable_complete_timer;
 
 	Timer *font_resize_timer;
 	int font_resize_val;
 	real_t font_size;
 
 	Label *error;
+	int error_line;
+	int error_column;
 
 	void _on_settings_change();
 
@@ -203,7 +204,7 @@ public:
 	void move_lines_up();
 	void move_lines_down();
 	void delete_lines();
-	void code_lines_down();
+	void clone_lines_down();
 
 	void goto_line(int p_line);
 	void goto_line_selection(int p_line, int p_begin, int p_end);
@@ -213,12 +214,15 @@ public:
 
 	void update_editor_settings();
 	void set_error(const String &p_error);
+	void set_error_pos(int p_line, int p_column);
 	void update_line_and_column() { _line_col_changed(); }
 	TextEdit *get_text_edit() { return text_editor; }
 	FindReplaceBar *get_find_replace_bar() { return find_replace_bar; }
+	Label *get_error_label() const { return error; }
 	Label *get_warning_label() const { return warning_label; }
 	Label *get_warning_count_label() const { return warning_count_label; }
 	virtual void apply_code() {}
+	void goto_error();
 
 	void set_code_complete_func(CodeTextEditorCodeCompleteFunc p_code_complete_func, void *p_ud);
 

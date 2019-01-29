@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1469,7 +1469,7 @@ int Animation::_find(const Vector<K> &p_keys, float p_time) const {
 
 		middle = (low + high) / 2;
 
-		if (p_time == keys[middle].time) { //match
+		if (Math::abs(p_time - keys[middle].time) < CMP_EPSILON) { //match
 			return middle;
 		} else if (p_time < keys[middle].time)
 			high = middle - 1; //search low end of array
@@ -1815,7 +1815,7 @@ Variant Animation::value_track_interpolate(int p_track, float p_time) const {
 
 	bool ok = false;
 
-	Variant res = _interpolate(vt->values, p_time, vt->update_mode == UPDATE_CONTINUOUS ? vt->interpolation : INTERPOLATION_NEAREST, vt->loop_wrap, &ok);
+	Variant res = _interpolate(vt->values, p_time, (vt->update_mode == UPDATE_CONTINUOUS || vt->update_mode == UPDATE_CAPTURE) ? vt->interpolation : INTERPOLATION_NEAREST, vt->loop_wrap, &ok);
 
 	if (ok) {
 
@@ -2332,7 +2332,7 @@ float Animation::bezier_track_interpolate(int p_track, float p_time) const {
 	float duration = bt->values[idx + 1].time - bt->values[idx].time; // time duration between our two keyframes
 	float low = 0; // 0% of the current animation segment
 	float high = 1; // 100% of the current animation segment
-	float middle = 0;
+	float middle;
 
 	Vector2 start(0, bt->values[idx].value.value);
 	Vector2 start_out = start + bt->values[idx].value.out_handle;

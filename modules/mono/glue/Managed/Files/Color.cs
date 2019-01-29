@@ -104,17 +104,26 @@ namespace Godot
             }
         }
 
-        private static readonly Color black = new Color(0f, 0f, 0f);
-
-        public Color Black
+        public static Color ColorN(string name, float alpha = 1f)
         {
-            get
+            name = name.Replace(" ", String.Empty);
+            name = name.Replace("-", String.Empty);
+            name = name.Replace("_", String.Empty);
+            name = name.Replace("'", String.Empty);
+            name = name.Replace(".", String.Empty);
+            name = name.ToLower();
+
+            if (!Colors.namedColors.ContainsKey(name))
             {
-                return black;
+                throw new ArgumentOutOfRangeException($"Invalid Color Name: {name}");
             }
+
+            Color color = Colors.namedColors[name];
+            color.a = alpha;
+            return color;
         }
 
-        public float this [int index]
+        public float this[int index]
         {
             get
             {
@@ -379,7 +388,7 @@ namespace Godot
 
             return txt;
         }
-        
+
         // Constructors 
         public Color(float r, float g, float b, float a = 1.0f)
         {

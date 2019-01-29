@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,15 +39,10 @@
 #include "file_access_android.h"
 #include "main/main.h"
 #include "servers/visual/visual_server_raster.h"
-//#include "servers/visual/visual_server_wrap_mt.h"
+#include "servers/visual/visual_server_wrap_mt.h"
 
-#ifdef ANDROID_NATIVE_ACTIVITY
-#include "dir_access_android.h"
-#include "file_access_android.h"
-#else
 #include "dir_access_jandroid.h"
 #include "file_access_jandroid.h"
-#endif
 
 #include <dlfcn.h>
 
@@ -90,18 +85,6 @@ void OS_Android::initialize_core() {
 
 	OS_Unix::initialize_core();
 
-#ifdef ANDROID_NATIVE_ACTIVITY
-
-	FileAccess::make_default<FileAccessAndroid>(FileAccess::ACCESS_RESOURCES);
-	FileAccess::make_default<FileAccessUnix>(FileAccess::ACCESS_USERDATA);
-	FileAccess::make_default<FileAccessUnix>(FileAccess::ACCESS_FILESYSTEM);
-	//FileAccessBufferedFA<FileAccessUnix>::make_default();
-	DirAccess::make_default<DirAccessAndroid>(DirAccess::ACCESS_RESOURCES);
-	DirAccess::make_default<DirAccessUnix>(DirAccess::ACCESS_USERDATA);
-	DirAccess::make_default<DirAccessUnix>(DirAccess::ACCESS_FILESYSTEM);
-
-#else
-
 	if (use_apk_expansion)
 		FileAccess::make_default<FileAccessUnix>(FileAccess::ACCESS_RESOURCES);
 	else {
@@ -121,8 +104,6 @@ void OS_Android::initialize_core() {
 		DirAccess::make_default<DirAccessJAndroid>(DirAccess::ACCESS_RESOURCES);
 	DirAccess::make_default<DirAccessUnix>(DirAccess::ACCESS_USERDATA);
 	DirAccess::make_default<DirAccessUnix>(DirAccess::ACCESS_FILESYSTEM);
-
-#endif
 }
 
 void OS_Android::set_opengl_extensions(const char *p_gl_extensions) {
@@ -183,13 +164,11 @@ Error OS_Android::initialize(const VideoMode &p_desired, int p_video_driver, int
 	video_driver_index = p_video_driver;
 
 	visual_server = memnew(VisualServerRaster);
-	/*	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
-
+	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
 		visual_server = memnew(VisualServerWrapMT(visual_server, false));
-	};*/
+	}
 
 	visual_server->init();
-	//	visual_server->cursor_set_visible(false, 0);
 
 	AudioDriverManager::initialize(p_audio_driver);
 
@@ -586,7 +565,7 @@ Error OS_Android::shell_open(String p_uri) {
 
 String OS_Android::get_resource_dir() const {
 
-	return "/"; //android has it's own filesystem for resources inside the APK
+	return "/"; //android has its own filesystem for resources inside the APK
 }
 
 String OS_Android::get_locale() const {

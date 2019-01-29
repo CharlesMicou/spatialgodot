@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -261,6 +261,13 @@ void InputDefault::parse_input_event(const Ref<InputEvent> &p_event) {
 
 void InputDefault::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool p_is_emulated) {
 
+	// Notes on mouse-touch emulation:
+	// - Emulated mouse events are parsed, that is, re-routed to this method, so they make the same effects
+	//   as true mouse events. The only difference is the situation is flagged as emulated so they are not
+	//   emulated back to touch events in an endless loop.
+	// - Emulated touch events are handed right to the main loop (i.e., the SceneTree) because they don't
+	//   require additional handling by this class.
+
 	_THREAD_SAFE_METHOD_
 
 	Ref<InputEventKey> k = p_event;
@@ -273,7 +280,7 @@ void InputDefault::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool 
 
 	Ref<InputEventMouseButton> mb = p_event;
 
-	if (mb.is_valid() && !mb->is_doubleclick()) {
+	if (mb.is_valid()) {
 
 		if (mb->is_pressed()) {
 			mouse_button_mask |= (1 << (mb->get_button_index() - 1));
@@ -316,11 +323,21 @@ void InputDefault::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool 
 		}
 	}
 
-	if (emulate_mouse_from_touch) {
+	Ref<InputEventScreenTouch> st = p_event;
 
-		Ref<InputEventScreenTouch> st = p_event;
+	if (st.is_valid()) {
 
-		if (st.is_valid()) {
+		if (st->is_pressed()) {
+			SpeedTrack &track = touch_speed_track[st->get_index()];
+			track.reset();
+		} else {
+			// Since a pointer index may not occur again (OSs may or may not reuse them),
+			// imperatively remove it from the map to keep no fossil entries in it
+			touch_speed_track.erase(st->get_index());
+		}
+
+		if (emulate_mouse_from_touch) {
+
 			bool translate = false;
 			if (st->is_pressed()) {
 				if (mouse_from_touch_index == -1) {
@@ -351,10 +368,18 @@ void InputDefault::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool 
 				_parse_input_event_impl(button_event, true);
 			}
 		}
+	}
 
-		Ref<InputEventScreenDrag> sd = p_event;
+	Ref<InputEventScreenDrag> sd = p_event;
 
-		if (sd.is_valid() && sd->get_index() == mouse_from_touch_index) {
+	if (sd.is_valid()) {
+
+		SpeedTrack &track = touch_speed_track[sd->get_index()];
+		track.update(sd->get_relative());
+		sd->set_speed(track.speed);
+
+		if (emulate_mouse_from_touch && sd->get_index() == mouse_from_touch_index) {
+
 			Ref<InputEventMouseMotion> motion_event;
 			motion_event.instance();
 
@@ -404,6 +429,7 @@ void InputDefault::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool 
 				action.physics_frame = Engine::get_singleton()->get_physics_frames();
 				action.idle_frame = Engine::get_singleton()->get_idle_frames();
 				action.pressed = p_event->is_action_pressed(E->key());
+				action.strength = 0.f;
 				action_state[E->key()] = action;
 			}
 			action_state[E->key()].strength = p_event->get_action_strength(E->key());
@@ -530,13 +556,14 @@ Point2i InputDefault::warp_mouse_motion(const Ref<InputEventMouseMotion> &p_moti
 void InputDefault::iteration(float p_step) {
 }
 
-void InputDefault::action_press(const StringName &p_action) {
+void InputDefault::action_press(const StringName &p_action, float p_strength) {
 
 	Action action;
 
 	action.physics_frame = Engine::get_singleton()->get_physics_frames();
 	action.idle_frame = Engine::get_singleton()->get_idle_frames();
 	action.pressed = true;
+	action.strength = p_strength;
 
 	action_state[p_action] = action;
 }
@@ -548,6 +575,7 @@ void InputDefault::action_release(const StringName &p_action) {
 	action.physics_frame = Engine::get_singleton()->get_physics_frames();
 	action.idle_frame = Engine::get_singleton()->get_idle_frames();
 	action.pressed = false;
+	action.strength = 0.f;
 
 	action_state[p_action] = action;
 }
@@ -1056,7 +1084,7 @@ Array InputDefault::get_connected_joypads() {
 	return ret;
 }
 
-static const char *_buttons[] = {
+static const char *_buttons[JOY_BUTTON_MAX] = {
 	"Face Button Bottom",
 	"Face Button Right",
 	"Face Button Left",
@@ -1075,7 +1103,7 @@ static const char *_buttons[] = {
 	"DPAD Right"
 };
 
-static const char *_axes[] = {
+static const char *_axes[JOY_AXIS_MAX] = {
 	"Left Stick X",
 	"Left Stick Y",
 	"Right Stick X",
@@ -1083,7 +1111,9 @@ static const char *_axes[] = {
 	"",
 	"",
 	"L2",
-	"R2"
+	"R2",
+	"",
+	""
 };
 
 String InputDefault::get_joy_button_string(int p_button) {

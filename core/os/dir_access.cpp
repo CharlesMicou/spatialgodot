@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -349,9 +349,9 @@ class DirChanger {
 	String original_dir;
 
 public:
-	DirChanger(DirAccess *p_da, String p_dir) {
-		da = p_da;
-		original_dir = p_da->get_current_dir();
+	DirChanger(DirAccess *p_da, String p_dir) :
+			da(p_da),
+			original_dir(p_da->get_current_dir()) {
 		p_da->change_dir(p_dir);
 	}
 
@@ -431,8 +431,12 @@ Error DirAccess::copy_dir(String p_from, String p_to, int p_chmod_flags) {
 		ERR_FAIL_COND_V(err, err);
 	}
 
+	if (!p_to.ends_with("/")) {
+		p_to = p_to + "/";
+	}
+
 	DirChanger dir_changer(this, p_from);
-	Error err = _copy_dir(target_da, p_to + "/", p_chmod_flags);
+	Error err = _copy_dir(target_da, p_to, p_chmod_flags);
 	memdelete(target_da);
 
 	return err;

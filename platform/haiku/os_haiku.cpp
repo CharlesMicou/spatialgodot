@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -117,16 +117,13 @@ Error OS_Haiku::initialize(const VideoMode &p_desired, int p_video_driver, int p
 
 #endif
 
-	visual_server = memnew(VisualServerRaster());
+	visual_server = memnew(VisualServerRaster);
+	// FIXME: Reimplement threaded rendering
+	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
+		visual_server = memnew(VisualServerWrapMT(visual_server, false));
+	}
 
 	ERR_FAIL_COND_V(!visual_server, ERR_UNAVAILABLE);
-
-	// TODO: enable multithreaded VS
-	/*
-	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
-		visual_server = memnew(VisualServerWrapMT(visual_server, get_render_thread_mode() == RENDER_SEPARATE_THREAD));
-	}
-	*/
 
 	video_driver_index = p_video_driver;
 

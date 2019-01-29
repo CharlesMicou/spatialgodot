@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -29,9 +29,9 @@
 /*************************************************************************/
 
 #include "joypad.h"
+
 #include <oleauto.h>
 #include <wbemidl.h>
-#include <iostream>
 
 #ifndef __GNUC__
 #define __builtin_bswap32 _byteswap_ulong
@@ -149,15 +149,12 @@ bool JoypadWindows::setup_dinput_joypad(const DIDEVICEINSTANCE *instance) {
 	const DWORD devtype = (instance->dwDevType & 0xFF);
 
 	if ((devtype != DI8DEVTYPE_JOYSTICK) && (devtype != DI8DEVTYPE_GAMEPAD) && (devtype != DI8DEVTYPE_1STPERSON)) {
-		//printf("ignore device %s, type %x\n", instance->tszProductName, devtype);
 		return false;
 	}
 
 	hr = dinput->CreateDevice(instance->guidInstance, &joy->di_joy, NULL);
 
 	if (FAILED(hr)) {
-
-		//std::wcout << "failed to create device: " << instance->tszProductName << std::endl;
 		return false;
 	}
 
@@ -172,7 +169,7 @@ bool JoypadWindows::setup_dinput_joypad(const DIDEVICEINSTANCE *instance) {
 
 	joy->di_joy->SetDataFormat(&c_dfDIJoystick2);
 	joy->di_joy->SetCooperativeLevel(*hWnd, DISCL_FOREGROUND);
-	joy->di_joy->EnumObjects(objectsCallback, this, NULL);
+	joy->di_joy->EnumObjects(objectsCallback, this, 0);
 	joy->joy_axis.sort();
 
 	joy->guid = instance->guidInstance;
@@ -383,8 +380,6 @@ void JoypadWindows::process_joypads() {
 
 		hr = joy->di_joy->GetDeviceState(sizeof(DIJOYSTATE2), &js);
 		if (FAILED(hr)) {
-
-			//printf("failed to read joy #%d\n", i);
 			continue;
 		}
 

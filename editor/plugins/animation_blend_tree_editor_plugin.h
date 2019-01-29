@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -70,9 +70,9 @@ class AnimationNodeBlendTreeEditor : public AnimationTreeNodeEditorPlugin {
 		String name;
 		String type;
 		Ref<Script> script;
-		AddOption(const String &p_name = String(), const String &p_type = String()) {
-			name = p_name;
-			type = p_type;
+		AddOption(const String &p_name = String(), const String &p_type = String()) :
+				name(p_name),
+				type(p_type) {
 		}
 	};
 
@@ -104,7 +104,7 @@ class AnimationNodeBlendTreeEditor : public AnimationTreeNodeEditorPlugin {
 	void _filter_toggled();
 	Ref<AnimationNode> _filter_edit;
 
-	void _property_changed(const StringName &p_property, const Variant &p_value);
+	void _property_changed(const StringName &p_property, const Variant &p_value, const String &p_field, bool p_changing);
 	void _removed_from_graph();
 
 	EditorFileDialog *open_file;

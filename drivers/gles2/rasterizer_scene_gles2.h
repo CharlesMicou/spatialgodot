@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -211,6 +211,8 @@ public:
 
 		bool render_no_shadows;
 
+		Vector2 viewport_size;
+
 		Vector2 screen_pixel_size;
 	} state;
 
@@ -342,6 +344,7 @@ public:
 
 		RID sky;
 		float sky_custom_fov;
+		Basis sky_orientation;
 
 		Color bg_color;
 		float bg_energy;
@@ -360,6 +363,7 @@ public:
 
 		bool fog_depth_enabled;
 		float fog_depth_begin;
+		float fog_depth_end;
 		float fog_depth_curve;
 		bool fog_transmit_enabled;
 		float fog_transmit_curve;
@@ -368,32 +372,28 @@ public:
 		float fog_height_max;
 		float fog_height_curve;
 
-		Environment() {
-			bg_mode = VS::ENV_BG_CLEAR_COLOR;
-			sky_custom_fov = 0.0;
-			bg_energy = 1.0;
-			sky_ambient = 0;
-			ambient_energy = 1.0;
-			ambient_sky_contribution = 0.0;
-			canvas_max_layer = 0;
-
-			fog_enabled = false;
-			fog_color = Color(0.5, 0.5, 0.5);
-			fog_sun_color = Color(0.8, 0.8, 0.0);
-			fog_sun_amount = 0;
-
-			fog_depth_enabled = true;
-
-			fog_depth_begin = 10;
-			fog_depth_curve = 1;
-
-			fog_transmit_enabled = true;
-			fog_transmit_curve = 1;
-
-			fog_height_enabled = false;
-			fog_height_min = 0;
-			fog_height_max = 100;
-			fog_height_curve = 1;
+		Environment() :
+				bg_mode(VS::ENV_BG_CLEAR_COLOR),
+				sky_custom_fov(0.0),
+				bg_energy(1.0),
+				sky_ambient(0),
+				ambient_energy(1.0),
+				ambient_sky_contribution(0.0),
+				canvas_max_layer(0),
+				fog_enabled(false),
+				fog_color(Color(0.5, 0.5, 0.5)),
+				fog_sun_color(Color(0.8, 0.8, 0.0)),
+				fog_sun_amount(0),
+				fog_depth_enabled(true),
+				fog_depth_begin(10),
+				fog_depth_end(0),
+				fog_depth_curve(1),
+				fog_transmit_enabled(true),
+				fog_transmit_curve(1),
+				fog_height_enabled(false),
+				fog_height_min(0),
+				fog_height_max(100),
+				fog_height_curve(1) {
 		}
 	};
 
@@ -404,6 +404,7 @@ public:
 	virtual void environment_set_background(RID p_env, VS::EnvironmentBG p_bg);
 	virtual void environment_set_sky(RID p_env, RID p_sky);
 	virtual void environment_set_sky_custom_fov(RID p_env, float p_scale);
+	virtual void environment_set_sky_orientation(RID p_env, const Basis &p_orientation);
 	virtual void environment_set_bg_color(RID p_env, const Color &p_color);
 	virtual void environment_set_bg_energy(RID p_env, float p_energy);
 	virtual void environment_set_canvas_max_layer(RID p_env, int p_max_layer);
@@ -411,7 +412,7 @@ public:
 
 	virtual void environment_set_dof_blur_near(RID p_env, bool p_enable, float p_distance, float p_transition, float p_amount, VS::EnvironmentDOFBlurQuality p_quality);
 	virtual void environment_set_dof_blur_far(RID p_env, bool p_enable, float p_distance, float p_transition, float p_amount, VS::EnvironmentDOFBlurQuality p_quality);
-	virtual void environment_set_glow(RID p_env, bool p_enable, int p_level_flags, float p_intensity, float p_strength, float p_bloom_threshold, VS::EnvironmentGlowBlendMode p_blend_mode, float p_hdr_bleed_threshold, float p_hdr_bleed_scale, bool p_bicubic_upscale);
+	virtual void environment_set_glow(RID p_env, bool p_enable, int p_level_flags, float p_intensity, float p_strength, float p_bloom_threshold, VS::EnvironmentGlowBlendMode p_blend_mode, float p_hdr_bleed_threshold, float p_hdr_bleed_scale, float p_hdr_luminance_cap, bool p_bicubic_upscale);
 	virtual void environment_set_fog(RID p_env, bool p_enable, float p_begin, float p_end, RID p_gradient_texture);
 
 	virtual void environment_set_ssr(RID p_env, bool p_enable, int p_max_steps, float p_fade_in, float p_fade_out, float p_depth_tolerance, bool p_roughness);
@@ -422,7 +423,7 @@ public:
 	virtual void environment_set_adjustment(RID p_env, bool p_enable, float p_brightness, float p_contrast, float p_saturation, RID p_ramp);
 
 	virtual void environment_set_fog(RID p_env, bool p_enable, const Color &p_color, const Color &p_sun_color, float p_sun_amount);
-	virtual void environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_curve, bool p_transmit, float p_transmit_curve);
+	virtual void environment_set_fog_depth(RID p_env, bool p_enable, float p_depth_begin, float p_depth_end, float p_depth_curve, bool p_transmit, float p_transmit_curve);
 	virtual void environment_set_fog_height(RID p_env, bool p_enable, float p_min_height, float p_max_height, float p_height_curve);
 
 	virtual bool is_environment(RID p_env);
@@ -472,6 +473,7 @@ public:
 	virtual void light_instance_set_transform(RID p_light_instance, const Transform &p_transform);
 	virtual void light_instance_set_shadow_transform(RID p_light_instance, const CameraMatrix &p_projection, const Transform &p_transform, float p_far, float p_split, int p_pass, float p_bias_scale = 1.0);
 	virtual void light_instance_mark_visible(RID p_light_instance);
+	virtual bool light_instances_can_render_shadow_cube() const { return storage->config.support_write_depth; }
 
 	LightInstance **render_light_instances;
 	int render_directional_lights;
@@ -655,7 +657,7 @@ public:
 			bool p_alpha_pass,
 			bool p_shadow);
 
-	void _draw_sky(RasterizerStorageGLES2::Sky *p_sky, const CameraMatrix &p_projection, const Transform &p_transform, bool p_vflip, float p_custom_fov, float p_energy);
+	void _draw_sky(RasterizerStorageGLES2::Sky *p_sky, const CameraMatrix &p_projection, const Transform &p_transform, bool p_vflip, float p_custom_fov, float p_energy, const Basis &p_sky_orientation);
 
 	_FORCE_INLINE_ bool _setup_material(RasterizerStorageGLES2::Material *p_material, bool p_reverse_cull, bool p_alpha_pass, Size2i p_skeleton_tex_size = Size2i(0, 0));
 	_FORCE_INLINE_ void _setup_geometry(RenderList::Element *p_element, RasterizerStorageGLES2::Skeleton *p_skeleton);

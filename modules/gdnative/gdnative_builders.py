@@ -46,6 +46,7 @@ def _build_gdnative_api_struct_header(api):
         '#include <arvr/godot_arvr.h>',
         '#include <nativescript/godot_nativescript.h>',
         '#include <pluginscript/godot_pluginscript.h>',
+        '#include <videodecoder/godot_videodecoder.h>',
         '',
         '#define GDNATIVE_API_INIT(options) do {  \\\n' + '  \\\n'.join(gdnative_api_init_macro) + '  \\\n } while (0)',
         '',
@@ -87,20 +88,20 @@ def _build_gdnative_api_struct_header(api):
         ret_val = []
         if core['next']:
             ret_val += generate_core_extension_struct(core['next'])
-        
+
         ret_val += [
             'typedef struct godot_gdnative_core_' + ('{0}_{1}'.format(core['version']['major'], core['version']['minor'])) + '_api_struct {',
             '\tunsigned int type;',
             '\tgodot_gdnative_api_version version;',
             '\tconst godot_gdnative_api_struct *next;',
         ]
-        
+
         for funcdef in core['api']:
             args = ', '.join(['%s%s' % (_spaced(t), n) for t, n in funcdef['arguments']])
             ret_val.append('\t%s(*%s)(%s);' % (_spaced(funcdef['return_type']), funcdef['name'], args))
-        
+
         ret_val += ['} godot_gdnative_core_' + '{0}_{1}'.format(core['version']['major'], core['version']['minor']) + '_api_struct;', '']
-        
+
         return ret_val
 
 
@@ -171,26 +172,26 @@ def _build_gdnative_api_struct_source(api):
         ret_val += ['};\n']
 
         return ret_val
-    
-    
+
+
     def get_core_struct_definition(core):
         ret_val = []
-        
+
         if core['next']:
             ret_val += get_core_struct_definition(core['next'])
-        
+
         ret_val += [
             'extern const godot_gdnative_core_' + ('{0}_{1}_api_struct api_{0}_{1}'.format(core['version']['major'], core['version']['minor'])) + ' = {',
             '\tGDNATIVE_' + core['type'] + ',',
             '\t{' + str(core['version']['major']) + ', ' + str(core['version']['minor']) + '},',
             '\t' + ('NULL' if not core['next'] else ('(const godot_gdnative_api_struct *)& api_{0}_{1}'.format(core['version']['major'], core['version']['minor']))) + ','
         ]
-        
+
         for funcdef in core['api']:
             ret_val.append('\t%s,' % funcdef['name'])
-        
+
         ret_val += ['};\n']
-        
+
         return ret_val
 
     for ext in api['extensions']:
@@ -204,7 +205,7 @@ def _build_gdnative_api_struct_source(api):
         out += ['\t(godot_gdnative_api_struct *)&api_extension_' + name + '_struct,']
 
     out += ['};\n']
-    
+
     if api['core']['next']:
         out += get_core_struct_definition(api['core']['next'])
 
@@ -244,6 +245,7 @@ def _build_gdnative_wrapper_code(api):
         '#include <nativescript/godot_nativescript.h>',
         '#include <pluginscript/godot_pluginscript.h>',
         '#include <arvr/godot_arvr.h>',
+        '#include <videodecoder/godot_videodecoder.h>',
         '',
         '#include <gdnative_api_struct.gen.h>',
         '',

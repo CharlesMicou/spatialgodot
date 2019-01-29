@@ -19,7 +19,7 @@ comments.
 ## bullet
 
 - Upstream: https://github.com/bulletphysics/bullet3
-- Version: git (12409f1118a7c7a266f9071350c70789dfe73bb9, Commits on Sep 6, 2018 )
+- Version: git (126b676, 2018-12-31)
 - License: zlib
 
 Files extracted from upstream source:
@@ -31,7 +31,7 @@ Files extracted from upstream source:
 ## certs
 
 - Upstream: Mozilla, via https://apps.fedoraproject.org/packages/ca-certificates
-- Version: 2018.2.22
+- Version: 2018.2.26
 - License: MPL 2.0
 
 File extracted from a recent Fedora install:
@@ -128,7 +128,7 @@ Files extracted from upstream source:
 ## glad
 
 - Upstream: https://github.com/Dav1dde/glad
-- Version: 0.1.25
+- Version: 0.1.28
 - License: MIT
 
 The files we package are automatically generated.
@@ -202,6 +202,9 @@ Files extracted from upstream source:
 - all .h files in include/theora/ as theora/
 - COPYING and LICENSE
 
+Upstream patches included in the `patches` directory have been applied
+on top of the 1.1.1 source (not included in any stable release yet).
+
 
 ## libvorbis
 
@@ -229,11 +232,14 @@ TODO.
 Important: File `libvpx/vpx_dsp/x86/vpx_subpixel_8t_intrin_avx2.c` has
 Godot-made change marked with `// -- GODOT --` comments.
 
+The files `libvpx/third_party/android/cpu-features.{c,h}` were copied
+from the Android NDK r18.
+
 
 ## libwebp
 
 - Upstream: https://chromium.googlesource.com/webm/libwebp/
-- Version: 1.0.0
+- Version: 1.0.1
 - License: BSD-3-Clause
 
 Files extracted from upstream source:
@@ -264,9 +270,7 @@ File extracted from upstream source:
     - From `roles/ws` exclude `ext` folder.
   - From `tls` exclude `openssl` folder.
 - Also copy `win32helpers/` from `win32port/` inside `thirdparty/libwebsockets`
-- A small fix has been added in `libwebsockets/libwebsockets.h` to `#include <sys/socket.h>` for the BSD family.
-  This change has been PRed upstream, and should be merged before the next update. Remember to check and remove this line.
-- Another fix has been added to allow building for 32-bits UWP, replacing `GetFileSize[Ex]` and `CreateFileW` with supported functions.
+- A fix has been added to allow building for 32-bits UWP, replacing `GetFileSize[Ex]` and `CreateFileW` with supported functions.
   There is a diff for this change in `thirdparty/libwebsockets/uwp_fixes.diff`
 
 Important: `lws_config.h` and `lws_config_private.h` contains custom
@@ -339,6 +343,10 @@ Collection of single-file libraries used in Godot components.
   * Upstream: http://www.efgh.com/software/md5.htm
   * Version: TBD, might not be latest from above URL
   * License: RSA Message-Digest License
+- `open-simplex-noise.{c,h}`
+  * Upstream: https://github.com/smcameron/open-simplex-noise-in-c
+  * Version: git (0d555e7, 2015)
+  * License: Unlicense
 - `pcg.{cpp,h}`
   * Upstream: http://www.pcg-random.org
   * Version: minimal C implementation, http://www.pcg-random.org/download.html
@@ -356,11 +364,6 @@ Collection of single-file libraries used in Godot components.
   * Upstream: https://github.com/ivanfratric/polypartition (`src/polypartition.cpp`)
   * Version: TBD, class was renamed
   * License: MIT
-- `open-simplex-noise.{c,h}`
-  * Upstream: https://github.com/smcameron/open-simplex-noise-in-c
-  * Version: git (0d555e7, 2015)
-  * License: Unlicense
-
 
 ### modules
 
@@ -372,6 +375,13 @@ Collection of single-file libraries used in Godot components.
   * Upstream: http://wss.co.uk/pinknoise/yuv2rgb/ (to check)
   * Version: ?
   * License: BSD
+
+### platform
+
+- `ifaddrs-android.{cc,h}`
+  * Upstream: https://chromium.googlesource.com/external/webrtc/stable/talk/+/master/base/ifaddrs-android.h
+  * Version: 5976650 (2013)
+  * License: BSD-3-Clause
 
 ### scene
 
@@ -505,7 +515,7 @@ changes are marked with `// -- GODOT --` comments.
 ## tinyexr
 
 - Upstream: https://github.com/syoyo/tinyexr
-- Version: git (2d5375f, 2018)
+- Version: git (5ae30aa, 2018)
 - License: BSD-3-Clause
 
 Files extracted from upstream source:
@@ -527,12 +537,10 @@ Files extracted from upstream source:
 ## zstd
 
 - Upstream: https://github.com/facebook/zstd
-- Version: 1.3.4
+- Version: 1.3.8
 - License: BSD-3-Clause
 
 Files extracted from upstream source:
 
 - lib/{common/,compress/,decompress/,zstd.h}
 - LICENSE
-
-- Applied the patch in `thirdparty/zstd/1314.diff` (PR 1314 upstream, already merged). Needed to build on UWP ARM. Can be removed when a new version is released with the patch.

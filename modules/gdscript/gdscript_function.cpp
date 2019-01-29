@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -275,7 +275,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 #endif
 
 	uint32_t alloca_size = 0;
-	GDScript *_class;
+	GDScript *script;
 	int ip = 0;
 	int line = _initial_line;
 
@@ -286,7 +286,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 		line = p_state->line;
 		ip = p_state->ip;
 		alloca_size = p_state->stack.size();
-		_class = p_state->_class;
+		script = p_state->script.ptr();
 		p_instance = p_state->instance;
 		defarg = p_state->defarg;
 		self = p_state->self;
@@ -368,9 +368,9 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 			} else {
 				self = p_instance->owner;
 			}
-			_class = p_instance->script.ptr();
+			script = p_instance->script.ptr();
 		} else {
-			_class = _script;
+			script = _script;
 		}
 	}
 
@@ -395,7 +395,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 #define GET_VARIANT_PTR(m_v, m_code_ofs)                                                       \
 	Variant *m_v;                                                                              \
-	m_v = _get_variant(_code_ptr[ip + m_code_ofs], p_instance, _class, self, stack, err_text); \
+	m_v = _get_variant(_code_ptr[ip + m_code_ofs], p_instance, script, self, stack, err_text); \
 	if (unlikely(!m_v))                                                                        \
 		OPCODE_BREAK;
 
@@ -404,7 +404,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 #define CHECK_SPACE(m_space)
 #define GET_VARIANT_PTR(m_v, m_code_ofs) \
 	Variant *m_v;                        \
-	m_v = _get_variant(_code_ptr[ip + m_code_ofs], p_instance, _class, self, stack, err_text);
+	m_v = _get_variant(_code_ptr[ip + m_code_ofs], p_instance, script, self, stack, err_text);
 
 #endif
 
@@ -477,56 +477,53 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				GET_VARIANT_PTR(dst, 3);
 
 #ifdef DEBUG_ENABLED
-				if (a->get_type() != Variant::OBJECT || a->operator Object *() == NULL) {
-
-					err_text = "Left operand of 'is' is not an instance of anything.";
-					OPCODE_BREAK;
-				}
 				if (b->get_type() != Variant::OBJECT || b->operator Object *() == NULL) {
 
 					err_text = "Right operand of 'is' is not a class.";
 					OPCODE_BREAK;
 				}
 #endif
-				Object *obj_A = *a;
-				Object *obj_B = *b;
-
-				GDScript *scr_B = Object::cast_to<GDScript>(obj_B);
 
 				bool extends_ok = false;
+				if (a->get_type() == Variant::OBJECT && a->operator Object *() != NULL) {
+					Object *obj_A = *a;
+					Object *obj_B = *b;
 
-				if (scr_B) {
-					//if B is a script, the only valid condition is that A has an instance which inherits from the script
-					//in other situation, this shoul return false.
+					GDScript *scr_B = Object::cast_to<GDScript>(obj_B);
 
-					if (obj_A->get_script_instance() && obj_A->get_script_instance()->get_language() == GDScriptLanguage::get_singleton()) {
+					if (scr_B) {
+						//if B is a script, the only valid condition is that A has an instance which inherits from the script
+						//in other situation, this shoul return false.
 
-						GDScript *cmp = static_cast<GDScript *>(obj_A->get_script_instance()->get_script().ptr());
-						//bool found=false;
-						while (cmp) {
+						if (obj_A->get_script_instance() && obj_A->get_script_instance()->get_language() == GDScriptLanguage::get_singleton()) {
 
-							if (cmp == scr_B) {
-								//inherits from script, all ok
-								extends_ok = true;
-								break;
+							GDScript *cmp = static_cast<GDScript *>(obj_A->get_script_instance()->get_script().ptr());
+							//bool found=false;
+							while (cmp) {
+
+								if (cmp == scr_B) {
+									//inherits from script, all ok
+									extends_ok = true;
+									break;
+								}
+
+								cmp = cmp->_base;
 							}
-
-							cmp = cmp->_base;
 						}
-					}
 
-				} else {
+					} else {
 
-					GDScriptNativeClass *nc = Object::cast_to<GDScriptNativeClass>(obj_B);
+						GDScriptNativeClass *nc = Object::cast_to<GDScriptNativeClass>(obj_B);
 
 #ifdef DEBUG_ENABLED
-					if (!nc) {
+						if (!nc) {
 
-						err_text = "Right operand of 'is' is not a class (type: '" + obj_B->get_class() + "').";
-						OPCODE_BREAK;
-					}
+							err_text = "Right operand of 'is' is not a class (type: '" + obj_B->get_class() + "').";
+							OPCODE_BREAK;
+						}
 #endif
-					extends_ok = ClassDB::is_parent_class(obj_A->get_class_name(), nc->get_name());
+						extends_ok = ClassDB::is_parent_class(obj_A->get_class_name(), nc->get_name());
+					}
 				}
 
 				*dst = extends_ok;
@@ -1256,11 +1253,10 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				gdfs->state.stack_size = _stack_size;
 				gdfs->state.self = self;
 				gdfs->state.alloca_size = alloca_size;
-				gdfs->state._class = _class;
+				gdfs->state.script = Ref<GDScript>(_script);
 				gdfs->state.ip = ip + ipofs;
 				gdfs->state.line = line;
 				gdfs->state.instance_id = (p_instance && p_instance->get_owner()) ? p_instance->get_owner()->get_instance_id() : 0;
-				gdfs->state.script_id = _class->get_instance_id();
 				//gdfs->state.result_pos=ip+ipofs-1;
 				gdfs->state.defarg = defarg;
 				gdfs->state.instance = p_instance;
@@ -1549,8 +1545,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 		String err_file;
 		if (p_instance)
 			err_file = p_instance->script->path;
-		else if (_class)
-			err_file = _class->path;
+		else if (script)
+			err_file = script->path;
 		if (err_file == "")
 			err_file = "<built-in>";
 		String err_func = name;
@@ -1764,17 +1760,14 @@ GDScriptFunction::~GDScriptFunction() {
 
 Variant GDScriptFunctionState::_signal_callback(const Variant **p_args, int p_argcount, Variant::CallError &r_error) {
 
-#ifdef DEBUG_ENABLED
 	if (state.instance_id && !ObjectDB::get_instance(state.instance_id)) {
+#ifdef DEBUG_ENABLED
 		ERR_EXPLAIN("Resumed after yield, but class instance is gone");
 		ERR_FAIL_V(Variant());
-	}
-
-	if (state.script_id && !ObjectDB::get_instance(state.script_id)) {
-		ERR_EXPLAIN("Resumed after yield, but script is gone");
-		ERR_FAIL_V(Variant());
-	}
+#else
+		return Variant();
 #endif
+	}
 
 	Variant arg;
 	r_error.error = Variant::CallError::CALL_OK;
@@ -1844,9 +1837,6 @@ bool GDScriptFunctionState::is_valid(bool p_extended_check) const {
 		//class instance gone?
 		if (state.instance_id && !ObjectDB::get_instance(state.instance_id))
 			return false;
-		//script gone?
-		if (state.script_id && !ObjectDB::get_instance(state.script_id))
-			return false;
 	}
 
 	return true;
@@ -1855,17 +1845,14 @@ bool GDScriptFunctionState::is_valid(bool p_extended_check) const {
 Variant GDScriptFunctionState::resume(const Variant &p_arg) {
 
 	ERR_FAIL_COND_V(!function, Variant());
-#ifdef DEBUG_ENABLED
 	if (state.instance_id && !ObjectDB::get_instance(state.instance_id)) {
+#ifdef DEBUG_ENABLED
 		ERR_EXPLAIN("Resumed after yield, but class instance is gone");
 		ERR_FAIL_V(Variant());
-	}
-
-	if (state.script_id && !ObjectDB::get_instance(state.script_id)) {
-		ERR_EXPLAIN("Resumed after yield, but script is gone");
-		ERR_FAIL_V(Variant());
-	}
+#else
+		return Variant();
 #endif
+	}
 
 	state.result = p_arg;
 	Variant::CallError err;

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os_server.h"
 
 #include "core/print_string.h"
@@ -68,6 +69,10 @@ void OS_Server::initialize_core() {
 	crash_handler.initialize();
 
 	OS_Unix::initialize_core();
+
+#ifdef __APPLE__
+	SemaphoreOSX::make_default();
+#endif
 }
 
 Error OS_Server::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
@@ -87,11 +92,15 @@ Error OS_Server::initialize(const VideoMode &p_desired, int p_video_driver, int 
 
 	input = memnew(InputDefault);
 
+#ifdef __APPLE__
+	power_manager = memnew(power_osx);
+#else
 	power_manager = memnew(PowerX11);
+#endif
 
 	_ensure_user_data_dir();
 
-	resource_loader_dummy = memnew(ResourceFormatDummyTexture);
+	resource_loader_dummy.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_dummy);
 
 	return OK;
@@ -110,7 +119,8 @@ void OS_Server::finalize() {
 
 	memdelete(power_manager);
 
-	memdelete(resource_loader_dummy);
+	ResourceLoader::remove_resource_format_loader(resource_loader_dummy);
+	resource_loader_dummy.unref();
 
 	args.clear();
 }

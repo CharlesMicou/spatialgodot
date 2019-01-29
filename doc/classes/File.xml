@@ -22,7 +22,7 @@
 		[/codeblock]
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/3.0/getting_started/step_by_step/filesystem.html</link>
+		<link>https://docs.godotengine.org/en/latest/getting_started/step_by_step/filesystem.html</link>
 	</tutorials>
 	<demos>
 	</demos>
@@ -48,6 +48,7 @@
 			</argument>
 			<description>
 				Returns [code]true[/code] if the file exists in the given path.
+				Note that many resources types are imported (e.g. textures or sound files), and that their source asset will not be included in the exported game, as only the imported version is used (in the [code]res://.import[/code] folder). To check for the existence of such resources while taking into account the remapping to their imported location, use [method ResourceLoader.exists]. Typically, using [code]File.file_exists[/code] on an imported resource would work while you are developing in the editor (the source asset is present in [code]res://[/code], but fail when exported).
 			</description>
 		</method>
 		<method name="get_16" qualifiers="const">
@@ -100,7 +101,7 @@
 			<argument index="0" name="delim" type="String" default="&quot;,&quot;">
 			</argument>
 			<description>
-				Returns the next value of the file in CSV (Comma Separated Values) format. You can pass a different delimiter to use other than the default "," (comma).
+				Returns the next value of the file in CSV (Comma Separated Values) format. You can pass a different delimiter to use other than the default "," (comma), it should be one character long.
 			</description>
 		</method>
 		<method name="get_double" qualifiers="const">
@@ -327,6 +328,17 @@
 				Stores the given array of bytes in the file.
 			</description>
 		</method>
+		<method name="store_csv_line">
+			<return type="void">
+			</return>
+			<argument index="0" name="values" type="PoolStringArray">
+			</argument>
+			<argument index="1" name="delim" type="String" default="&quot;,&quot;">
+			</argument>
+			<description>
+				Store the given [PoolStringArray] in the file as a line formatted in the CSV (Comma Separated Values) format. You can pass a different delimiter to use other than the default "," (comma), it should be one character long.
+			</description>
+		</method>
 		<method name="store_double">
 			<return type="void">
 			</return>
@@ -393,7 +405,7 @@
 	</methods>
 	<members>
 		<member name="endian_swap" type="bool" setter="set_endian_swap" getter="get_endian_swap">
-			If [code]true[/code] the file's endianness is swapped. Use this if you're dealing with files written in big endian machines.
+			If [code]true[/code], the file's endianness is swapped. Use this if you're dealing with files written in big endian machines.
 			Note that this is about the file format, not CPU type. This is always reset to [code]false[/code] whenever you open the file.
 		</member>
 	</members>

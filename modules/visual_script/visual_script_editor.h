@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -176,7 +176,7 @@ class VisualScriptEditor : public ScriptEditorBase {
 
 	void _cancel_connect_node();
 	void _create_new_node(const String &p_text, const String &p_category, const Vector2 &p_point);
-	void _selected_new_virtual_method(const String &p_text = String(""), const String &p_category = String(""), const bool p_connecting = true);
+	void _selected_new_virtual_method(const String &p_text, const String &p_category, const bool p_connecting);
 
 	int error_line;
 
@@ -234,7 +234,7 @@ class VisualScriptEditor : public ScriptEditorBase {
 	void _comment_node_resized(const Vector2 &p_new_size, int p_node);
 
 	int selecting_method_id;
-	void _selected_method(const String &p_method, const String &p_type);
+	void _selected_method(const String &p_method, const String &p_type, const bool p_connecting);
 
 	void _draw_color_over_button(Object *obj, Color p_color);
 	void _button_resource_previewed(const String &p_path, const Ref<Texture> &p_preview, const Ref<Texture> &p_small_preview, Variant p_ud);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -178,6 +178,12 @@ void ImageTexture::_reload_hook(const RID &p_hook) {
 	_change_notify();
 }
 
+bool ImageTexture::keep_images_cached = false;
+
+void ImageTexture::set_keep_images_cached(bool p_enable) {
+	keep_images_cached = p_enable;
+}
+
 void ImageTexture::create(int p_width, int p_height, Image::Format p_format, uint32_t p_flags) {
 
 	flags = p_flags;
@@ -185,6 +191,7 @@ void ImageTexture::create(int p_width, int p_height, Image::Format p_format, uin
 	format = p_format;
 	w = p_width;
 	h = p_height;
+	_change_notify();
 }
 void ImageTexture::create_from_image(const Ref<Image> &p_image, uint32_t p_flags) {
 
@@ -197,6 +204,10 @@ void ImageTexture::create_from_image(const Ref<Image> &p_image, uint32_t p_flags
 	VisualServer::get_singleton()->texture_allocate(texture, p_image->get_width(), p_image->get_height(), 0, p_image->get_format(), VS::TEXTURE_TYPE_2D, p_flags);
 	VisualServer::get_singleton()->texture_set_data(texture, p_image);
 	_change_notify();
+
+	if (keep_images_cached) {
+		image_cache = p_image;
+	}
 }
 
 void ImageTexture::set_flags(uint32_t p_flags) {
@@ -211,6 +222,7 @@ void ImageTexture::set_flags(uint32_t p_flags) {
 		return; //uninitialized, do not set to texture
 	}
 	VisualServer::get_singleton()->texture_set_flags(texture, p_flags);
+	_change_notify("flags");
 }
 
 uint32_t ImageTexture::get_flags() const {
@@ -243,6 +255,10 @@ void ImageTexture::set_data(const Ref<Image> &p_image) {
 
 	_change_notify();
 	alpha_cache.unref();
+
+	if (keep_images_cached) {
+		image_cache = p_image;
+	}
 }
 
 void ImageTexture::_resource_path_changed() {
@@ -252,7 +268,11 @@ void ImageTexture::_resource_path_changed() {
 
 Ref<Image> ImageTexture::get_data() const {
 
-	return VisualServer::get_singleton()->texture_get_data(texture);
+	if (image_cache.is_valid()) {
+		return image_cache;
+	} else {
+		return VisualServer::get_singleton()->texture_get_data(texture);
+	}
 }
 
 int ImageTexture::get_width() const {
@@ -324,7 +344,7 @@ bool ImageTexture::is_pixel_opaque(int p_x, int p_y) const {
 		int y = p_y * ah / h;
 
 		x = CLAMP(x, 0, aw);
-		y = CLAMP(y, 0, aw);
+		y = CLAMP(y, 0, ah);
 
 		return alpha_cache->get_bit(Point2(x, y));
 	}
@@ -712,6 +732,7 @@ Error StreamTexture::load(const String &p_path) {
 	path_to_file = p_path;
 	format = image->get_format();
 
+	_change_notify();
 	return OK;
 }
 String StreamTexture::get_load_path() const {
@@ -791,7 +812,7 @@ bool StreamTexture::is_pixel_opaque(int p_x, int p_y) const {
 		int y = p_y * ah / h;
 
 		x = CLAMP(x, 0, aw);
-		y = CLAMP(y, 0, aw);
+		y = CLAMP(y, 0, ah);
 
 		return alpha_cache->get_bit(Point2(x, y));
 	}
@@ -801,6 +822,7 @@ bool StreamTexture::is_pixel_opaque(int p_x, int p_y) const {
 void StreamTexture::set_flags(uint32_t p_flags) {
 	flags = p_flags;
 	VS::get_singleton()->texture_set_flags(texture, flags);
+	_change_notify("flags");
 }
 
 void StreamTexture::reload_from_file() {
@@ -921,6 +943,7 @@ uint32_t AtlasTexture::get_flags() const {
 
 void AtlasTexture::set_atlas(const Ref<Texture> &p_atlas) {
 
+	ERR_FAIL_COND(p_atlas == this);
 	if (atlas == p_atlas)
 		return;
 	atlas = p_atlas;
@@ -994,10 +1017,10 @@ void AtlasTexture::_bind_methods() {
 
 void AtlasTexture::draw(RID p_canvas_item, const Point2 &p_pos, const Color &p_modulate, bool p_transpose, const Ref<Texture> &p_normal_map) const {
 
-	Rect2 rc = region;
-
 	if (!atlas.is_valid())
 		return;
+
+	Rect2 rc = region;
 
 	if (rc.size.width == 0) {
 		rc.size.width = atlas->get_width();
@@ -1013,10 +1036,10 @@ void AtlasTexture::draw(RID p_canvas_item, const Point2 &p_pos, const Color &p_m
 
 void AtlasTexture::draw_rect(RID p_canvas_item, const Rect2 &p_rect, bool p_tile, const Color &p_modulate, bool p_transpose, const Ref<Texture> &p_normal_map) const {
 
-	Rect2 rc = region;
-
 	if (!atlas.is_valid())
 		return;
+
+	Rect2 rc = region;
 
 	if (rc.size.width == 0) {
 		rc.size.width = atlas->get_width();
@@ -1048,10 +1071,10 @@ void AtlasTexture::draw_rect_region(RID p_canvas_item, const Rect2 &p_rect, cons
 
 bool AtlasTexture::get_rect_region(const Rect2 &p_rect, const Rect2 &p_src_rect, Rect2 &r_rect, Rect2 &r_src_rect) const {
 
-	Rect2 rc = region;
-
 	if (!atlas.is_valid())
 		return false;
+
+	Rect2 rc = region;
 
 	Rect2 src = p_src_rect;
 	if (src.size == Size2()) {
@@ -1084,11 +1107,17 @@ bool AtlasTexture::get_rect_region(const Rect2 &p_rect, const Rect2 &p_src_rect,
 
 bool AtlasTexture::is_pixel_opaque(int p_x, int p_y) const {
 
-	if (atlas.is_valid()) {
-		return atlas->is_pixel_opaque(p_x + region.position.x + margin.position.x, p_x + region.position.y + margin.position.y);
-	}
+	if (!atlas.is_valid())
+		return true;
 
-	return true;
+	int x = p_x + region.position.x - margin.position.x;
+	int y = p_y + region.position.y - margin.position.y;
+
+	// margin edge may outside of atlas
+	if (x < 0 || x >= atlas->get_width()) return false;
+	if (y < 0 || y >= atlas->get_height()) return false;
+
+	return atlas->is_pixel_opaque(x, y);
 }
 
 AtlasTexture::AtlasTexture() {
@@ -1154,6 +1183,7 @@ void LargeTexture::set_piece_offset(int p_idx, const Point2 &p_offset) {
 
 void LargeTexture::set_piece_texture(int p_idx, const Ref<Texture> &p_texture) {
 
+	ERR_FAIL_COND(p_texture == this);
 	ERR_FAIL_INDEX(p_idx, pieces.size());
 	pieces.write[p_idx].texture = p_texture;
 };
@@ -1202,6 +1232,17 @@ Ref<Texture> LargeTexture::get_piece_texture(int p_idx) const {
 
 	ERR_FAIL_INDEX_V(p_idx, pieces.size(), Ref<Texture>());
 	return pieces[p_idx].texture;
+}
+Ref<Image> LargeTexture::to_image() const {
+
+	Ref<Image> img = memnew(Image(this->get_width(), this->get_height(), false, Image::FORMAT_RGBA8));
+	for (int i = 0; i < pieces.size(); i++) {
+
+		Ref<Image> src_img = pieces[i].texture->get_data();
+		img->blit_rect(src_img, Rect2(0, 0, src_img->get_width(), src_img->get_height()), pieces[i].offset);
+	}
+
+	return img;
 }
 
 void LargeTexture::_bind_methods() {
@@ -1708,6 +1749,7 @@ void ProxyTexture::_bind_methods() {
 
 void ProxyTexture::set_base(const Ref<Texture> &p_texture) {
 
+	ERR_FAIL_COND(p_texture == this);
 	base = p_texture;
 	if (base.is_valid()) {
 		VS::get_singleton()->texture_set_proxy(proxy, base->get_rid());
@@ -1823,6 +1865,8 @@ int AnimatedTexture::get_frames() const {
 }
 
 void AnimatedTexture::set_frame_texture(int p_frame, const Ref<Texture> &p_texture) {
+
+	ERR_FAIL_COND(p_texture == this);
 	ERR_FAIL_INDEX(p_frame, MAX_FRAMES);
 
 	RWLockWrite w(rw_lock);
@@ -1958,9 +2002,11 @@ void AnimatedTexture::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "fps", PROPERTY_HINT_RANGE, "0,1024,0.1"), "set_fps", "get_fps");
 
 	for (int i = 0; i < MAX_FRAMES; i++) {
-		ADD_PROPERTYI(PropertyInfo(Variant::OBJECT, "frame_" + itos(i) + "/texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "set_frame_texture", "get_frame_texture", i);
-		ADD_PROPERTYI(PropertyInfo(Variant::REAL, "frame_" + itos(i) + "/delay_sec", PROPERTY_HINT_RANGE, "0.0,16.0,0.01", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "set_frame_delay", "get_frame_delay", i);
+		ADD_PROPERTYI(PropertyInfo(Variant::OBJECT, "frame_" + itos(i) + "/texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_INTERNAL), "set_frame_texture", "get_frame_texture", i);
+		ADD_PROPERTYI(PropertyInfo(Variant::REAL, "frame_" + itos(i) + "/delay_sec", PROPERTY_HINT_RANGE, "0.0,16.0,0.01", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_INTERNAL), "set_frame_delay", "get_frame_delay", i);
 	}
+
+	BIND_CONSTANT(MAX_FRAMES);
 }
 
 AnimatedTexture::AnimatedTexture() {
@@ -2065,7 +2111,7 @@ void TextureLayered::create(uint32_t p_width, uint32_t p_height, uint32_t p_dept
 	width = p_width;
 	height = p_height;
 	depth = p_depth;
-
+	format = p_format;
 	flags = p_flags;
 }
 

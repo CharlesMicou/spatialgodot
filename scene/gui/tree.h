@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -329,6 +329,8 @@ private:
 	bool range_drag_enabled;
 	Vector2 range_drag_capture_pos;
 
+	bool propagate_mouse_activated;
+
 	//TreeItem *cursor_item;
 	//int cursor_column;
 
@@ -434,6 +436,7 @@ private:
 		int button_margin;
 		Point2 offset;
 		int draw_relationship_lines;
+		int draw_guides;
 		int scroll_border;
 		int scroll_speed;
 
@@ -455,6 +458,8 @@ private:
 
 		TreeItem *hover_item;
 		int hover_cell;
+
+		Point2i text_editor_position;
 
 	} cache;
 

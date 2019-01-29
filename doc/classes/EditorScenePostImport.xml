@@ -20,13 +20,13 @@
 
 		func iterate(node):
 		    if node != null:
-		        node.name = "modified_"+node.name
+		        node.name = "modified_" + node.name
 		        for child in node.get_children():
 		            iterate(child)
 		[/codeblock]
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/latest/getting_started/workflow/assets/importing_scenes.html#custom-script</link>
+		<link>https://docs.godotengine.org/en/latest/getting_started/workflow/assets/importing_scenes.html#custom-script</link>
 	</tutorials>
 	<demos>
 	</demos>

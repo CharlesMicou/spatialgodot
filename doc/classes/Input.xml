@@ -7,7 +7,7 @@
 		A Singleton that deals with inputs. This includes key presses, mouse buttons and movement, joypads, and input actions. Actions and their events can be set in the Project Settings / Input Map tab. Or be set with [InputMap].
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/3.0/tutorials/inputs/index.html</link>
+		<link>https://docs.godotengine.org/en/latest/tutorials/inputs/index.html</link>
 	</tutorials>
 	<demos>
 	</demos>
@@ -17,8 +17,11 @@
 			</return>
 			<argument index="0" name="action" type="String">
 			</argument>
+			<argument index="1" name="strength" type="float" default="1.0">
+			</argument>
 			<description>
 				This will simulate pressing the specified action.
+				The strength can be used for non-boolean actions, it's ranged between 0 and 1 representing the intensity of the given action.
 			</description>
 		</method>
 		<method name="action_release">
@@ -123,7 +126,7 @@
 			<argument index="0" name="button_index" type="int">
 			</argument>
 			<description>
-				Receives a [code]JOY_BUTTON_*[/code] Enum and returns it's equivalent name as a string.
+				Receives a [code]JOY_BUTTON_*[/code] Enum and returns its equivalent name as a string.
 			</description>
 		</method>
 		<method name="get_joy_guid" qualifiers="const">

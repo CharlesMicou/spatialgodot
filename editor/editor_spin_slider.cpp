@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -63,6 +63,7 @@ void EditorSpinSlider::_gui_input(const Ref<InputEvent> &p_event) {
 
 				grabbing_spinner_attempt = true;
 				grabbing_spinner_dist_cache = 0;
+				pre_grab_value = get_value();
 				grabbing_spinner = false;
 				grabbing_spinner_mouse_pos = Input::get_singleton()->get_mouse_position();
 			}
@@ -107,10 +108,10 @@ void EditorSpinSlider::_gui_input(const Ref<InputEvent> &p_event) {
 					if (ABS(grabbing_spinner_dist_cache) > 6) {
 						set_value(get_value() + SGN(grabbing_spinner_dist_cache));
 						grabbing_spinner_dist_cache = 0;
+						pre_grab_value = get_value();
 					}
 				} else {
-					set_value(get_value() + get_step() * grabbing_spinner_dist_cache * 10);
-					grabbing_spinner_dist_cache = 0;
+					set_value(pre_grab_value + get_step() * grabbing_spinner_dist_cache * 10);
 				}
 			}
 		} else if (updown_offset != -1) {
@@ -154,7 +155,9 @@ void EditorSpinSlider::_grabber_gui_input(const Ref<InputEvent> &p_event) {
 
 void EditorSpinSlider::_notification(int p_what) {
 
-	if (p_what == MainLoop::NOTIFICATION_WM_FOCUS_OUT || p_what == MainLoop::NOTIFICATION_WM_FOCUS_OUT) {
+	if (p_what == MainLoop::NOTIFICATION_WM_FOCUS_OUT ||
+			p_what == MainLoop::NOTIFICATION_WM_FOCUS_IN ||
+			p_what == NOTIFICATION_EXIT_TREE) {
 		if (grabbing_spinner) {
 			Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_VISIBLE);
 			grabbing_spinner = false;
@@ -434,6 +437,7 @@ EditorSpinSlider::EditorSpinSlider() {
 	grabbing_spinner_attempt = false;
 	grabbing_spinner = false;
 	grabbing_spinner_dist_cache = 0;
+	pre_grab_value = 0;
 	set_focus_mode(FOCUS_ALL);
 	updown_offset = -1;
 	hover_updown = false;

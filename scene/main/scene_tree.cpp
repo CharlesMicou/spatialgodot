@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -484,6 +484,14 @@ bool SceneTree::iteration(float p_time) {
 	return _quit;
 }
 
+void SceneTree::_update_font_oversampling(float p_ratio) {
+
+	if (use_font_oversampling) {
+		DynamicFontAtSize::font_oversampling = p_ratio;
+		DynamicFont::update_oversampling();
+	}
+}
+
 bool SceneTree::idle(float p_time) {
 
 	//print_line("ram: "+itos(OS::get_singleton()->get_static_memory_usage())+" sram: "+itos(OS::get_singleton()->get_dynamic_memory_usage()));
@@ -515,12 +523,6 @@ bool SceneTree::idle(float p_time) {
 
 		last_screen_size = win_size;
 		_update_root_rect();
-
-		if (use_font_oversampling) {
-			DynamicFontAtSize::font_oversampling = OS::get_singleton()->get_window_size().width / root->get_visible_rect().size.width;
-			DynamicFont::update_oversampling();
-		}
-
 		emit_signal("screen_resized");
 	}
 
@@ -535,10 +537,15 @@ bool SceneTree::idle(float p_time) {
 
 	//go through timers
 
+	List<Ref<SceneTreeTimer> >::Element *L = timers.back(); //last element
+
 	for (List<Ref<SceneTreeTimer> >::Element *E = timers.front(); E;) {
 
 		List<Ref<SceneTreeTimer> >::Element *N = E->next();
 		if (pause && !E->get()->is_pause_mode_process()) {
+			if (E == L) {
+				break; //break on last, so if new timers were added during list traversal, ignore them.
+			}
 			E = N;
 			continue;
 		}
@@ -549,6 +556,9 @@ bool SceneTree::idle(float p_time) {
 		if (time_left < 0) {
 			E->get()->emit_signal("timeout");
 			timers.erase(E);
+		}
+		if (E == L) {
+			break; //break on last, so if new timers were added during list traversal, ignore them.
 		}
 		E = N;
 	}
@@ -631,6 +641,7 @@ void SceneTree::_notification(int p_notification) {
 			}
 		} break;
 		case NOTIFICATION_OS_MEMORY_WARNING:
+		case NOTIFICATION_OS_IME_UPDATE:
 		case NOTIFICATION_WM_MOUSE_ENTER:
 		case NOTIFICATION_WM_MOUSE_EXIT:
 		case NOTIFICATION_WM_FOCUS_IN:
@@ -1124,10 +1135,12 @@ void SceneTree::_update_root_rect() {
 
 	if (stretch_mode == STRETCH_MODE_DISABLED) {
 
+		_update_font_oversampling(1.0);
 		root->set_size((last_screen_size / stretch_shrink).floor());
 		root->set_attach_to_screen_rect(Rect2(Point2(), last_screen_size));
 		root->set_size_override_stretch(false);
 		root->set_size_override(false, Size2());
+		root->update_canvas_items();
 		return; //user will take care
 	}
 
@@ -1145,6 +1158,9 @@ void SceneTree::_update_root_rect() {
 		//same aspect or ignore aspect
 		viewport_size = desired_res;
 		screen_size = video_mode;
+		if (use_font_oversampling) {
+			WARN_PRINT("Font oversampling only works with the following resize modes 'Keep Width', 'Keep Height', and 'Expand'.")
+		}
 	} else if (viewport_aspect < video_mode_aspect) {
 		// screen ratio is smaller vertically
 
@@ -1199,21 +1215,30 @@ void SceneTree::_update_root_rect() {
 	switch (stretch_mode) {
 		case STRETCH_MODE_DISABLED: {
 			// Already handled above
+			_update_font_oversampling(1.0);
 		} break;
 		case STRETCH_MODE_2D: {
 
+			_update_font_oversampling(screen_size.x / viewport_size.x); //screen / viewport radio drives oversampling
 			root->set_size((screen_size / stretch_shrink).floor());
 			root->set_attach_to_screen_rect(Rect2(margin, screen_size));
 			root->set_size_override_stretch(true);
 			root->set_size_override(true, (viewport_size / stretch_shrink).floor());
+			root->update_canvas_items(); //force them to update just in case
 
 		} break;
 		case STRETCH_MODE_VIEWPORT: {
 
+			_update_font_oversampling(1.0);
 			root->set_size((viewport_size / stretch_shrink).floor());
 			root->set_attach_to_screen_rect(Rect2(margin, screen_size));
 			root->set_size_override_stretch(false);
 			root->set_size_override(false, Size2());
+			root->update_canvas_items(); //force them to update just in case
+
+			if (use_font_oversampling) {
+				WARN_PRINT("Font oversampling does not work in 'Viewport' stretch mode, only '2D'.")
+			}
 
 		} break;
 	}
@@ -1916,12 +1941,11 @@ void SceneTree::add_idle_callback(IdleCallback p_callback) {
 
 void SceneTree::set_use_font_oversampling(bool p_oversampling) {
 
+	if (use_font_oversampling == p_oversampling)
+		return;
+
 	use_font_oversampling = p_oversampling;
-	if (use_font_oversampling) {
-		DynamicFontAtSize::font_oversampling = OS::get_singleton()->get_window_size().width / root->get_visible_rect().size.width;
-	} else {
-		DynamicFontAtSize::font_oversampling = 1.0;
-	}
+	_update_root_rect();
 }
 
 bool SceneTree::is_using_font_oversampling() const {
@@ -1935,6 +1959,7 @@ SceneTree::SceneTree() {
 	accept_quit = true;
 	quit_on_go_back = true;
 	initialized = false;
+	use_font_oversampling = false;
 #ifdef DEBUG_ENABLED
 	debug_collisions_hint = false;
 	debug_navigation_hint = false;
@@ -1944,6 +1969,7 @@ SceneTree::SceneTree() {
 	debug_navigation_color = GLOBAL_DEF("debug/shapes/navigation/geometry_color", Color(0.1, 1.0, 0.7, 0.4));
 	debug_navigation_disabled_color = GLOBAL_DEF("debug/shapes/navigation/disabled_geometry_color", Color(1.0, 0.7, 0.1, 0.4));
 	collision_debug_contacts = GLOBAL_DEF("debug/shapes/collision/max_contacts_displayed", 10000);
+	ProjectSettings::get_singleton()->set_custom_property_info("debug/shapes/collision/max_contacts_displayed", PropertyInfo(Variant::INT, "debug/shapes/collision/max_contacts_displayed", PROPERTY_HINT_RANGE, "0,20000,1")); // No negative
 
 	tree_version = 1;
 	physics_process_time = 1;
@@ -1964,6 +1990,7 @@ SceneTree::SceneTree() {
 
 	root = memnew(Viewport);
 	root->set_name("root");
+	root->set_handle_input_locally(false);
 	if (!root->get_world().is_valid())
 		root->set_world(Ref<World>(memnew(World)));
 
@@ -1977,7 +2004,9 @@ SceneTree::SceneTree() {
 	current_scene = NULL;
 
 	int ref_atlas_size = GLOBAL_DEF("rendering/quality/reflections/atlas_size", 2048);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/reflections/atlas_size", PropertyInfo(Variant::INT, "rendering/quality/reflections/atlas_size", PROPERTY_HINT_RANGE, "0,8192,or_greater")); //next_power_of_2 will return a 0 as min value
 	int ref_atlas_subdiv = GLOBAL_DEF("rendering/quality/reflections/atlas_subdiv", 8);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/reflections/atlas_subdiv", PropertyInfo(Variant::INT, "rendering/quality/reflections/atlas_subdiv", PROPERTY_HINT_RANGE, "0,32,or_greater")); //next_power_of_2 will return a 0 as min value
 	int msaa_mode = GLOBAL_DEF("rendering/quality/filters/msaa", 0);
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/filters/msaa", PropertyInfo(Variant::INT, "rendering/quality/filters/msaa", PROPERTY_HINT_ENUM, "Disabled,2x,4x,8x,16x"));
 	root->set_msaa(Viewport::MSAA(msaa_mode));
@@ -2066,8 +2095,6 @@ SceneTree::SceneTree() {
 	live_edit_root = NodePath("/root");
 
 #endif
-
-	use_font_oversampling = false;
 }
 
 SceneTree::~SceneTree() {

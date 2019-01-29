@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -69,7 +69,7 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 /**
- * 
+ *
  * @author Luis Linietsky <luis.linietsky@gmail.com>
  */
 public class HttpRequester {
@@ -105,7 +105,7 @@ public class HttpRequester {
 			long timeInit = new Date().getTime();
 			response = request(httpget);
 			long delay = new Date().getTime() - timeInit;
-			Log.d("com.app11tt.android.utils.HttpRequest::get(url)", "Url: " + params.getUrl() + " downloaded in " + String.format("%.03f", delay / 1000.0f) + " seconds");
+			Log.d("HttpRequest::get(url)", "Url: " + params.getUrl() + " downloaded in " + String.format("%.03f", delay / 1000.0f) + " seconds");
 			if (response == null || response.length() == 0) {
 				response = "";
 			} else {
@@ -200,7 +200,7 @@ public class HttpRequester {
 		SharedPreferences.Editor editor = sharedPref.edit();
 		editor.putString("request_" + Crypt.md5(request), response);
 		editor.putLong("request_" + Crypt.md5(request) + "_ttl", new Date().getTime() + getTtl());
-		editor.commit();
+		editor.apply();
 	}
 
 	public String getResponseFromCache(String request) {

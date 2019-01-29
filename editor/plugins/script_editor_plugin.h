@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,6 +34,7 @@
 #include "core/script_language.h"
 #include "editor/code_editor.h"
 #include "editor/editor_help.h"
+#include "editor/editor_help_search.h"
 #include "editor/editor_plugin.h"
 #include "editor/script_create_dialog.h"
 #include "scene/gui/item_list.h"
@@ -155,7 +156,6 @@ class ScriptEditor : public PanelContainer {
 		DEBUG_SHOW_KEEP_OPEN,
 		DEBUG_WITH_EXTERNAL_EDITOR,
 		SEARCH_HELP,
-		SEARCH_CLASSES,
 		SEARCH_WEBSITE,
 		HELP_SEARCH_FIND,
 		HELP_SEARCH_FIND_NEXT,
@@ -200,7 +200,6 @@ class ScriptEditor : public PanelContainer {
 
 	Button *help_search;
 	Button *site_search;
-	Button *class_search;
 	EditorHelpSearch *help_search_dialog;
 
 	ItemList *script_list;
@@ -254,7 +253,7 @@ class ScriptEditor : public PanelContainer {
 	Vector<ScriptHistory> history;
 	int history_pos;
 
-	EditorHelpIndex *help_index;
+	Vector<String> previous_scripts;
 
 	void _tab_changed(int p_which);
 	void _menu_option(int p_option);

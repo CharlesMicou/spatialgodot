@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -223,6 +223,12 @@ godot_quat GDAPI godot_quat_operator_neg(const godot_quat *p_self) {
 	const Quat *self = (const Quat *)p_self;
 	*dest = -(*self);
 	return raw_dest;
+}
+
+void GDAPI godot_quat_set_axis_angle(godot_quat *p_self, const godot_vector3 *p_axis, const godot_real p_angle) {
+	Quat *self = (Quat *)p_self;
+	const Vector3 *axis = (const Vector3 *)p_axis;
+	self->set_axis_angle(*axis, p_angle);
 }
 
 #ifdef __cplusplus

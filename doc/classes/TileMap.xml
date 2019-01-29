@@ -7,7 +7,7 @@
 		Node for 2D tile-based maps. Tilemaps use a [TileSet] which contain a list of tiles (textures plus optional collision, navigation, and/or occluder shapes) which are used to create grid-based maps.
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/3.0/tutorials/2d/using_tilemaps.html</link>
+		<link>https://docs.godotengine.org/en/latest/tutorials/2d/using_tilemaps.html</link>
 	</tutorials>
 	<demos>
 	</demos>
@@ -35,6 +35,16 @@
 			</argument>
 			<description>
 				Returns the tile index of the given cell.
+			</description>
+		</method>
+		<method name="get_cell_autotile_coord" qualifiers="const">
+			<return type="Vector2">
+			</return>
+			<argument index="0" name="x" type="int">
+			</argument>
+			<argument index="1" name="y" type="int">
+			</argument>
+			<description>
 			</description>
 		</method>
 		<method name="get_cellv" qualifiers="const">
@@ -234,7 +244,7 @@
 			<argument index="0" name="world_position" type="Vector2">
 			</argument>
 			<description>
-				Returns the tilemap (grid-based) coordinatescorresponding to the given global position.
+				Returns the tilemap (grid-based) coordinates corresponding to the given local position.
 			</description>
 		</method>
 	</methods>
@@ -257,7 +267,7 @@
 			Position for tile origin. Uses TILE_ORIGIN_* constants. Default value: TILE_ORIGIN_TOP_LEFT.
 		</member>
 		<member name="cell_y_sort" type="bool" setter="set_y_sort_mode" getter="is_y_sort_mode_enabled">
-			If [code]true[/code] the TileMap's children will be drawn in order of their Y coordinate. Default value: [code]false[/code].
+			If [code]true[/code], the TileMap's children will be drawn in order of their Y coordinate. Default value: [code]false[/code].
 		</member>
 		<member name="collision_bounce" type="float" setter="set_collision_bounce" getter="get_collision_bounce">
 			Bounce value for static body collisions (see [code]collision_use_kinematic[/code]). Default value: 0.
@@ -272,7 +282,7 @@
 			The collision mask(s) for all colliders in the TileMap.
 		</member>
 		<member name="collision_use_kinematic" type="bool" setter="set_collision_use_kinematic" getter="get_collision_use_kinematic">
-			If [code]true[/code] TileMap collisions will be handled as a kinematic body. If [code]false[/code] collisions will be handled as static body. Default value: [code]false[/code].
+			If [code]true[/code], TileMap collisions will be handled as a kinematic body. If [code]false[/code], collisions will be handled as static body. Default value: [code]false[/code].
 		</member>
 		<member name="mode" type="int" setter="set_mode" getter="get_mode" enum="TileMap.Mode">
 			The TileMap orientation mode. Uses MODE_* constants. Default value: MODE_SQUARE.

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -127,6 +127,8 @@ public:
 	GDMonoClass *get_object_derived_class(const StringName &p_class);
 
 	static void fill_search_dirs(Vector<String> &r_search_dirs, const String &p_custom_config = String());
+
+	static GDMonoAssembly *load_from(const String &p_name, const String &p_path, bool p_refonly);
 
 	GDMonoAssembly(const String &p_name, const String &p_path = String());
 	~GDMonoAssembly();

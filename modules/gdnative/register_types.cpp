@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -38,6 +38,7 @@
 #include "nativescript/register_types.h"
 #include "net/register_types.h"
 #include "pluginscript/register_types.h"
+#include "videodecoder/register_types.h"
 
 #include "core/engine.h"
 #include "core/io/resource_loader.h"
@@ -299,8 +300,8 @@ GDNativeCallRegistry *GDNativeCallRegistry::singleton;
 
 Vector<Ref<GDNative> > singleton_gdnatives;
 
-GDNativeLibraryResourceLoader *resource_loader_gdnlib = NULL;
-GDNativeLibraryResourceSaver *resource_saver_gdnlib = NULL;
+Ref<GDNativeLibraryResourceLoader> resource_loader_gdnlib;
+Ref<GDNativeLibraryResourceSaver> resource_saver_gdnlib;
 
 void register_gdnative_types() {
 
@@ -312,10 +313,10 @@ void register_gdnative_types() {
 	ClassDB::register_class<GDNativeLibrary>();
 	ClassDB::register_class<GDNative>();
 
-	resource_loader_gdnlib = memnew(GDNativeLibraryResourceLoader);
-	resource_saver_gdnlib = memnew(GDNativeLibraryResourceSaver);
-
+	resource_loader_gdnlib.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_gdnlib);
+
+	resource_saver_gdnlib.instance();
 	ResourceSaver::add_resource_format_saver(resource_saver_gdnlib);
 
 	GDNativeCallRegistry::singleton = memnew(GDNativeCallRegistry);
@@ -326,6 +327,7 @@ void register_gdnative_types() {
 	register_arvr_types();
 	register_nativescript_types();
 	register_pluginscript_types();
+	register_videodecoder_types();
 
 	// run singletons
 
@@ -378,6 +380,7 @@ void unregister_gdnative_types() {
 	}
 	singleton_gdnatives.clear();
 
+	unregister_videodecoder_types();
 	unregister_pluginscript_types();
 	unregister_nativescript_types();
 	unregister_arvr_types();
@@ -391,8 +394,11 @@ void unregister_gdnative_types() {
 	}
 #endif
 
-	memdelete(resource_loader_gdnlib);
-	memdelete(resource_saver_gdnlib);
+	ResourceLoader::remove_resource_format_loader(resource_loader_gdnlib);
+	resource_loader_gdnlib.unref();
+
+	ResourceSaver::remove_resource_format_saver(resource_saver_gdnlib);
+	resource_saver_gdnlib.unref();
 
 	// This is for printing out the sizes of the core types
 

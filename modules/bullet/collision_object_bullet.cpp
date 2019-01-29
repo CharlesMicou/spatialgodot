@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -304,7 +304,11 @@ bool RigidCollisionObjectBullet::is_shape_disabled(int p_index) {
 }
 
 void RigidCollisionObjectBullet::shape_changed(int p_shape_index) {
-	bulletdelete(shapes.write[p_shape_index].bt_shape);
+	ShapeWrapper &shp = shapes.write[p_shape_index];
+	if (shp.bt_shape == mainShape) {
+		mainShape = NULL;
+	}
+	bulletdelete(shp.bt_shape);
 	reload_shapes();
 }
 
@@ -366,5 +370,8 @@ void RigidCollisionObjectBullet::body_scale_changed() {
 void RigidCollisionObjectBullet::internal_shape_destroy(int p_index, bool p_permanentlyFromThisBody) {
 	ShapeWrapper &shp = shapes.write[p_index];
 	shp.shape->remove_owner(this, p_permanentlyFromThisBody);
+	if (shp.bt_shape == mainShape) {
+		mainShape = NULL;
+	}
 	bulletdelete(shp.bt_shape);
 }

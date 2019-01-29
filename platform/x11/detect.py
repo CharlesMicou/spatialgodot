@@ -1,6 +1,7 @@
 import os
 import platform
 import sys
+from compat import decode_utf8
 
 
 def is_active():
@@ -47,6 +48,11 @@ def can_build():
         print("xrender not found.. x11 disabled.")
         return False
 
+    x11_error = os.system("pkg-config xi --modversion > /dev/null ")
+    if (x11_error):
+        print("xi not found.. Aborting.")
+        return False
+
     return True
 
 def get_opts():
@@ -55,8 +61,9 @@ def get_opts():
     return [
         BoolVariable('use_llvm', 'Use the LLVM compiler', False),
         BoolVariable('use_static_cpp', 'Link libgcc and libstdc++ statically for better portability', False),
-        BoolVariable('use_sanitizer', 'Use LLVM compiler address sanitizer', False),
-        BoolVariable('use_leak_sanitizer', 'Use LLVM compiler memory leaks sanitizer (implies use_sanitizer)', False),
+        BoolVariable('use_ubsan', 'Use LLVM/GCC compiler undefined behavior sanitizer (UBSAN)', False),
+        BoolVariable('use_asan', 'Use LLVM/GCC compiler address sanitizer (ASAN))', False),
+        BoolVariable('use_lsan', 'Use LLVM/GCC compiler leak sanitizer (LSAN))', False),
         BoolVariable('pulseaudio', 'Detect & use pulseaudio', True),
         BoolVariable('udev', 'Use udev for gamepad connection callbacks', False),
         EnumVariable('debug_symbols', 'Add debugging symbols to release builds', 'yes', ('yes', 'no', 'full')),
@@ -80,10 +87,8 @@ def configure(env):
     ## Build type
 
     if (env["target"] == "release"):
-        # -O3 -ffast-math is identical to -Ofast. We need to split it out so we can selectively disable
-        # -ffast-math in code for which it generates wrong results.
         if (env["optimize"] == "speed"): #optimize for speed (default)
-            env.Prepend(CCFLAGS=['-O3', '-ffast-math'])
+            env.Prepend(CCFLAGS=['-O3'])
         else: #optimize for size
             env.Prepend(CCFLAGS=['-Os'])
 
@@ -94,7 +99,7 @@ def configure(env):
 
     elif (env["target"] == "release_debug"):
         if (env["optimize"] == "speed"): #optimize for speed (default)
-            env.Prepend(CCFLAGS=['-O2', '-ffast-math', '-DDEBUG_ENABLED'])
+            env.Prepend(CCFLAGS=['-O2', '-DDEBUG_ENABLED'])
         else: #optimize for size
             env.Prepend(CCFLAGS=['-Os', '-DDEBUG_ENABLED'])
 
@@ -127,12 +132,19 @@ def configure(env):
         env.Append(CPPFLAGS=['-DTYPED_METHOD_BIND'])
         env.extra_suffix = ".llvm" + env.extra_suffix
 
-    # leak sanitizer requires (address) sanitizer
-    if env['use_sanitizer'] or env['use_leak_sanitizer']:
-        env.Append(CCFLAGS=['-fsanitize=address', '-fno-omit-frame-pointer'])
-        env.Append(LINKFLAGS=['-fsanitize=address'])
+
+    if env['use_ubsan'] or env['use_asan'] or env['use_lsan']:
         env.extra_suffix += "s"
-        if env['use_leak_sanitizer']:
+
+        if env['use_ubsan']:
+            env.Append(CCFLAGS=['-fsanitize=undefined'])
+            env.Append(LINKFLAGS=['-fsanitize=undefined'])
+
+        if env['use_asan']:
+            env.Append(CCFLAGS=['-fsanitize=address'])
+            env.Append(LINKFLAGS=['-fsanitize=address'])
+
+        if env['use_lsan']:
             env.Append(CCFLAGS=['-fsanitize=leak'])
             env.Append(LINKFLAGS=['-fsanitize=leak'])
 
@@ -149,6 +161,19 @@ def configure(env):
     env.Append(CCFLAGS=['-pipe'])
     env.Append(LINKFLAGS=['-pipe'])
 
+    # Check for gcc version > 5 before adding -no-pie
+    import re
+    import subprocess
+    proc = subprocess.Popen([env['CXX'], '--version'], stdout=subprocess.PIPE)
+    (stdout, _) = proc.communicate()
+    stdout = decode_utf8(stdout)
+    match = re.search('[0-9][0-9.]*', stdout)
+    if match is not None:
+        version = match.group().split('.')
+        if (version[0] > '5'):
+            env.Append(CCFLAGS=['-fpie'])
+            env.Append(LINKFLAGS=['-no-pie'])
+
     ## Dependencies
 
     env.ParseConfig('pkg-config x11 --cflags --libs')
@@ -156,13 +181,9 @@ def configure(env):
     env.ParseConfig('pkg-config xinerama --cflags --libs')
     env.ParseConfig('pkg-config xrandr --cflags --libs')
     env.ParseConfig('pkg-config xrender --cflags --libs')
+    env.ParseConfig('pkg-config xi --cflags --libs')
 
     if (env['touch']):
-        x11_error = os.system("pkg-config xi --modversion > /dev/null ")
-        if (x11_error):
-            print("xi not found.. cannot build with touch. Aborting.")
-            sys.exit(255)
-        env.ParseConfig('pkg-config xi --cflags --libs')
         env.Append(CPPFLAGS=['-DTOUCH_ENABLED'])
 
     # FIXME: Check for existence of the libs before parsing their flags with pkg-config

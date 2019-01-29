@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -128,7 +128,7 @@ public:
 };
 
 class ResourceFormatLoaderText : public ResourceFormatLoader {
-
+	GDCLASS(ResourceFormatLoaderText, ResourceFormatLoader)
 public:
 	static ResourceFormatLoaderText *singleton;
 	virtual Ref<ResourceInteractiveLoader> load_interactive(const String &p_path, const String &p_original_path = "", Error *r_error = NULL);
@@ -170,6 +170,7 @@ public:
 };
 
 class ResourceFormatSaverText : public ResourceFormatSaver {
+	GDCLASS(ResourceFormatSaverText, ResourceFormatSaver)
 public:
 	static ResourceFormatSaverText *singleton;
 	virtual Error save(const String &p_path, const RES &p_resource, uint32_t p_flags = 0);

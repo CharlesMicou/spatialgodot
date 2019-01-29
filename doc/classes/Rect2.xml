@@ -7,7 +7,7 @@
 		Rect2 consists of a position, a size, and several utility functions. It is typically used for fast overlap tests.
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/3.0/tutorials/math/index.html</link>
+		<link>https://docs.godotengine.org/en/latest/tutorials/math/index.html</link>
 	</tutorials>
 	<demos>
 	</demos>
@@ -111,7 +111,7 @@
 			<argument index="1" name="by" type="float">
 			</argument>
 			<description>
-				Returns a copy of the [code]Rect2[/code] grown a given amount of units towards the [Margin] direction.
+				Returns a copy of the [code]Rect2[/code] grown a given amount of units towards the [enum Margin] direction.
 			</description>
 		</method>
 		<method name="has_no_area">

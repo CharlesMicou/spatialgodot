@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -273,7 +273,7 @@ void EditorInterface::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_resource_filesystem"), &EditorInterface::get_resource_file_system);
 	ClassDB::bind_method(D_METHOD("get_editor_viewport"), &EditorInterface::get_editor_viewport);
 	ClassDB::bind_method(D_METHOD("make_mesh_previews", "meshes", "preview_size"), &EditorInterface::_make_mesh_previews);
-	ClassDB::bind_method(D_METHOD("select_file", "p_file"), &EditorInterface::select_file);
+	ClassDB::bind_method(D_METHOD("select_file", "file"), &EditorInterface::select_file);
 	ClassDB::bind_method(D_METHOD("get_selected_path"), &EditorInterface::get_selected_path);
 
 	ClassDB::bind_method(D_METHOD("set_plugin_enabled", "plugin", "enabled"), &EditorInterface::set_plugin_enabled);
@@ -475,7 +475,6 @@ void EditorPlugin::set_force_draw_over_forwarding_enabled() {
 }
 
 void EditorPlugin::notify_scene_changed(const Node *scn_root) {
-	if (scn_root == NULL) return;
 	emit_signal("scene_changed", scn_root);
 }
 
@@ -683,6 +682,14 @@ void EditorPlugin::remove_export_plugin(const Ref<EditorExportPlugin> &p_exporte
 	EditorExport::get_singleton()->remove_export_plugin(p_exporter);
 }
 
+void EditorPlugin::add_spatial_gizmo_plugin(const Ref<EditorSpatialGizmoPlugin> &p_gizmo_plugin) {
+	SpatialEditor::get_singleton()->add_gizmo_plugin(p_gizmo_plugin);
+}
+
+void EditorPlugin::remove_spatial_gizmo_plugin(const Ref<EditorSpatialGizmoPlugin> &p_gizmo_plugin) {
+	SpatialEditor::get_singleton()->remove_gizmo_plugin(p_gizmo_plugin);
+}
+
 void EditorPlugin::add_inspector_plugin(const Ref<EditorInspectorPlugin> &p_plugin) {
 	EditorInspector::add_inspector_plugin(p_plugin);
 }
@@ -697,6 +704,34 @@ void EditorPlugin::add_scene_import_plugin(const Ref<EditorSceneImporter> &p_imp
 
 void EditorPlugin::remove_scene_import_plugin(const Ref<EditorSceneImporter> &p_importer) {
 	ResourceImporterScene::get_singleton()->remove_importer(p_importer);
+}
+
+int find(const PoolStringArray &a, const String &v) {
+	PoolStringArray::Read r = a.read();
+	for (int j = 0; j < a.size(); ++j) {
+		if (r[j] == v) {
+			return j;
+		}
+	}
+	return -1;
+}
+
+void EditorPlugin::enable_plugin() {
+	// Called when the plugin gets enabled in project settings, after it's added to the tree.
+	// You can implement it to register autoloads.
+
+	if (get_script_instance() && get_script_instance()->has_method("enable_plugin")) {
+		get_script_instance()->call("enable_plugin");
+	}
+}
+
+void EditorPlugin::disable_plugin() {
+	// Last function called when the plugin gets disabled in project settings.
+	// Implement it to cleanup things from the project, such as unregister autoloads.
+
+	if (get_script_instance() && get_script_instance()->has_method("disable_plugin")) {
+		get_script_instance()->call("disable_plugin");
+	}
 }
 
 void EditorPlugin::set_window_layout(Ref<ConfigFile> p_layout) {
@@ -775,6 +810,8 @@ void EditorPlugin::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("remove_scene_import_plugin", "scene_importer"), &EditorPlugin::remove_scene_import_plugin);
 	ClassDB::bind_method(D_METHOD("add_export_plugin", "plugin"), &EditorPlugin::add_export_plugin);
 	ClassDB::bind_method(D_METHOD("remove_export_plugin", "plugin"), &EditorPlugin::remove_export_plugin);
+	ClassDB::bind_method(D_METHOD("add_spatial_gizmo_plugin", "plugin"), &EditorPlugin::add_spatial_gizmo_plugin);
+	ClassDB::bind_method(D_METHOD("remove_spatial_gizmo_plugin", "plugin"), &EditorPlugin::remove_spatial_gizmo_plugin);
 	ClassDB::bind_method(D_METHOD("add_inspector_plugin", "plugin"), &EditorPlugin::add_inspector_plugin);
 	ClassDB::bind_method(D_METHOD("remove_inspector_plugin", "plugin"), &EditorPlugin::remove_inspector_plugin);
 	ClassDB::bind_method(D_METHOD("set_input_event_forwarding_always_enabled"), &EditorPlugin::set_input_event_forwarding_always_enabled);
@@ -802,6 +839,8 @@ void EditorPlugin::_bind_methods() {
 	ClassDB::add_virtual_method(get_class_static(), MethodInfo("set_window_layout", PropertyInfo(Variant::OBJECT, "layout", PROPERTY_HINT_RESOURCE_TYPE, "ConfigFile")));
 	ClassDB::add_virtual_method(get_class_static(), MethodInfo("get_window_layout", PropertyInfo(Variant::OBJECT, "layout", PROPERTY_HINT_RESOURCE_TYPE, "ConfigFile")));
 	ClassDB::add_virtual_method(get_class_static(), MethodInfo(Variant::BOOL, "build"));
+	ClassDB::add_virtual_method(get_class_static(), MethodInfo("enable_plugin"));
+	ClassDB::add_virtual_method(get_class_static(), MethodInfo("disable_plugin"));
 
 	ADD_SIGNAL(MethodInfo("scene_changed", PropertyInfo(Variant::OBJECT, "scene_root", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
 	ADD_SIGNAL(MethodInfo("scene_closed", PropertyInfo(Variant::STRING, "filepath")));
@@ -830,11 +869,11 @@ void EditorPlugin::_bind_methods() {
 	BIND_ENUM_CONSTANT(DOCK_SLOT_MAX);
 }
 
-EditorPlugin::EditorPlugin() {
-	undo_redo = NULL;
-	input_event_forwarding_always_enabled = false;
-	force_draw_over_forwarding_enabled = false;
-	last_main_screen_name = "";
+EditorPlugin::EditorPlugin() :
+		undo_redo(NULL),
+		input_event_forwarding_always_enabled(false),
+		force_draw_over_forwarding_enabled(false),
+		last_main_screen_name("") {
 }
 
 EditorPlugin::~EditorPlugin() {

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1662,7 +1662,17 @@ Variant::operator Transform() const {
 		return Transform(*_data._basis, Vector3());
 	else if (type == QUAT)
 		return Transform(Basis(*reinterpret_cast<const Quat *>(_data._mem)), Vector3());
-	else
+	else if (type == TRANSFORM2D) {
+		const Transform2D &t = *_data._transform2d;
+		Transform m;
+		m.basis.elements[0][0] = t.elements[0][0];
+		m.basis.elements[1][0] = t.elements[0][1];
+		m.basis.elements[0][1] = t.elements[1][0];
+		m.basis.elements[1][1] = t.elements[1][1];
+		m.origin[0] = t.elements[2][0];
+		m.origin[1] = t.elements[2][1];
+		return m;
+	} else
 		return Transform();
 }
 
@@ -1721,6 +1731,14 @@ Variant::operator RID() const {
 	else if (type == OBJECT && !_get_obj().ref.is_null()) {
 		return _get_obj().ref.get_rid();
 	} else if (type == OBJECT && _get_obj().obj) {
+#ifdef DEBUG_ENABLED
+		if (ScriptDebugger::get_singleton()) {
+			if (!ObjectDB::instance_validate(_get_obj().obj)) {
+				ERR_EXPLAIN("Invalid pointer (object was deleted)");
+				ERR_FAIL_V(RID());
+			};
+		};
+#endif
 		Variant::CallError ce;
 		Variant ret = _get_obj().obj->call(CoreStringNames::get_singleton()->get_rid, NULL, 0, ce);
 		if (ce.error == Variant::CallError::CALL_OK && ret.get_type() == Variant::_RID) {

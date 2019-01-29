@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -678,19 +678,20 @@ void SpaceBullet::check_ghost_overlaps() {
 		// For each overlapping
 		for (i = ghostOverlaps.size() - 1; 0 <= i; --i) {
 
+			bool hasOverlap = false;
 			btCollisionObject *overlapped_bt_co = ghostOverlaps[i];
 			RigidCollisionObjectBullet *otherObject = static_cast<RigidCollisionObjectBullet *>(overlapped_bt_co->getUserPointer());
 
-			if (!area->is_transform_changed() && !otherObject->is_transform_changed())
-				continue;
+			if (!area->is_transform_changed() && !otherObject->is_transform_changed()) {
+				hasOverlap = true;
+				goto collision_found;
+			}
 
 			if (overlapped_bt_co->getUserIndex() == CollisionObjectBullet::TYPE_AREA) {
 				if (!static_cast<AreaBullet *>(overlapped_bt_co->getUserPointer())->is_monitorable())
 					continue;
 			} else if (overlapped_bt_co->getUserIndex() != CollisionObjectBullet::TYPE_RIGID_BODY)
 				continue;
-
-			bool hasOverlap = false;
 
 			// For each area shape
 			for (y = area->get_shape_count() - 1; 0 <= y; --y) {
@@ -786,16 +787,22 @@ void SpaceBullet::check_body_collision() {
 			}
 
 			const int numContacts = contactManifold->getNumContacts();
+
+			/// Since I don't need report all contacts for these objects,
+			/// So report only the first
 #define REPORT_ALL_CONTACTS 0
 #if REPORT_ALL_CONTACTS
 			for (int j = 0; j < numContacts; j++) {
 				btManifoldPoint &pt = contactManifold->getContactPoint(j);
 #else
-			// Since I don't need report all contacts for these objects, I'll report only the first
 			if (numContacts) {
 				btManifoldPoint &pt = contactManifold->getContactPoint(0);
 #endif
-				if (pt.getDistance() <= 0.0) {
+				if (
+						pt.getDistance() <= 0.0 ||
+						bodyA->was_colliding(bodyB) ||
+						bodyB->was_colliding(bodyA)) {
+
 					Vector3 collisionWorldPosition;
 					Vector3 collisionLocalPosition;
 					Vector3 normalOnB;

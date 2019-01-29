@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -138,6 +138,8 @@ void MeshInstance::set_mesh(const Ref<Mesh> &p_mesh) {
 		set_base(RID());
 	}
 
+	update_gizmo();
+
 	_change_notify();
 }
 Ref<Mesh> MeshInstance::get_mesh() const {
@@ -253,6 +255,11 @@ void MeshInstance::_notification(int p_what) {
 	}
 }
 
+int MeshInstance::get_surface_material_count() const {
+
+	return materials.size();
+}
+
 void MeshInstance::set_surface_material(int p_surface, const Ref<Material> &p_material) {
 
 	ERR_FAIL_INDEX(p_surface, materials.size());
@@ -359,6 +366,7 @@ void MeshInstance::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_skeleton_path", "skeleton_path"), &MeshInstance::set_skeleton_path);
 	ClassDB::bind_method(D_METHOD("get_skeleton_path"), &MeshInstance::get_skeleton_path);
 
+	ClassDB::bind_method(D_METHOD("get_surface_material_count"), &MeshInstance::get_surface_material_count);
 	ClassDB::bind_method(D_METHOD("set_surface_material", "surface", "material"), &MeshInstance::set_surface_material);
 	ClassDB::bind_method(D_METHOD("get_surface_material", "surface"), &MeshInstance::get_surface_material);
 

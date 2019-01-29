@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -83,6 +83,8 @@ private:
 	Container *name_container;
 	Container *path_container;
 	Container *install_path_container;
+	Container *rasterizer_container;
+	Ref<ButtonGroup> rasterizer_button_group;
 	Label *msg;
 	LineEdit *project_path;
 	LineEdit *project_name;
@@ -447,13 +449,14 @@ private:
 				ProjectSettings::CustomMap edited_settings;
 				edited_settings["application/config/name"] = project_name->get_text();
 
-				if (current->save_custom(dir.plus_file("/project.godot"), edited_settings, Vector<String>(), true)) {
+				if (current->save_custom(dir.plus_file("project.godot"), edited_settings, Vector<String>(), true) != OK) {
 					set_message(TTR("Couldn't edit project.godot in project path."), MESSAGE_ERROR);
 				}
 			}
 
 			hide();
-			emit_signal("project_renamed");
+			emit_signal("projects_updated");
+
 		} else {
 
 			if (mode == MODE_IMPORT) {
@@ -470,16 +473,23 @@ private:
 				if (mode == MODE_NEW) {
 
 					ProjectSettings::CustomMap initial_settings;
+					if (rasterizer_button_group->get_pressed_button()->get_meta("driver_name") == "GLES3") {
+						initial_settings["rendering/quality/driver/driver_name"] = "GLES3";
+					} else {
+						initial_settings["rendering/quality/driver/driver_name"] = "GLES2";
+						initial_settings["rendering/vram_compression/import_etc2"] = false;
+						initial_settings["rendering/vram_compression/import_etc"] = true;
+					}
 					initial_settings["application/config/name"] = project_name->get_text();
 					initial_settings["application/config/icon"] = "res://icon.png";
 					initial_settings["rendering/environment/default_environment"] = "res://default_env.tres";
 
-					if (ProjectSettings::get_singleton()->save_custom(dir.plus_file("/project.godot"), initial_settings, Vector<String>(), false)) {
+					if (ProjectSettings::get_singleton()->save_custom(dir.plus_file("project.godot"), initial_settings, Vector<String>(), false) != OK) {
 						set_message(TTR("Couldn't create project.godot in project path."), MESSAGE_ERROR);
 					} else {
-						ResourceSaver::save(dir.plus_file("/icon.png"), get_icon("DefaultProjectIcon", "EditorIcons"));
+						ResourceSaver::save(dir.plus_file("icon.png"), get_icon("DefaultProjectIcon", "EditorIcons"));
 
-						FileAccess *f = FileAccess::open(dir.plus_file("/default_env.tres"), FileAccess::WRITE);
+						FileAccess *f = FileAccess::open(dir.plus_file("default_env.tres"), FileAccess::WRITE);
 						if (!f) {
 							set_message(TTR("Couldn't create project.godot in project path."), MESSAGE_ERROR);
 						} else {
@@ -587,7 +597,7 @@ private:
 						dialog_error->popup_centered_minsize();
 
 					} else if (!project_path->get_text().ends_with(".zip")) {
-						dialog_error->set_text(TTR("Package Installed Successfully!"));
+						dialog_error->set_text(TTR("Package installed successfully!"));
 						dialog_error->popup_centered_minsize();
 					}
 				}
@@ -651,7 +661,7 @@ protected:
 		ClassDB::bind_method("_install_path_selected", &ProjectDialog::_install_path_selected);
 		ClassDB::bind_method("_browse_install_path", &ProjectDialog::_browse_install_path);
 		ADD_SIGNAL(MethodInfo("project_created"));
-		ADD_SIGNAL(MethodInfo("project_renamed"));
+		ADD_SIGNAL(MethodInfo("projects_updated"));
 	}
 
 public:
@@ -686,6 +696,7 @@ public:
 			msg->hide();
 			install_path_container->hide();
 			install_status_rect->hide();
+			rasterizer_container->hide();
 			get_ok()->set_disabled(false);
 
 			ProjectSettings *current = memnew(ProjectSettings);
@@ -737,6 +748,7 @@ public:
 				get_ok()->set_text(TTR("Import & Edit"));
 				name_container->hide();
 				install_path_container->hide();
+				rasterizer_container->hide();
 				project_path->grab_focus();
 
 			} else if (mode == MODE_NEW) {
@@ -745,7 +757,9 @@ public:
 				get_ok()->set_text(TTR("Create & Edit"));
 				name_container->show();
 				install_path_container->hide();
-				project_name->grab_focus();
+				rasterizer_container->show();
+				project_name->call_deferred("grab_focus");
+				project_name->call_deferred("select_all");
 
 			} else if (mode == MODE_INSTALL) {
 
@@ -753,13 +767,14 @@ public:
 				get_ok()->set_text(TTR("Install & Edit"));
 				name_container->hide();
 				install_path_container->hide();
+				rasterizer_container->hide();
 				project_path->grab_focus();
 			}
 
 			_test_path();
 		}
 
-		popup_centered(Size2(500, 0) * EDSCALE);
+		popup_centered_minsize(Size2(500, 0) * EDSCALE);
 	}
 
 	ProjectDialog() {
@@ -838,6 +853,48 @@ public:
 		msg->set_align(Label::ALIGN_CENTER);
 		vb->add_child(msg);
 
+		// rasterizer selection
+		rasterizer_container = memnew(VBoxContainer);
+		vb->add_child(rasterizer_container);
+		l = memnew(Label);
+		l->set_text(TTR("Renderer:"));
+		rasterizer_container->add_child(l);
+		Container *rshb = memnew(HBoxContainer);
+		rasterizer_container->add_child(rshb);
+		rasterizer_button_group.instance();
+
+		Container *rvb = memnew(VBoxContainer);
+		rvb->set_h_size_flags(SIZE_EXPAND_FILL);
+		rshb->add_child(rvb);
+		Button *rs_button = memnew(CheckBox);
+		rs_button->set_button_group(rasterizer_button_group);
+		rs_button->set_text(TTR("OpenGL ES 3.0"));
+		rs_button->set_meta("driver_name", "GLES3");
+		rs_button->set_pressed(true);
+		rvb->add_child(rs_button);
+		l = memnew(Label);
+		l->set_text(TTR("Higher visual quality\nAll features available\nIncompatible with older hardware\nNot recommended for web games"));
+		rvb->add_child(l);
+
+		rshb->add_child(memnew(VSeparator));
+
+		rvb = memnew(VBoxContainer);
+		rvb->set_h_size_flags(SIZE_EXPAND_FILL);
+		rshb->add_child(rvb);
+		rs_button = memnew(CheckBox);
+		rs_button->set_button_group(rasterizer_button_group);
+		rs_button->set_text(TTR("OpenGL ES 2.0"));
+		rs_button->set_meta("driver_name", "GLES2");
+		rvb->add_child(rs_button);
+		l = memnew(Label);
+		l->set_text(TTR("Lower visual quality\nSome features not available\nWorks on most hardware\nRecommended for web games"));
+		rvb->add_child(l);
+
+		l = memnew(Label);
+		l->set_text(TTR("Renderer can be changed later, but scenes may need to be adjusted."));
+		l->set_align(Label::ALIGN_CENTER);
+		rasterizer_container->add_child(l);
+
 		fdialog = memnew(FileDialog);
 		fdialog->set_access(FileDialog::ACCESS_FILESYSTEM);
 		fdialog_install = memnew(FileDialog);
@@ -851,6 +908,7 @@ public:
 		fdialog->connect("file_selected", this, "_file_selected");
 		fdialog_install->connect("dir_selected", this, "_install_path_selected");
 		fdialog_install->connect("file_selected", this, "_install_path_selected");
+
 		set_hide_on_ok(false);
 		mode = MODE_NEW;
 
@@ -863,19 +921,27 @@ struct ProjectItem {
 	String project;
 	String path;
 	String conf;
+	int config_version;
 	uint64_t last_modified;
 	bool favorite;
 	bool grayed;
+	bool ordered_latest_modification;
 	ProjectItem() {}
-	ProjectItem(const String &p_project, const String &p_path, const String &p_conf, uint64_t p_last_modified, bool p_favorite = false, bool p_grayed = false) {
+	ProjectItem(const String &p_project, const String &p_path, const String &p_conf, int p_config_version, uint64_t p_last_modified, bool p_favorite = false, bool p_grayed = false, const bool p_ordered_latest_modification = true) {
 		project = p_project;
 		path = p_path;
 		conf = p_conf;
+		config_version = p_config_version;
 		last_modified = p_last_modified;
 		favorite = p_favorite;
 		grayed = p_grayed;
+		ordered_latest_modification = p_ordered_latest_modification;
 	}
-	_FORCE_INLINE_ bool operator<(const ProjectItem &l) const { return last_modified > l.last_modified; }
+	_FORCE_INLINE_ bool operator<(const ProjectItem &l) const {
+		if (ordered_latest_modification)
+			return last_modified > l.last_modified;
+		return project < l.project;
+	}
 	_FORCE_INLINE_ bool operator==(const ProjectItem &l) const { return project == l.project; }
 };
 
@@ -975,7 +1041,7 @@ void ProjectManager::_panel_input(const Ref<InputEvent> &p_ev, Node *p_hb) {
 		_update_project_buttons();
 
 		if (mb->is_doubleclick())
-			_open_project(); //open if doubleclicked
+			_open_selected_projects_ask(); //open if doubleclicked
 	}
 }
 
@@ -997,7 +1063,7 @@ void ProjectManager::_unhandled_input(const Ref<InputEvent> &p_ev) {
 
 			case KEY_ENTER: {
 
-				_open_project();
+				_open_selected_projects_ask();
 			} break;
 			case KEY_DELETE: {
 
@@ -1156,6 +1222,15 @@ void ProjectManager::_load_recent_projects() {
 
 	Color font_color = gui_base->get_color("font_color", "Tree");
 
+	bool set_ordered_latest_modification;
+	ProjectListFilter::FilterOption filter_order_option = project_order_filter->get_filter_option();
+	if (filter_order_option == ProjectListFilter::FILTER_NAME) {
+		set_ordered_latest_modification = false;
+	} else {
+		set_ordered_latest_modification = true;
+	}
+	EditorSettings::get_singleton()->set("project_manager/sorting_order", (int)filter_order_option);
+
 	List<ProjectItem> projects;
 	List<ProjectItem> favorite_projects;
 
@@ -1171,6 +1246,7 @@ void ProjectManager::_load_recent_projects() {
 
 		String project = _name.get_slice("/", 1);
 		String conf = path.plus_file("project.godot");
+		int config_version = 0; // Assume 0 until we know better
 		bool favorite = (_name.begins_with("favorite_projects/")) ? true : false;
 		bool grayed = false;
 
@@ -1188,13 +1264,12 @@ void ProjectManager::_load_recent_projects() {
 			grayed = true;
 		}
 
-		ProjectItem item(project, path, conf, last_modified, favorite, grayed);
+		ProjectItem item(project, path, conf, config_version, last_modified, favorite, grayed, set_ordered_latest_modification);
 		if (favorite)
 			favorite_projects.push_back(item);
 		else
 			projects.push_back(item);
 	}
-
 	projects.sort();
 	favorite_projects.sort();
 
@@ -1216,14 +1291,11 @@ void ProjectManager::_load_recent_projects() {
 		String project = item.project;
 		String path = item.path;
 		String conf = item.conf;
-		bool is_favorite = item.favorite;
-		bool is_grayed = item.grayed;
 
 		Ref<ConfigFile> cf = memnew(ConfigFile);
 		Error cf_err = cf->load(conf);
 
 		String project_name = TTR("Unnamed Project");
-
 		if (cf_err == OK && cf->has_section_key("application", "config/name")) {
 			project_name = static_cast<String>(cf->get_value("application", "config/name")).xml_unescape();
 		}
@@ -1232,8 +1304,16 @@ void ProjectManager::_load_recent_projects() {
 			continue;
 
 		Ref<Texture> icon;
-		if (cf_err == OK && cf->has_section_key("application", "config/icon")) {
-			String appicon = cf->get_value("application", "config/icon");
+		String main_scene;
+
+		if (cf_err == OK) {
+			item.config_version = (int)cf->get_value("", "config_version", 0);
+			if (item.config_version > ProjectSettings::CONFIG_VERSION) {
+				// Comes from an incompatible (more recent) Godot version, grey it out
+				item.grayed = true;
+			}
+
+			String appicon = cf->get_value("application", "config/icon", "");
 			if (appicon != "") {
 				Ref<Image> img;
 				img.instance();
@@ -1247,20 +1327,18 @@ void ProjectManager::_load_recent_projects() {
 					icon = it;
 				}
 			}
+
+			main_scene = cf->get_value("application", "run/main_scene", "");
 		}
 
 		if (icon.is_null()) {
 			icon = get_icon("DefaultProjectIcon", "EditorIcons");
 		}
 
-		String main_scene;
-		if (cf_err == OK && cf->has_section_key("application", "run/main_scene")) {
-			main_scene = cf->get_value("application", "run/main_scene");
-		} else {
-			main_scene = "";
-		}
-
 		selected_list_copy.erase(project);
+
+		bool is_favorite = item.favorite;
+		bool is_grayed = item.grayed;
 
 		HBoxContainer *hb = memnew(HBoxContainer);
 		hb->set_meta("name", project);
@@ -1312,7 +1390,7 @@ void ProjectManager::_load_recent_projects() {
 		show->set_modulate(Color(1, 1, 1, 0.5));
 		path_hb->add_child(show);
 		show->connect("pressed", this, "_show_project", varray(path));
-		show->set_tooltip(TTR("Show In File Manager"));
+		show->set_tooltip(TTR("Show in File Manager"));
 
 		Label *fpath = memnew(Label(path));
 		fpath->set_name("path");
@@ -1339,7 +1417,7 @@ void ProjectManager::_load_recent_projects() {
 	tabs->set_current_tab(0);
 }
 
-void ProjectManager::_on_project_renamed() {
+void ProjectManager::_on_projects_updated() {
 	_load_recent_projects();
 }
 
@@ -1359,7 +1437,7 @@ void ProjectManager::_on_project_created(const String &dir) {
 		_load_recent_projects();
 		_update_scroll_position(dir);
 	}
-	_open_project();
+	_open_selected_projects_ask();
 }
 
 void ProjectManager::_update_scroll_position(const String &dir) {
@@ -1381,14 +1459,18 @@ void ProjectManager::_update_scroll_position(const String &dir) {
 	}
 }
 
-void ProjectManager::_open_project_confirm() {
+void ProjectManager::_confirm_update_settings() {
+	_open_selected_projects();
+}
 
-	for (Map<String, String>::Element *E = selected_list.front(); E; E = E->next()) {
+void ProjectManager::_open_selected_projects() {
+
+	for (const Map<String, String>::Element *E = selected_list.front(); E; E = E->next()) {
 		const String &selected = E->key();
 		String path = EditorSettings::get_singleton()->get("projects/" + selected);
-		String conf = path + "/project.godot";
+		String conf = path.plus_file("project.godot");
 		if (!FileAccess::exists(conf)) {
-			dialog_error->set_text(TTR("Can't open project"));
+			dialog_error->set_text(vformat(TTR("Can't open project at '%s'."), path));
 			dialog_error->popup_centered_minsize();
 			return;
 		}
@@ -1416,7 +1498,7 @@ void ProjectManager::_open_project_confirm() {
 	get_tree()->quit();
 }
 
-void ProjectManager::_open_project() {
+void ProjectManager::_open_selected_projects_ask() {
 
 	if (selected_list.size() < 1) {
 		return;
@@ -1425,9 +1507,40 @@ void ProjectManager::_open_project() {
 	if (selected_list.size() > 1) {
 		multi_open_ask->set_text(TTR("Are you sure to open more than one project?"));
 		multi_open_ask->popup_centered_minsize();
-	} else {
-		_open_project_confirm();
+		return;
 	}
+
+	// Update the project settings or don't open
+	String path = EditorSettings::get_singleton()->get("projects/" + selected_list.front()->key());
+	String conf = path.plus_file("project.godot");
+
+	// FIXME: We already parse those in _load_recent_projects, we could instead make
+	// its `projects` list global and reuse its parsed metadata here.
+	Ref<ConfigFile> cf = memnew(ConfigFile);
+	Error cf_err = cf->load(conf);
+
+	if (cf_err != OK) {
+		dialog_error->set_text(vformat(TTR("Can't open project at '%s'."), path));
+		dialog_error->popup_centered_minsize();
+		return;
+	}
+
+	int config_version = (int)cf->get_value("", "config_version", 0);
+	// Check if we need to convert project settings from an earlier engine version
+	if (config_version < ProjectSettings::CONFIG_VERSION) {
+		ask_update_settings->set_text(vformat(TTR("The following project settings file was generated by an older engine version, and needs to be converted for this version:\n\n%s\n\nDo you want to convert it?\nWarning: You will not be able to open the project with previous versions of the engine anymore."), conf));
+		ask_update_settings->popup_centered_minsize();
+		return;
+	}
+	// Check if the file was generated by a newer, incompatible engine version
+	if (config_version > ProjectSettings::CONFIG_VERSION) {
+		dialog_error->set_text(vformat(TTR("Can't open project at '%s'.") + "\n" + TTR("The project settings were created by a newer engine version, whose settings are not compatible with this version."), path));
+		dialog_error->popup_centered_minsize();
+		return;
+	}
+
+	// Open if the project is up-to-date
+	_open_selected_projects();
 }
 
 void ProjectManager::_run_project_confirm() {
@@ -1672,8 +1785,8 @@ void ProjectManager::_scan_multiple_folders(PoolStringArray p_files) {
 
 void ProjectManager::_bind_methods() {
 
-	ClassDB::bind_method("_open_project", &ProjectManager::_open_project);
-	ClassDB::bind_method("_open_project_confirm", &ProjectManager::_open_project_confirm);
+	ClassDB::bind_method("_open_selected_projects_ask", &ProjectManager::_open_selected_projects_ask);
+	ClassDB::bind_method("_open_selected_projects", &ProjectManager::_open_selected_projects);
 	ClassDB::bind_method("_run_project", &ProjectManager::_run_project);
 	ClassDB::bind_method("_run_project_confirm", &ProjectManager::_run_project_confirm);
 	ClassDB::bind_method("_show_project", &ProjectManager::_show_project);
@@ -1688,7 +1801,7 @@ void ProjectManager::_bind_methods() {
 	ClassDB::bind_method("_restart_confirm", &ProjectManager::_restart_confirm);
 	ClassDB::bind_method("_exit_dialog", &ProjectManager::_exit_dialog);
 	ClassDB::bind_method("_load_recent_projects", &ProjectManager::_load_recent_projects);
-	ClassDB::bind_method("_on_project_renamed", &ProjectManager::_on_project_renamed);
+	ClassDB::bind_method("_on_projects_updated", &ProjectManager::_on_projects_updated);
 	ClassDB::bind_method("_on_project_created", &ProjectManager::_on_project_created);
 	ClassDB::bind_method("_update_scroll_position", &ProjectManager::_update_scroll_position);
 	ClassDB::bind_method("_panel_draw", &ProjectManager::_panel_draw);
@@ -1698,6 +1811,7 @@ void ProjectManager::_bind_methods() {
 	ClassDB::bind_method("_install_project", &ProjectManager::_install_project);
 	ClassDB::bind_method("_files_dropped", &ProjectManager::_files_dropped);
 	ClassDB::bind_method("_open_asset_library", &ProjectManager::_open_asset_library);
+	ClassDB::bind_method("_confirm_update_settings", &ProjectManager::_confirm_update_settings);
 	ClassDB::bind_method(D_METHOD("_scan_multiple_folders", "files"), &ProjectManager::_scan_multiple_folders);
 }
 
@@ -1784,7 +1898,7 @@ ProjectManager::ProjectManager() {
 
 	String cp;
 	cp += 0xA9;
-	OS::get_singleton()->set_window_title(VERSION_NAME + String(" - ") + TTR("Project Manager") + " - " + cp + " 2007-2018 Juan Linietsky, Ariel Manzur & Godot Contributors");
+	OS::get_singleton()->set_window_title(VERSION_NAME + String(" - ") + TTR("Project Manager") + " - " + cp + " 2007-2019 Juan Linietsky, Ariel Manzur & Godot Contributors");
 
 	HBoxContainer *top_hb = memnew(HBoxContainer);
 	vb->add_child(top_hb);
@@ -1818,16 +1932,44 @@ ProjectManager::ProjectManager() {
 	tabs->add_child(tree_hb);
 
 	VBoxContainer *search_tree_vb = memnew(VBoxContainer);
-	search_tree_vb->set_h_size_flags(SIZE_EXPAND_FILL);
 	tree_hb->add_child(search_tree_vb);
+	search_tree_vb->set_h_size_flags(SIZE_EXPAND_FILL);
 
-	HBoxContainer *search_box = memnew(HBoxContainer);
-	search_box->add_spacer(true);
+	HBoxContainer *sort_filters = memnew(HBoxContainer);
+	Label *sort_label = memnew(Label);
+	sort_label->set_text(TTR("Sort:"));
+	sort_filters->add_child(sort_label);
+	Vector<String> sort_filter_titles;
+	sort_filter_titles.push_back("Name");
+	sort_filter_titles.push_back("Last Modified");
+	project_order_filter = memnew(ProjectListFilter);
+	project_order_filter->_setup_filters(sort_filter_titles);
+	project_order_filter->set_filter_size(150);
+	sort_filters->add_child(project_order_filter);
+	project_order_filter->connect("filter_changed", this, "_load_recent_projects");
+	project_order_filter->set_custom_minimum_size(Size2(180, 10) * EDSCALE);
+
+	int projects_sorting_order = (int)EditorSettings::get_singleton()->get("project_manager/sorting_order");
+	project_order_filter->set_filter_option((ProjectListFilter::FilterOption)projects_sorting_order);
+
+	sort_filters->add_spacer(true);
+	Label *search_label = memnew(Label);
+	search_label->set_text(TTR("Search:"));
+	sort_filters->add_child(search_label);
+
+	HBoxContainer *search_filters = memnew(HBoxContainer);
+	Vector<String> vec2;
+	vec2.push_back("Name");
+	vec2.push_back("Path");
 	project_filter = memnew(ProjectListFilter);
-	search_box->add_child(project_filter);
+	project_filter->_setup_filters(vec2);
+	project_filter->add_search_box();
+	search_filters->add_child(project_filter);
 	project_filter->connect("filter_changed", this, "_load_recent_projects");
 	project_filter->set_custom_minimum_size(Size2(280, 10) * EDSCALE);
-	search_tree_vb->add_child(search_box);
+	sort_filters->add_child(search_filters);
+
+	search_tree_vb->add_child(sort_filters);
 
 	PanelContainer *pc = memnew(PanelContainer);
 	pc->add_style_override("panel", gui_base->get_stylebox("bg", "Tree"));
@@ -1847,7 +1989,7 @@ ProjectManager::ProjectManager() {
 	Button *open = memnew(Button);
 	open->set_text(TTR("Edit"));
 	tree_vb->add_child(open);
-	open->connect("pressed", this, "_open_project");
+	open->connect("pressed", this, "_open_selected_projects_ask");
 	open_btn = open;
 
 	Button *run = memnew(Button);
@@ -1954,38 +2096,37 @@ ProjectManager::ProjectManager() {
 	language_restart_ask->get_ok()->set_text(TTR("Restart Now"));
 	language_restart_ask->get_ok()->connect("pressed", this, "_restart_confirm");
 	language_restart_ask->get_cancel()->set_text(TTR("Continue"));
-
 	gui_base->add_child(language_restart_ask);
 
 	erase_ask = memnew(ConfirmationDialog);
 	erase_ask->get_ok()->set_text(TTR("Remove"));
 	erase_ask->get_ok()->connect("pressed", this, "_erase_project_confirm");
-
 	gui_base->add_child(erase_ask);
 
 	multi_open_ask = memnew(ConfirmationDialog);
 	multi_open_ask->get_ok()->set_text(TTR("Edit"));
-	multi_open_ask->get_ok()->connect("pressed", this, "_open_project_confirm");
-
+	multi_open_ask->get_ok()->connect("pressed", this, "_open_selected_projects");
 	gui_base->add_child(multi_open_ask);
 
 	multi_run_ask = memnew(ConfirmationDialog);
 	multi_run_ask->get_ok()->set_text(TTR("Run"));
 	multi_run_ask->get_ok()->connect("pressed", this, "_run_project_confirm");
-
 	gui_base->add_child(multi_run_ask);
 
 	multi_scan_ask = memnew(ConfirmationDialog);
 	multi_scan_ask->get_ok()->set_text(TTR("Scan"));
-
 	gui_base->add_child(multi_scan_ask);
+
+	ask_update_settings = memnew(ConfirmationDialog);
+	ask_update_settings->get_ok()->connect("pressed", this, "_confirm_update_settings");
+	gui_base->add_child(ask_update_settings);
 
 	OS::get_singleton()->set_low_processor_usage_mode(true);
 
 	npdialog = memnew(ProjectDialog);
 	gui_base->add_child(npdialog);
 
-	npdialog->connect("project_renamed", this, "_on_project_renamed");
+	npdialog->connect("projects_updated", this, "_on_projects_updated");
 	npdialog->connect("project_created", this, "_on_project_created");
 	_load_recent_projects();
 
@@ -2017,11 +2158,11 @@ ProjectManager::~ProjectManager() {
 		EditorSettings::destroy();
 }
 
-void ProjectListFilter::_setup_filters() {
+void ProjectListFilter::_setup_filters(Vector<String> options) {
 
 	filter_option->clear();
-	filter_option->add_item(TTR("Name"));
-	filter_option->add_item(TTR("Path"));
+	for (int i = 0; i < options.size(); i++)
+		filter_option->add_item(TTR(options[i]));
 }
 
 void ProjectListFilter::_search_text_changed(const String &p_newtext) {
@@ -2036,6 +2177,11 @@ ProjectListFilter::FilterOption ProjectListFilter::get_filter_option() {
 	return _current_filter;
 }
 
+void ProjectListFilter::set_filter_option(FilterOption option) {
+	filter_option->select((int)option);
+	_filter_option_selected(0);
+}
+
 void ProjectListFilter::_filter_option_selected(int p_idx) {
 	FilterOption selected = (FilterOption)(filter_option->get_selected());
 	if (_current_filter != selected) {
@@ -2046,7 +2192,7 @@ void ProjectListFilter::_filter_option_selected(int p_idx) {
 
 void ProjectListFilter::_notification(int p_what) {
 
-	if (p_what == NOTIFICATION_ENTER_TREE) {
+	if (p_what == NOTIFICATION_ENTER_TREE && has_search_box) {
 		search_box->set_right_icon(get_icon("Search", "EditorIcons"));
 		search_box->set_clear_button_enabled(true);
 	}
@@ -2060,20 +2206,27 @@ void ProjectListFilter::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("filter_changed"));
 }
 
+void ProjectListFilter::add_search_box() {
+	search_box = memnew(LineEdit);
+	search_box->connect("text_changed", this, "_search_text_changed");
+	search_box->set_h_size_flags(SIZE_EXPAND_FILL);
+	add_child(search_box);
+	has_search_box = true;
+}
+
+void ProjectListFilter::set_filter_size(int h_size) {
+	filter_option->set_custom_minimum_size(Size2(h_size * EDSCALE, 10 * EDSCALE));
+}
+
 ProjectListFilter::ProjectListFilter() {
 
 	_current_filter = FILTER_NAME;
 
 	filter_option = memnew(OptionButton);
-	filter_option->set_custom_minimum_size(Size2(80 * EDSCALE, 10 * EDSCALE));
+	set_filter_size(80);
 	filter_option->set_clip_text(true);
 	filter_option->connect("item_selected", this, "_filter_option_selected");
 	add_child(filter_option);
 
-	_setup_filters();
-
-	search_box = memnew(LineEdit);
-	search_box->connect("text_changed", this, "_search_text_changed");
-	search_box->set_h_size_flags(SIZE_EXPAND_FILL);
-	add_child(search_box);
+	has_search_box = false;
 }

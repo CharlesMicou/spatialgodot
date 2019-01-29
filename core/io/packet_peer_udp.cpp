@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -239,13 +239,12 @@ void PacketPeerUDP::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_dest_address", "host", "port"), &PacketPeerUDP::_set_dest_address);
 }
 
-PacketPeerUDP::PacketPeerUDP() {
-
-	_sock = Ref<NetSocket>(NetSocket::create());
-	blocking = true;
-	packet_port = 0;
-	queue_count = 0;
-	peer_port = 0;
+PacketPeerUDP::PacketPeerUDP() :
+		packet_port(0),
+		queue_count(0),
+		peer_port(0),
+		blocking(true),
+		_sock(Ref<NetSocket>(NetSocket::create())) {
 	rb.resize(16);
 }
 

@@ -1,12 +1,12 @@
 /*************************************************************************/
-/* text_editor.cpp                                                       */
+/*  text_editor.cpp                                                      */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -131,7 +131,7 @@ void TextEditor::_load_theme_settings() {
 	text_edit->add_color_override("search_result_border_color", search_result_border_color);
 	text_edit->add_color_override("symbol_color", symbol_color);
 
-	text_edit->add_constant_override("line_spacing", EDITOR_DEF("text_editor/theme/line_spacing", 4));
+	text_edit->add_constant_override("line_spacing", EDITOR_DEF("text_editor/theme/line_spacing", 6));
 
 	colors_cache.font_color = text_color;
 	colors_cache.symbol_color = symbol_color;
@@ -360,7 +360,7 @@ void TextEditor::_edit_option(int p_op) {
 		} break;
 		case EDIT_CLONE_DOWN: {
 
-			code_editor->code_lines_down();
+			code_editor->clone_lines_down();
 		} break;
 		case EDIT_TOGGLE_FOLD_LINE: {
 

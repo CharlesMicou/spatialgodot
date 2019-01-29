@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,12 +40,6 @@
 //#include "power_android.h"
 #include "servers/audio_server.h"
 #include "servers/visual/rasterizer.h"
-
-#ifdef ANDROID_NATIVE_ACTIVITY
-#include <android/log.h>
-#include <android/sensor.h>
-#include <android_native_app_glue.h>
-#endif
 
 typedef void (*GFXInitFunc)(void *ud, bool gl2);
 typedef int (*OpenURIFunc)(const String &);

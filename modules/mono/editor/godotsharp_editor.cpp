@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -42,8 +42,8 @@
 #include "../utils/path_utils.h"
 #include "bindings_generator.h"
 #include "csharp_project.h"
+#include "dotnet_solution.h"
 #include "godotsharp_export.h"
-#include "net_solution.h"
 
 #ifdef OSX_ENABLED
 #include "../utils/osx_utils.h"
@@ -71,17 +71,21 @@ bool GodotSharpEditor::_create_project_solution() {
 
 	if (guid.length()) {
 
-		NETSolution solution(name);
+		DotNetSolution solution(name);
 
 		if (!solution.set_path(path)) {
 			show_error_dialog(TTR("Failed to create solution."));
 			return false;
 		}
 
-		Vector<String> extra_configs;
-		extra_configs.push_back("Tools");
+		DotNetSolution::ProjectInfo proj_info;
+		proj_info.guid = guid;
+		proj_info.relpath = name + ".csproj";
+		proj_info.configs.push_back("Debug");
+		proj_info.configs.push_back("Release");
+		proj_info.configs.push_back("Tools");
 
-		solution.add_new_project(name, guid, extra_configs);
+		solution.add_new_project(name, proj_info);
 
 		Error sln_error = solution.save();
 
@@ -90,10 +94,10 @@ bool GodotSharpEditor::_create_project_solution() {
 			return false;
 		}
 
-		if (!GodotSharpBuilds::make_api_sln(APIAssembly::API_CORE))
+		if (!GodotSharpBuilds::make_api_assembly(APIAssembly::API_CORE))
 			return false;
 
-		if (!GodotSharpBuilds::make_api_sln(APIAssembly::API_EDITOR))
+		if (!GodotSharpBuilds::make_api_assembly(APIAssembly::API_EDITOR))
 			return false;
 
 		pr.step(TTR("Done"));
@@ -122,15 +126,15 @@ void GodotSharpEditor::_make_api_solutions_if_needed_impl() {
 	// If the project has a solution and C# project make sure the API assemblies are present and up to date
 	String res_assemblies_dir = GodotSharpDirs::get_res_assemblies_dir();
 
-	if (!FileAccess::exists(res_assemblies_dir.plus_file(API_ASSEMBLY_NAME ".dll")) ||
+	if (!FileAccess::exists(res_assemblies_dir.plus_file(CORE_API_ASSEMBLY_NAME ".dll")) ||
 			GDMono::get_singleton()->metadata_is_api_assembly_invalidated(APIAssembly::API_CORE)) {
-		if (!GodotSharpBuilds::make_api_sln(APIAssembly::API_CORE))
+		if (!GodotSharpBuilds::make_api_assembly(APIAssembly::API_CORE))
 			return;
 	}
 
 	if (!FileAccess::exists(res_assemblies_dir.plus_file(EDITOR_API_ASSEMBLY_NAME ".dll")) ||
 			GDMono::get_singleton()->metadata_is_api_assembly_invalidated(APIAssembly::API_EDITOR)) {
-		if (!GodotSharpBuilds::make_api_sln(APIAssembly::API_EDITOR))
+		if (!GodotSharpBuilds::make_api_assembly(APIAssembly::API_EDITOR))
 			return; // Redundant? I don't think so
 	}
 }
@@ -244,8 +248,19 @@ Error GodotSharpEditor::open_in_external_editor(const Ref<Script> &p_script, int
 			static String vscode_path;
 
 			if (vscode_path.empty() || !FileAccess::exists(vscode_path)) {
+				static List<String> vscode_name;
+				vscode_name.push_back("code");
+				vscode_name.push_back("code-oss");
+				vscode_name.push_back("vscode");
+				vscode_name.push_back("vscode-oss");
+				vscode_name.push_back("visual-studio-code");
+				vscode_name.push_back("visual-studio-code-oss");
 				// Try to search it again if it wasn't found last time or if it was removed from its location
-				vscode_path = path_which("code");
+				for (int i = 0; i < vscode_name.size(); i++) {
+					vscode_path = path_which(vscode_name[i]);
+					if (!vscode_path.empty() || FileAccess::exists(vscode_path))
+						break;
+				}
 			}
 
 			List<String> args;
@@ -471,7 +486,9 @@ MonoReloadNode *MonoReloadNode::singleton = NULL;
 
 void MonoReloadNode::_reload_timer_timeout() {
 
-	CSharpLanguage::get_singleton()->reload_assemblies_if_needed(false);
+	if (CSharpLanguage::get_singleton()->is_assembly_reloading_needed()) {
+		CSharpLanguage::get_singleton()->reload_assemblies(false);
+	}
 }
 
 void MonoReloadNode::restart_reload_timer() {
@@ -489,7 +506,9 @@ void MonoReloadNode::_notification(int p_what) {
 	switch (p_what) {
 		case MainLoop::NOTIFICATION_WM_FOCUS_IN: {
 			restart_reload_timer();
-			CSharpLanguage::get_singleton()->reload_assemblies_if_needed(true);
+			if (CSharpLanguage::get_singleton()->is_assembly_reloading_needed()) {
+				CSharpLanguage::get_singleton()->reload_assemblies(false);
+			}
 		} break;
 		default: {
 		} break;

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -245,6 +245,8 @@ EM_BOOL OS_JavaScript::keydown_callback(int p_event_type, const EmscriptenKeyboa
 		return false;
 	}
 	os->input->parse_input_event(ev);
+	// Resume audio context after input in case autoplay was denied.
+	os->audio_driver_javascript.resume();
 	return true;
 }
 
@@ -295,6 +297,30 @@ EM_BOOL OS_JavaScript::mouse_button_callback(int p_event_type, const EmscriptenM
 		default: return false;
 	}
 
+	if (ev->is_pressed()) {
+
+		uint64_t diff = p_event->timestamp - os->last_click_ms;
+
+		if (ev->get_button_index() == os->last_click_button_index) {
+
+			if (diff < 400 && Point2(os->last_click_pos).distance_to(ev->get_position()) < 5) {
+
+				os->last_click_ms = 0;
+				os->last_click_pos = Point2(-100, -100);
+				os->last_click_button_index = -1;
+				ev->set_doubleclick(true);
+			}
+
+		} else {
+			os->last_click_button_index = ev->get_button_index();
+		}
+
+		if (!ev->is_doubleclick()) {
+			os->last_click_ms += diff;
+			os->last_click_pos = ev->get_position();
+		}
+	}
+
 	int mask = os->input->get_mouse_button_mask();
 	int button_flag = 1 << (ev->get_button_index() - 1);
 	if (ev->is_pressed()) {
@@ -311,6 +337,8 @@ EM_BOOL OS_JavaScript::mouse_button_callback(int p_event_type, const EmscriptenM
 	ev->set_button_mask(mask);
 
 	os->input->parse_input_event(ev);
+	// Resume audio context after input in case autoplay was denied.
+	os->audio_driver_javascript.resume();
 	// Prevent multi-click text selection and wheel-click scrolling anchor.
 	// Context menu is prevented through contextmenu event.
 	return true;
@@ -391,12 +419,134 @@ void OS_JavaScript::set_cursor_shape(CursorShape p_shape) {
 
 	ERR_FAIL_INDEX(p_shape, CURSOR_MAX);
 
+	if (get_mouse_mode() == MOUSE_MODE_VISIBLE) {
+		if (cursors[p_shape] != "") {
+			Vector<String> url = cursors[p_shape].split("?");
+			set_css_cursor(("url(\"" + url[0] + "\") " + url[1] + ", auto").utf8());
+		} else {
+			set_css_cursor(godot2dom_cursor(p_shape));
+		}
+	}
+
 	cursor_shape = p_shape;
-	if (get_mouse_mode() != MOUSE_MODE_HIDDEN)
-		set_css_cursor(godot2dom_cursor(cursor_shape));
 }
 
 void OS_JavaScript::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot) {
+
+	if (p_cursor.is_valid()) {
+		Ref<Texture> texture = p_cursor;
+		Ref<AtlasTexture> atlas_texture = p_cursor;
+		Ref<Image> image;
+		Size2 texture_size;
+		Rect2 atlas_rect;
+
+		if (texture.is_valid()) {
+			image = texture->get_data();
+			if (image.is_valid()) {
+				image->duplicate();
+			}
+		}
+
+		if (!image.is_valid() && atlas_texture.is_valid()) {
+			texture = atlas_texture->get_atlas();
+
+			atlas_rect.size.width = texture->get_width();
+			atlas_rect.size.height = texture->get_height();
+			atlas_rect.position.x = atlas_texture->get_region().position.x;
+			atlas_rect.position.y = atlas_texture->get_region().position.y;
+
+			texture_size.width = atlas_texture->get_region().size.x;
+			texture_size.height = atlas_texture->get_region().size.y;
+		} else if (image.is_valid()) {
+			texture_size.width = texture->get_width();
+			texture_size.height = texture->get_height();
+		}
+
+		ERR_FAIL_COND(!texture.is_valid());
+		ERR_FAIL_COND(p_hotspot.x < 0 || p_hotspot.y < 0);
+		ERR_FAIL_COND(texture_size.width > 256 || texture_size.height > 256);
+		ERR_FAIL_COND(p_hotspot.x > texture_size.width || p_hotspot.y > texture_size.height);
+
+		image = texture->get_data();
+
+		ERR_FAIL_COND(!image.is_valid());
+
+		image = image->duplicate();
+
+		if (atlas_texture.is_valid())
+			image->crop_from_point(
+					atlas_rect.position.x,
+					atlas_rect.position.y,
+					texture_size.width,
+					texture_size.height);
+
+		if (image->get_format() != Image::FORMAT_RGBA8) {
+			image->convert(Image::FORMAT_RGBA8);
+		}
+
+		png_image png_meta;
+		memset(&png_meta, 0, sizeof png_meta);
+		png_meta.version = PNG_IMAGE_VERSION;
+		png_meta.width = texture_size.width;
+		png_meta.height = texture_size.height;
+		png_meta.format = PNG_FORMAT_RGBA;
+
+		PoolByteArray png;
+		size_t len;
+		PoolByteArray::Read r = image->get_data().read();
+		ERR_FAIL_COND(!png_image_write_get_memory_size(png_meta, len, 0, r.ptr(), 0, NULL));
+
+		png.resize(len);
+		PoolByteArray::Write w = png.write();
+		ERR_FAIL_COND(!png_image_write_to_memory(&png_meta, w.ptr(), &len, 0, r.ptr(), 0, NULL));
+		w = PoolByteArray::Write();
+
+		r = png.read();
+
+		char *object_url;
+		/* clang-format off */
+		EM_ASM({
+			var PNG_PTR = $0;
+			var PNG_LEN = $1;
+			var PTR = $2;
+
+			var png = new Blob([HEAPU8.slice(PNG_PTR, PNG_PTR + PNG_LEN)], { type: 'image/png' });
+			var url = URL.createObjectURL(png);
+			var length_bytes = lengthBytesUTF8(url) + 1;
+			var string_on_wasm_heap = _malloc(length_bytes);
+			setValue(PTR, string_on_wasm_heap, '*');
+			stringToUTF8(url, string_on_wasm_heap, length_bytes);
+		}, r.ptr(), len, &object_url);
+		/* clang-format on */
+		r = PoolByteArray::Read();
+
+		String url = String::utf8(object_url) + "?" + itos(p_hotspot.x) + " " + itos(p_hotspot.y);
+
+		/* clang-format off */
+		EM_ASM({ _free($0); }, object_url);
+		/* clang-format on */
+
+		if (cursors[p_shape] != "") {
+			/* clang-format off */
+			EM_ASM({
+				URL.revokeObjectURL(UTF8ToString($0).split('?')[0]);
+			}, cursors[p_shape].utf8().get_data());
+			/* clang-format on */
+			cursors[p_shape] = "";
+		}
+
+		cursors[p_shape] = url;
+
+	} else if (cursors[p_shape] != "") {
+		/* clang-format off */
+		EM_ASM({
+			URL.revokeObjectURL(UTF8ToString($0).split('?')[0]);
+		}, cursors[p_shape].utf8().get_data());
+		/* clang-format on */
+		cursors[p_shape] = "";
+	}
+
+	set_cursor_shape(cursor_shape);
 }
 
 void OS_JavaScript::set_mouse_mode(OS::MouseMode p_mode) {
@@ -408,7 +558,9 @@ void OS_JavaScript::set_mouse_mode(OS::MouseMode p_mode) {
 
 	if (p_mode == MOUSE_MODE_VISIBLE) {
 
+		// set_css_cursor must be called before set_cursor_shape to make the cursor visible
 		set_css_cursor(godot2dom_cursor(cursor_shape));
+		set_cursor_shape(cursor_shape);
 		emscripten_exit_pointerlock();
 
 	} else if (p_mode == MOUSE_MODE_HIDDEN) {
@@ -422,7 +574,9 @@ void OS_JavaScript::set_mouse_mode(OS::MouseMode p_mode) {
 		ERR_EXPLAIN("MOUSE_MODE_CAPTURED can only be entered from within an appropriate input callback");
 		ERR_FAIL_COND(result == EMSCRIPTEN_RESULT_FAILED_NOT_DEFERRED);
 		ERR_FAIL_COND(result != EMSCRIPTEN_RESULT_SUCCESS);
+		// set_css_cursor must be called before set_cursor_shape to make the cursor visible
 		set_css_cursor(godot2dom_cursor(cursor_shape));
+		set_cursor_shape(cursor_shape);
 	}
 }
 
@@ -452,7 +606,6 @@ EM_BOOL OS_JavaScript::wheel_callback(int p_event_type, const EmscriptenWheelEve
 	InputDefault *input = get_singleton()->input;
 	Ref<InputEventMouseButton> ev;
 	ev.instance();
-	ev->set_button_mask(input->get_mouse_button_mask());
 	ev->set_position(input->get_mouse_position());
 	ev->set_global_position(ev->get_position());
 
@@ -475,10 +628,14 @@ EM_BOOL OS_JavaScript::wheel_callback(int p_event_type, const EmscriptenWheelEve
 	// Different browsers give wildly different delta values, and we can't
 	// interpret deltaMode, so use default value for wheel events' factor.
 
+	int button_flag = 1 << (ev->get_button_index() - 1);
+
 	ev->set_pressed(true);
+	ev->set_button_mask(input->get_mouse_button_mask() | button_flag);
 	input->parse_input_event(ev);
 
 	ev->set_pressed(false);
+	ev->set_button_mask(input->get_mouse_button_mask() & ~button_flag);
 	input->parse_input_event(ev);
 
 	return true;
@@ -515,6 +672,8 @@ EM_BOOL OS_JavaScript::touch_press_callback(int p_event_type, const EmscriptenTo
 
 		os->input->parse_input_event(ev);
 	}
+	// Resume audio context after input in case autoplay was denied.
+	os->audio_driver_javascript.resume();
 	return true;
 }
 
@@ -707,8 +866,21 @@ Error OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, 
 	video_driver_index = p_video_driver;
 
 	video_mode = p_desired;
-	// Can't fulfill fullscreen request during start-up due to browser security.
+	// fullscreen_change_callback will correct this if the request is successful.
 	video_mode.fullscreen = false;
+	// Emscripten only attempts fullscreen requests if the user input callback
+	// was registered through one its own functions, so request manually for
+	// start-up fullscreen.
+	if (p_desired.fullscreen) {
+		/* clang-format off */
+		EM_ASM({
+			(canvas.requestFullscreen || canvas.msRequestFullscreen ||
+				canvas.mozRequestFullScreen || canvas.mozRequestFullscreen ||
+				canvas.webkitRequestFullscreen
+			).call(canvas);
+		});
+		/* clang-format on */
+	}
 	/* clang-format off */
 	if (EM_ASM_INT_V({ return Module.resizeCanvasOnStart })) {
 		/* clang-format on */
@@ -822,7 +994,8 @@ bool OS_JavaScript::main_loop_iterate() {
 		}
 	}
 
-	process_joypads();
+	if (emscripten_sample_gamepad_data() == EMSCRIPTEN_RESULT_SUCCESS)
+		process_joypads();
 
 	if (just_exited_fullscreen) {
 		if (window_maximized) {
@@ -861,6 +1034,24 @@ void OS_JavaScript::finalize() {
 }
 
 // Miscellaneous
+
+Error OS_JavaScript::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr) {
+
+	ERR_EXPLAIN("OS::execute() is not available on the HTML5 platform");
+	ERR_FAIL_V(ERR_UNAVAILABLE);
+}
+
+Error OS_JavaScript::kill(const ProcessID &p_pid) {
+
+	ERR_EXPLAIN("OS::kill() is not available on the HTML5 platform");
+	ERR_FAIL_V(ERR_UNAVAILABLE);
+}
+
+int OS_JavaScript::get_process_id() const {
+
+	ERR_EXPLAIN("OS::get_process_id() is not available on the HTML5 platform");
+	ERR_FAIL_V(0);
+}
 
 extern "C" EMSCRIPTEN_KEEPALIVE void send_notification(int p_notification) {
 
@@ -1048,6 +1239,10 @@ OS_JavaScript::OS_JavaScript(int p_argc, char *p_argv[]) {
 		arguments.push_back(String::utf8(p_argv[i]));
 	}
 	set_cmdline(p_argv[0], arguments);
+
+	last_click_button_index = -1;
+	last_click_ms = 0;
+	last_click_pos = Point2(-100, -100);
 
 	window_maximized = false;
 	entering_fullscreen = false;

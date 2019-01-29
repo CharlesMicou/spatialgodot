@@ -9,7 +9,7 @@
 		Kinematic Characters: KinematicBody also has an API for moving objects (the [method move_and_collide] and [method move_and_slide] methods) while performing collision tests. This makes them really useful to implement characters that collide against a world, but that don't require advanced physics.
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/3.0/tutorials/physics/kinematic_character_2d.html</link>
+		<link>https://docs.godotengine.org/en/latest/tutorials/physics/kinematic_character_2d.html</link>
 	</tutorials>
 	<demos>
 	</demos>
@@ -89,7 +89,7 @@
 			</argument>
 			<description>
 				Moves the body along a vector. If the body collides with another, it will slide along the other body rather than stop immediately. If the other body is a [code]KinematicBody[/code] or [RigidBody], it will also be affected by the motion of the other body. You can use this to make moving or rotating platforms, or to make nodes push other nodes.
-				[code]linear_velocity[/code] is a value in pixels per second. Unlike in for example [method move_and_collide], you should [i]not[/i] multiply it with [code]delta[/code] — this is done by the method.
+				[code]linear_velocity[/code] is the velocity vector (typically meters per second). Unlike in [method move_and_collide], you should [i]not[/i] multiply it by [code]delta[/code] — the physics engine handles applying the velocity.
 				[code]floor_normal[/code] is the up direction, used to determine what is a wall and what is a floor or a ceiling. If set to the default value of [code]Vector3(0, 0, 0)[/code], everything is considered a wall. This is useful for topdown games.
 				[i]TODO: Update for new stop_on_slode argument.[/i] If the body is standing on a slope and the horizontal speed (relative to the floor's speed) goes below [code]slope_stop_min_velocity[/code], the body will stop completely. This prevents the body from sliding down slopes when you include gravity in [code]linear_velocity[/code]. When set to lower values, the body will not be able to stand still on steep slopes.
 				If the body collides, it will change direction a maximum of [code]max_slides[/code] times before it stops.
@@ -106,13 +106,13 @@
 			</argument>
 			<argument index="2" name="floor_normal" type="Vector3" default="Vector3( 0, 0, 0 )">
 			</argument>
-			<argument index="3" name="infinite_inertia" type="bool" default="true">
+			<argument index="3" name="stop_on_slope" type="bool" default="false">
 			</argument>
-			<argument index="4" name="stop_on_slope" type="bool" default="false">
+			<argument index="4" name="max_slides" type="int" default="4">
 			</argument>
-			<argument index="5" name="max_bounces" type="int" default="4">
+			<argument index="5" name="floor_max_angle" type="float" default="0.785398">
 			</argument>
-			<argument index="6" name="floor_max_angle" type="float" default="0.785398">
+			<argument index="6" name="infinite_inertia" type="bool" default="true">
 			</argument>
 			<description>
 				Moves the body while keeping it attached to slopes. Similar to [method move_and_slide].
@@ -126,7 +126,7 @@
 			</argument>
 			<argument index="1" name="rel_vec" type="Vector3">
 			</argument>
-			<argument index="2" name="infinite_inertia" type="bool">
+			<argument index="2" name="infinite_inertia" type="bool" default="true">
 			</argument>
 			<description>
 				Checks for collisions without moving the body. Virtually sets the node's position, scale and rotation to that of the given [Transform], then tries to move the body along the vector [code]rel_vec[/code]. Returns [code]true[/code] if a collision would occur.
@@ -138,10 +138,13 @@
 			If the body is at least this close to another body, this body will consider them to be colliding.
 		</member>
 		<member name="move_lock_x" type="bool" setter="set_axis_lock" getter="get_axis_lock">
+			Lock the body's movement in the x-axis.
 		</member>
 		<member name="move_lock_y" type="bool" setter="set_axis_lock" getter="get_axis_lock">
+			Lock the body's movement in the y-axis.
 		</member>
 		<member name="move_lock_z" type="bool" setter="set_axis_lock" getter="get_axis_lock">
+			Lock the body's movement in the z-axis.
 		</member>
 	</members>
 	<constants>

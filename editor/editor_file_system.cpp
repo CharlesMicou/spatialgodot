@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -466,6 +466,7 @@ bool EditorFileSystem::_update_scan_actions() {
 	bool fs_changed = false;
 
 	Vector<String> reimports;
+	Vector<String> reloads;
 
 	for (List<ItemAction>::Element *E = scan_actions.front(); E; E = E->next()) {
 
@@ -545,11 +546,24 @@ bool EditorFileSystem::_update_scan_actions() {
 
 				fs_changed = true;
 			} break;
+			case ItemAction::ACTION_FILE_RELOAD: {
+
+				int idx = ia.dir->find_file_index(ia.file);
+				ERR_CONTINUE(idx == -1);
+				String full_path = ia.dir->get_file_path(idx);
+
+				reloads.push_back(full_path);
+
+			} break;
 		}
 	}
 
 	if (reimports.size()) {
 		reimport_files(reimports);
+	}
+
+	if (reloads.size()) {
+		emit_signal("resources_reload", reloads);
 	}
 	scan_actions.clear();
 
@@ -783,7 +797,7 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, const 
 	bool updated_dir = false;
 	String cd = p_dir->get_path();
 
-	if (current_mtime != p_dir->modified_time) {
+	if (current_mtime != p_dir->modified_time || using_fat_32) {
 
 		updated_dir = true;
 		p_dir->modified_time = current_mtime;
@@ -905,10 +919,10 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, const 
 			continue;
 		}
 
+		String path = cd.plus_file(p_dir->files[i]->file);
+
 		if (import_extensions.has(p_dir->files[i]->file.get_extension().to_lower())) {
 			//check here if file must be imported or not
-
-			String path = cd.plus_file(p_dir->files[i]->file);
 
 			uint64_t mt = FileAccess::get_modified_time(path);
 
@@ -932,6 +946,20 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, const 
 
 				ItemAction ia;
 				ia.action = ItemAction::ACTION_FILE_TEST_REIMPORT;
+				ia.dir = p_dir;
+				ia.file = p_dir->files[i]->file;
+				scan_actions.push_back(ia);
+			}
+		} else if (ResourceCache::has(path)) { //test for potential reload
+
+			uint64_t mt = FileAccess::get_modified_time(path);
+
+			if (mt != p_dir->files[i]->modified_time) {
+
+				p_dir->files[i]->modified_time = mt; //save new time, but test for reload
+
+				ItemAction ia;
+				ia.action = ItemAction::ACTION_FILE_RELOAD;
 				ia.dir = p_dir;
 				ia.file = p_dir->files[i]->file;
 				scan_actions.push_back(ia);
@@ -1305,11 +1333,6 @@ void EditorFileSystem::_save_late_updated_files() {
 	}
 }
 
-void EditorFileSystem::_resource_saved(const String &p_path) {
-
-	EditorFileSystem::get_singleton()->update_file(p_path);
-}
-
 Vector<String> EditorFileSystem::_get_dependencies(const String &p_path) {
 
 	List<String> deps;
@@ -1378,6 +1401,14 @@ void EditorFileSystem::update_script_classes() {
 
 	ScriptServer::save_global_classes();
 	EditorNode::get_editor_data().script_class_save_icon_paths();
+
+	// Rescan custom loaders and savers.
+	// Doing the following here because the `filesystem_changed` signal fires multiple times and isn't always followed by script classes update.
+	// So I thought it's better to do this when script classes really get updated
+	ResourceLoader::remove_custom_loaders();
+	ResourceLoader::add_custom_loaders();
+	ResourceSaver::remove_custom_savers();
+	ResourceSaver::add_custom_savers();
 }
 
 void EditorFileSystem::_queue_update_script_classes() {
@@ -1731,6 +1762,7 @@ void EditorFileSystem::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("filesystem_changed"));
 	ADD_SIGNAL(MethodInfo("sources_changed", PropertyInfo(Variant::BOOL, "exist")));
 	ADD_SIGNAL(MethodInfo("resources_reimported", PropertyInfo(Variant::POOL_STRING_ARRAY, "resources")));
+	ADD_SIGNAL(MethodInfo("resources_reload", PropertyInfo(Variant::POOL_STRING_ARRAY, "resources")));
 }
 
 void EditorFileSystem::_update_extensions() {
@@ -1772,12 +1804,13 @@ EditorFileSystem::EditorFileSystem() {
 	abort_scan = false;
 	scanning_changes = false;
 	scanning_changes_done = false;
-	ResourceSaver::set_save_callback(_resource_saved);
 
 	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	if (da->change_dir("res://.import") != OK) {
 		da->make_dir("res://.import");
 	}
+	//this should probably also work on Unix and use the string it returns for FAT32
+	using_fat_32 = da->get_filesystem_type() == "FAT32";
 	memdelete(da);
 
 	scan_total = 0;

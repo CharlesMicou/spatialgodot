@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -356,5 +356,5 @@ void CSGShapeSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 
 EditorPluginCSG::EditorPluginCSG(EditorNode *p_editor) {
 	Ref<CSGShapeSpatialGizmoPlugin> gizmo_plugin = Ref<CSGShapeSpatialGizmoPlugin>(memnew(CSGShapeSpatialGizmoPlugin));
-	SpatialEditor::get_singleton()->register_gizmo_plugin(gizmo_plugin);
+	SpatialEditor::get_singleton()->add_gizmo_plugin(gizmo_plugin);
 }

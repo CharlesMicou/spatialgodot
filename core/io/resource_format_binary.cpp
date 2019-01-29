@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -342,7 +342,7 @@ Error ResourceInteractiveLoaderBinary::parse_variant(Variant &r_v) {
 					int erindex = f->get_32();
 
 					if (erindex < 0 || erindex >= external_resources.size()) {
-						WARN_PRINT("Broken external resource! (index out of size");
+						WARN_PRINT("Broken external resource! (index out of size)");
 						r_v = Variant();
 					} else {
 
@@ -970,12 +970,11 @@ String ResourceInteractiveLoaderBinary::recognize(FileAccess *p_f) {
 	return type;
 }
 
-ResourceInteractiveLoaderBinary::ResourceInteractiveLoaderBinary() {
-
-	f = NULL;
-	stage = 0;
-	error = OK;
-	translation_remapped = false;
+ResourceInteractiveLoaderBinary::ResourceInteractiveLoaderBinary() :
+		translation_remapped(false),
+		f(NULL),
+		error(OK),
+		stage(0) {
 }
 
 ResourceInteractiveLoaderBinary::~ResourceInteractiveLoaderBinary() {
@@ -1813,8 +1812,13 @@ Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p
 					Property p;
 					p.name_idx = get_string_index(F->get().name);
 					p.value = E->get()->get(F->get().name);
-					if (((F->get().usage & PROPERTY_USAGE_STORE_IF_NONZERO) && p.value.is_zero()) || ((F->get().usage & PROPERTY_USAGE_STORE_IF_NONONE) && p.value.is_one()))
+
+					Variant default_value = ClassDB::class_get_default_property_value(E->get()->get_class(), F->get().name);
+
+					if (default_value.get_type() != Variant::NIL && bool(Variant::evaluate(Variant::OP_EQUAL, p.value, default_value))) {
 						continue;
+					}
+
 					p.pi = F->get();
 
 					rd.properties.push_back(p);

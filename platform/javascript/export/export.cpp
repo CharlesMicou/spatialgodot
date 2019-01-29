@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -58,7 +58,7 @@ public:
 	virtual Ref<Texture> get_logo() const;
 
 	virtual bool can_export(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates) const;
-	virtual String get_binary_extension(const Ref<EditorExportPreset> &p_preset) const;
+	virtual List<String> get_binary_extensions(const Ref<EditorExportPreset> &p_preset) const;
 	virtual Error export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int p_flags = 0);
 
 	virtual bool poll_devices();
@@ -155,7 +155,7 @@ bool EditorExportPlatformJavaScript::can_export(const Ref<EditorExportPreset> &p
 		if (FileAccess::exists(p_preset->get("custom_template/debug"))) {
 			valid = true;
 		} else {
-			err += "Custom debug template not found.\n";
+			err += TTR("Custom debug template not found.") + "\n";
 		}
 	}
 
@@ -163,7 +163,7 @@ bool EditorExportPlatformJavaScript::can_export(const Ref<EditorExportPreset> &p
 		if (FileAccess::exists(p_preset->get("custom_template/release"))) {
 			valid = true;
 		} else {
-			err += "Custom release template not found.\n";
+			err += TTR("Custom release template not found.") + "\n";
 		}
 	}
 
@@ -174,9 +174,11 @@ bool EditorExportPlatformJavaScript::can_export(const Ref<EditorExportPreset> &p
 	return valid;
 }
 
-String EditorExportPlatformJavaScript::get_binary_extension(const Ref<EditorExportPreset> &p_preset) const {
+List<String> EditorExportPlatformJavaScript::get_binary_extensions(const Ref<EditorExportPreset> &p_preset) const {
 
-	return "html";
+	List<String> list;
+	list.push_back("html");
+	return list;
 }
 
 Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int p_flags) {

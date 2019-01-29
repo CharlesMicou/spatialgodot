@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -400,7 +400,7 @@ public:
 	FUNC2(viewport_set_transparent_background, RID, bool)
 
 	FUNC2(viewport_set_global_canvas_transform, RID, const Transform2D &)
-	FUNC3(viewport_set_canvas_layer, RID, RID, int)
+	FUNC4(viewport_set_canvas_stacking, RID, RID, int, int)
 	FUNC2(viewport_set_shadow_atlas_size, RID, int)
 	FUNC3(viewport_set_shadow_atlas_quadrant_subdivision, RID, int, int)
 	FUNC2(viewport_set_msaa, RID, ViewportMSAA)
@@ -421,6 +421,7 @@ public:
 	FUNC2(environment_set_background, RID, EnvironmentBG)
 	FUNC2(environment_set_sky, RID, RID)
 	FUNC2(environment_set_sky_custom_fov, RID, float)
+	FUNC2(environment_set_sky_orientation, RID, const Basis &)
 	FUNC2(environment_set_bg_color, RID, const Color &)
 	FUNC2(environment_set_bg_energy, RID, float)
 	FUNC2(environment_set_canvas_max_layer, RID, int)
@@ -430,14 +431,14 @@ public:
 
 	FUNC6(environment_set_dof_blur_near, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
 	FUNC6(environment_set_dof_blur_far, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
-	FUNC10(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, bool)
+	FUNC11(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, float, bool)
 
 	FUNC9(environment_set_tonemap, RID, EnvironmentToneMapper, float, float, bool, float, float, float, float)
 
 	FUNC6(environment_set_adjustment, RID, bool, float, float, float, RID)
 
 	FUNC5(environment_set_fog, RID, bool, const Color &, const Color &, float)
-	FUNC6(environment_set_fog_depth, RID, bool, float, float, bool, float)
+	FUNC7(environment_set_fog_depth, RID, bool, float, float, float, bool, float)
 	FUNC5(environment_set_fog_height, RID, bool, float, float, float)
 
 	FUNCRID(scenario)
@@ -516,7 +517,7 @@ public:
 	FUNC10(canvas_item_add_triangle_array, RID, const Vector<int> &, const Vector<Point2> &, const Vector<Color> &, const Vector<Point2> &, const Vector<int> &, const Vector<float> &, RID, int, RID)
 	FUNC4(canvas_item_add_mesh, RID, const RID &, RID, RID)
 	FUNC4(canvas_item_add_multimesh, RID, RID, RID, RID)
-	FUNC6(canvas_item_add_particles, RID, RID, RID, RID, int, int)
+	FUNC4(canvas_item_add_particles, RID, RID, RID, RID)
 	FUNC2(canvas_item_add_set_transform, RID, const Transform2D &)
 	FUNC2(canvas_item_add_clip_ignore, RID, bool)
 	FUNC2(canvas_item_set_sort_children_by_y, RID, bool)

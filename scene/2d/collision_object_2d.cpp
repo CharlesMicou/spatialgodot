@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -58,6 +58,14 @@ void CollisionObject2D::_notification(int p_what) {
 			//get space
 		}
 
+		case NOTIFICATION_ENTER_CANVAS: {
+
+			if (area)
+				Physics2DServer::get_singleton()->area_attach_canvas_instance_id(rid, get_canvas_layer_instance_id());
+			else
+				Physics2DServer::get_singleton()->body_attach_canvas_instance_id(rid, get_canvas_layer_instance_id());
+		}
+
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 
 			_update_pickable();
@@ -86,6 +94,14 @@ void CollisionObject2D::_notification(int p_what) {
 				Physics2DServer::get_singleton()->body_set_space(rid, RID());
 
 		} break;
+
+		case NOTIFICATION_EXIT_CANVAS: {
+
+			if (area)
+				Physics2DServer::get_singleton()->area_attach_canvas_instance_id(rid, 0);
+			else
+				Physics2DServer::get_singleton()->body_attach_canvas_instance_id(rid, 0);
+		}
 	}
 }
 
@@ -147,7 +163,7 @@ void CollisionObject2D::shape_owner_set_one_way_collision(uint32_t p_owner, bool
 	ShapeData &sd = shapes[p_owner];
 	sd.one_way_collision = p_enable;
 	for (int i = 0; i < sd.shapes.size(); i++) {
-		Physics2DServer::get_singleton()->body_set_shape_as_one_way_collision(rid, sd.shapes[i].index, p_enable);
+		Physics2DServer::get_singleton()->body_set_shape_as_one_way_collision(rid, sd.shapes[i].index, sd.one_way_collision, sd.one_way_collision_margin);
 	}
 }
 
@@ -156,6 +172,27 @@ bool CollisionObject2D::is_shape_owner_one_way_collision_enabled(uint32_t p_owne
 	ERR_FAIL_COND_V(!shapes.has(p_owner), false);
 
 	return shapes[p_owner].one_way_collision;
+}
+
+void CollisionObject2D::shape_owner_set_one_way_collision_margin(uint32_t p_owner, float p_margin) {
+
+	if (area)
+		return; //not for areas
+
+	ERR_FAIL_COND(!shapes.has(p_owner));
+
+	ShapeData &sd = shapes[p_owner];
+	sd.one_way_collision_margin = p_margin;
+	for (int i = 0; i < sd.shapes.size(); i++) {
+		Physics2DServer::get_singleton()->body_set_shape_as_one_way_collision(rid, sd.shapes[i].index, sd.one_way_collision, sd.one_way_collision_margin);
+	}
+}
+
+float CollisionObject2D::get_shape_owner_one_way_collision_margin(uint32_t p_owner) const {
+
+	ERR_FAIL_COND_V(!shapes.has(p_owner), 0);
+
+	return shapes[p_owner].one_way_collision_margin;
 }
 
 void CollisionObject2D::get_shape_owners(List<uint32_t> *r_owners) {
@@ -374,6 +411,8 @@ void CollisionObject2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_shape_owner_disabled", "owner_id"), &CollisionObject2D::is_shape_owner_disabled);
 	ClassDB::bind_method(D_METHOD("shape_owner_set_one_way_collision", "owner_id", "enable"), &CollisionObject2D::shape_owner_set_one_way_collision);
 	ClassDB::bind_method(D_METHOD("is_shape_owner_one_way_collision_enabled", "owner_id"), &CollisionObject2D::is_shape_owner_one_way_collision_enabled);
+	ClassDB::bind_method(D_METHOD("shape_owner_set_one_way_collision_margin", "owner_id", "margin"), &CollisionObject2D::shape_owner_set_one_way_collision_margin);
+	ClassDB::bind_method(D_METHOD("get_shape_owner_one_way_collision_margin", "owner_id"), &CollisionObject2D::get_shape_owner_one_way_collision_margin);
 	ClassDB::bind_method(D_METHOD("shape_owner_add_shape", "owner_id", "shape"), &CollisionObject2D::shape_owner_add_shape);
 	ClassDB::bind_method(D_METHOD("shape_owner_get_shape_count", "owner_id"), &CollisionObject2D::shape_owner_get_shape_count);
 	ClassDB::bind_method(D_METHOD("shape_owner_get_shape", "owner_id", "shape_id"), &CollisionObject2D::shape_owner_get_shape);

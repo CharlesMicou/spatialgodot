@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -86,6 +86,7 @@ Ref<Texture> EditorTexturePreviewPlugin::generate(const RES &p_from, const Size2
 
 	Ref<Image> img;
 	Ref<AtlasTexture> atex = p_from;
+	Ref<LargeTexture> ltex = p_from;
 	if (atex.is_valid()) {
 		Ref<Texture> tex = atex->get_atlas();
 		if (!tex.is_valid()) {
@@ -93,15 +94,19 @@ Ref<Texture> EditorTexturePreviewPlugin::generate(const RES &p_from, const Size2
 		}
 		Ref<Image> atlas = tex->get_data();
 		img = atlas->get_rect(atex->get_region());
+	} else if (ltex.is_valid()) {
+		img = ltex->to_image();
 	} else {
 		Ref<Texture> tex = p_from;
 		img = tex->get_data();
+		if (img.is_valid()) {
+			img = img->duplicate();
+		}
 	}
 
 	if (img.is_null() || img->empty())
 		return Ref<Texture>();
 
-	img = img->duplicate();
 	img->clear_mipmaps();
 
 	if (img->is_compressed()) {
@@ -329,7 +334,7 @@ Ref<Texture> EditorMaterialPreviewPlugin::generate(const RES &p_from, const Size
 			OS::get_singleton()->delay_usec(10);
 		}
 
-		Ref<Image> img = VS::get_singleton()->VS::get_singleton()->texture_get_data(viewport_texture);
+		Ref<Image> img = VS::get_singleton()->texture_get_data(viewport_texture);
 		VS::get_singleton()->mesh_surface_set_material(sphere, 0, RID());
 
 		ERR_FAIL_COND_V(!img.is_valid(), Ref<ImageTexture>());
@@ -729,7 +734,7 @@ Ref<Texture> EditorMeshPreviewPlugin::generate(const RES &p_from, const Size2 p_
 		OS::get_singleton()->delay_usec(10);
 	}
 
-	Ref<Image> img = VS::get_singleton()->VS::get_singleton()->texture_get_data(viewport_texture);
+	Ref<Image> img = VS::get_singleton()->texture_get_data(viewport_texture);
 	ERR_FAIL_COND_V(img.is_null(), Ref<ImageTexture>());
 
 	VS::get_singleton()->instance_set_base(mesh_instance, RID());
@@ -849,7 +854,7 @@ Ref<Texture> EditorFontPreviewPlugin::generate_from_path(const String &p_path, c
 		OS::get_singleton()->delay_usec(10);
 	}
 
-	Ref<Image> img = VS::get_singleton()->VS::get_singleton()->texture_get_data(viewport_texture);
+	Ref<Image> img = VS::get_singleton()->texture_get_data(viewport_texture);
 	ERR_FAIL_COND_V(img.is_null(), Ref<ImageTexture>());
 
 	img->convert(Image::FORMAT_RGBA8);

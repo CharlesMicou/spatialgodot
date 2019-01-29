@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,6 +40,7 @@
 #include "editor/editor_settings.h"
 #include "editor/find_in_files.h"
 #include "editor/node_dock.h"
+#include "editor/plugins/shader_editor_plugin.h"
 #include "editor/script_editor_debugger.h"
 #include "scene/main/viewport.h"
 #include "script_text_editor.h"
@@ -50,8 +51,7 @@ void ScriptEditorBase::_bind_methods() {
 
 	ADD_SIGNAL(MethodInfo("name_changed"));
 	ADD_SIGNAL(MethodInfo("edited_script_changed"));
-	ADD_SIGNAL(MethodInfo("request_help_search", PropertyInfo(Variant::STRING, "topic")));
-	ADD_SIGNAL(MethodInfo("request_help_index"));
+	ADD_SIGNAL(MethodInfo("request_help", PropertyInfo(Variant::STRING, "topic")));
 	ADD_SIGNAL(MethodInfo("request_open_script_at_line", PropertyInfo(Variant::OBJECT, "script"), PropertyInfo(Variant::INT, "line")));
 	ADD_SIGNAL(MethodInfo("request_save_history"));
 	ADD_SIGNAL(MethodInfo("go_to_help", PropertyInfo(Variant::STRING, "what")));
@@ -210,6 +210,9 @@ void ScriptEditorQuickOpen::_notification(int p_what) {
 			search_box->set_right_icon(get_icon("Search", "EditorIcons"));
 			search_box->set_clear_button_enabled(true);
 		} break;
+		case NOTIFICATION_EXIT_TREE: {
+			disconnect("confirmed", this, "_confirmed");
+		} break;
 	}
 }
 
@@ -298,7 +301,7 @@ void ScriptEditor::_goto_script_line2(int p_line) {
 void ScriptEditor::_goto_script_line(REF p_script, int p_line) {
 
 	Ref<Script> script = Object::cast_to<Script>(*p_script);
-	if (!script.is_null() && script->has_source_code()) {
+	if (script.is_valid() && (script->has_source_code() || script->get_path().is_resource_file())) {
 		if (edit(p_script, p_line, 0)) {
 			editor->push_item(p_script.ptr());
 
@@ -490,7 +493,7 @@ void ScriptEditor::_open_recent_script(int p_idx) {
 			edit(text_file, true);
 			return;
 		}
-		// if it's a path then its most likely a deleted file not help
+		// if it's a path then it's most likely a deleted file not help
 	} else if (path.find("::") != -1) {
 		// built-in script
 		Ref<Script> script = ResourceLoader::load(path);
@@ -894,12 +897,12 @@ void ScriptEditor::_file_dialog_action(String p_file) {
 		} break;
 		case THEME_SAVE_AS: {
 			if (!EditorSettings::get_singleton()->save_text_editor_theme_as(p_file)) {
-				editor->show_warning(TTR("Error while saving theme"), TTR("Error saving"));
+				editor->show_warning(TTR("Error while saving theme."), TTR("Error Saving"));
 			}
 		} break;
 		case THEME_IMPORT: {
 			if (!EditorSettings::get_singleton()->import_text_editor_theme(p_file)) {
-				editor->show_warning(TTR("Error importing theme"), TTR("Error importing"));
+				editor->show_warning(TTR("Error importing theme."), TTR("Error Importing"));
 			}
 		} break;
 	}
@@ -972,13 +975,9 @@ void ScriptEditor::_menu_option(int p_option) {
 
 			help_search_dialog->popup_dialog();
 		} break;
-		case SEARCH_CLASSES: {
-
-			help_index->popup_dialog();
-		} break;
 		case SEARCH_WEBSITE: {
 
-			OS::get_singleton()->shell_open("http://docs.godotengine.org/");
+			OS::get_singleton()->shell_open("https://docs.godotengine.org/");
 		} break;
 
 		case WINDOW_NEXT: {
@@ -1091,7 +1090,7 @@ void ScriptEditor::_menu_option(int p_option) {
 
 				Ref<Script> scr = current->get_edited_resource();
 				if (scr == NULL || scr.is_null()) {
-					EditorNode::get_singleton()->show_warning("Can't obtain the script for running");
+					EditorNode::get_singleton()->show_warning("Can't obtain the script for running.");
 					break;
 				}
 
@@ -1104,13 +1103,13 @@ void ScriptEditor::_menu_option(int p_option) {
 				}
 				if (!scr->is_tool()) {
 
-					EditorNode::get_singleton()->show_warning("Script is not in tool mode, will not be able to run");
+					EditorNode::get_singleton()->show_warning("Script is not in tool mode, will not be able to run.");
 					return;
 				}
 
 				if (!ClassDB::is_parent_class(scr->get_instance_base_type(), "EditorScript")) {
 
-					EditorNode::get_singleton()->show_warning("To run this script, it must inherit EditorScript and be set to tool mode");
+					EditorNode::get_singleton()->show_warning("To run this script, it must inherit EditorScript and be set to tool mode.");
 					return;
 				}
 
@@ -1203,12 +1202,6 @@ void ScriptEditor::_menu_option(int p_option) {
 		if (help) {
 
 			switch (p_option) {
-
-				case SEARCH_CLASSES: {
-
-					help_index->popup_dialog();
-					help_index->call_deferred("select_class", help->get_class());
-				} break;
 				case HELP_SEARCH_FIND: {
 					help->popup_search();
 				} break;
@@ -1315,7 +1308,6 @@ void ScriptEditor::_notification(int p_what) {
 			EditorSettings::get_singleton()->connect("settings_changed", this, "_editor_settings_changed");
 			help_search->set_icon(get_icon("HelpSearch", "EditorIcons"));
 			site_search->set_icon(get_icon("Instance", "EditorIcons"));
-			class_search->set_icon(get_icon("ClassList", "EditorIcons"));
 
 			script_forward->set_icon(get_icon("Forward", "EditorIcons"));
 			script_back->set_icon(get_icon("Back", "EditorIcons"));
@@ -1327,7 +1319,6 @@ void ScriptEditor::_notification(int p_what) {
 			get_tree()->connect("tree_changed", this, "_tree_changed");
 			editor->get_inspector_dock()->connect("request_help", this, "_request_help");
 			editor->connect("request_help_search", this, "_help_search");
-			editor->connect("request_help_index", this, "_help_index");
 		} break;
 
 		case NOTIFICATION_EXIT_TREE: {
@@ -1347,7 +1338,6 @@ void ScriptEditor::_notification(int p_what) {
 
 			help_search->set_icon(get_icon("HelpSearch", "EditorIcons"));
 			site_search->set_icon(get_icon("Instance", "EditorIcons"));
-			class_search->set_icon(get_icon("ClassList", "EditorIcons"));
 
 			script_forward->set_icon(get_icon("Forward", "EditorIcons"));
 			script_back->set_icon(get_icon("Back", "EditorIcons"));
@@ -1363,7 +1353,9 @@ void ScriptEditor::_notification(int p_what) {
 			if (is_visible()) {
 				find_in_files_button->show();
 			} else {
-				find_in_files->hide();
+				if (find_in_files->is_visible_in_tree()) {
+					editor->hide_bottom_panel();
+				}
 				find_in_files_button->hide();
 			}
 
@@ -1824,6 +1816,10 @@ Ref<TextFile> ScriptEditor::_load_text_file(const String &p_path, Error *r_error
 	text_file->set_file_path(local_path);
 	text_file->set_path(local_path, true);
 
+	if (ResourceLoader::get_timestamp_on_load()) {
+		text_file->set_last_modified_time(FileAccess::get_modified_time(path));
+	}
+
 	if (r_error) {
 		*r_error = OK;
 	}
@@ -1852,6 +1848,10 @@ Error ScriptEditor::_save_text_file(Ref<TextFile> p_text_file, const String &p_p
 	}
 	file->close();
 	memdelete(file);
+
+	if (ResourceSaver::get_timestamp_on_save()) {
+		p_text_file->set_last_modified_time(FileAccess::get_modified_time(p_path));
+	}
 
 	_res_saved_callback(sqscr);
 	return OK;
@@ -2001,7 +2001,7 @@ bool ScriptEditor::edit(const RES &p_resource, int p_line, int p_col, bool p_gra
 	_save_layout();
 	se->connect("name_changed", this, "_update_script_names");
 	se->connect("edited_script_changed", this, "_script_changed");
-	se->connect("request_help_search", this, "_help_search");
+	se->connect("request_help", this, "_help_search");
 	se->connect("request_open_script_at_line", this, "_goto_script_line");
 	se->connect("go_to_help", this, "_help_class_goto");
 	se->connect("request_save_history", this, "_save_history");
@@ -2728,10 +2728,6 @@ void ScriptEditor::set_live_auto_reload_running_scripts(bool p_enabled) {
 	auto_reload_running_scripts = p_enabled;
 }
 
-void ScriptEditor::_help_index(String p_text) {
-	help_index->popup_dialog();
-}
-
 void ScriptEditor::_help_search(String p_text) {
 	help_search_dialog->popup_dialog(p_text);
 }
@@ -2783,13 +2779,18 @@ void ScriptEditor::_on_find_in_files_requested(String text) {
 void ScriptEditor::_on_find_in_files_result_selected(String fpath, int line_number, int begin, int end) {
 
 	RES res = ResourceLoader::load(fpath);
-	edit(res);
+	if (fpath.get_extension() == "shader") {
+		ShaderEditorPlugin *shader_editor = Object::cast_to<ShaderEditorPlugin>(EditorNode::get_singleton()->get_editor_data().get_editor("Shader"));
+		shader_editor->edit(res.ptr());
+		shader_editor->make_visible(true);
+		shader_editor->get_shader_editor()->goto_line_selection(line_number - 1, begin, end);
+	} else {
+		edit(res);
 
-	ScriptEditorBase *seb = _get_current_editor();
-
-	ScriptTextEditor *ste = Object::cast_to<ScriptTextEditor>(seb);
-	if (ste) {
-		ste->goto_line_selection(line_number - 1, begin, end);
+		ScriptTextEditor *ste = Object::cast_to<ScriptTextEditor>(_get_current_editor());
+		if (ste) {
+			ste->goto_line_selection(line_number - 1, begin, end);
+		}
 	}
 }
 
@@ -2799,15 +2800,14 @@ void ScriptEditor::_start_find_in_files(bool with_replace) {
 
 	f->set_search_text(find_in_files_dialog->get_search_text());
 	f->set_match_case(find_in_files_dialog->is_match_case());
-	f->set_whole_words(find_in_files_dialog->is_match_case());
+	f->set_whole_words(find_in_files_dialog->is_whole_words());
 	f->set_folder(find_in_files_dialog->get_folder());
 	f->set_filter(find_in_files_dialog->get_filter());
 
 	find_in_files->set_with_replace(with_replace);
 	find_in_files->start_search();
 
-	find_in_files_button->set_pressed(true);
-	find_in_files->show();
+	editor->make_bottom_panel_item_visible(find_in_files);
 }
 
 void ScriptEditor::_on_find_in_files_modified_files(PoolStringArray paths) {
@@ -2838,7 +2838,6 @@ void ScriptEditor::_bind_methods() {
 	ClassDB::bind_method("_goto_script_line", &ScriptEditor::_goto_script_line);
 	ClassDB::bind_method("_goto_script_line2", &ScriptEditor::_goto_script_line2);
 	ClassDB::bind_method("_help_search", &ScriptEditor::_help_search);
-	ClassDB::bind_method("_help_index", &ScriptEditor::_help_index);
 	ClassDB::bind_method("_save_history", &ScriptEditor::_save_history);
 	ClassDB::bind_method("_copy_script_path", &ScriptEditor::_copy_script_path);
 
@@ -2891,7 +2890,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	restoring_layout = false;
 	waiting_update_names = false;
 	pending_auto_reload = false;
-	auto_reload_running_scripts = false;
+	auto_reload_running_scripts = true;
 	members_overview_enabled = EditorSettings::get_singleton()->get("text_editor/open_scripts/show_members_overview");
 	help_overview_enabled = EditorSettings::get_singleton()->get("text_editor/help/show_help_index");
 	editor = p_editor;
@@ -2912,7 +2911,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 
 	script_list = memnew(ItemList);
 	list_split->add_child(script_list);
-	script_list->set_custom_minimum_size(Size2(150 * EDSCALE, 90)); //need to give a bit of limit to avoid it from disappearing
+	script_list->set_custom_minimum_size(Size2(150, 90) * EDSCALE); //need to give a bit of limit to avoid it from disappearing
 	script_list->set_v_size_flags(SIZE_EXPAND_FILL);
 	script_split->set_split_offset(140);
 	_sort_list_on_update = true;
@@ -2951,7 +2950,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	overview_vbox->add_child(members_overview);
 
 	members_overview->set_allow_reselect(true);
-	members_overview->set_custom_minimum_size(Size2(0, 90)); //need to give a bit of limit to avoid it from disappearing
+	members_overview->set_custom_minimum_size(Size2(0, 90) * EDSCALE); //need to give a bit of limit to avoid it from disappearing
 	members_overview->set_v_size_flags(SIZE_EXPAND_FILL);
 	members_overview->set_allow_rmb_select(true);
 	members_overview->set_drag_forwarding(this);
@@ -2959,12 +2958,12 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	help_overview = memnew(ItemList);
 	overview_vbox->add_child(help_overview);
 	help_overview->set_allow_reselect(true);
-	help_overview->set_custom_minimum_size(Size2(0, 90)); //need to give a bit of limit to avoid it from disappearing
+	help_overview->set_custom_minimum_size(Size2(0, 90) * EDSCALE); //need to give a bit of limit to avoid it from disappearing
 	help_overview->set_v_size_flags(SIZE_EXPAND_FILL);
 
 	tab_container = memnew(TabContainer);
 	tab_container->set_tabs_visible(false);
-	tab_container->set_custom_minimum_size(Size2(200 * EDSCALE, 0));
+	tab_container->set_custom_minimum_size(Size2(200, 0) * EDSCALE);
 	script_split->add_child(tab_container);
 	tab_container->set_h_size_flags(SIZE_EXPAND_FILL);
 
@@ -2978,10 +2977,11 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	file_menu = memnew(MenuButton);
 	menu_hb->add_child(file_menu);
 	file_menu->set_text(TTR("File"));
+	file_menu->set_switch_on_hover(true);
 	file_menu->get_popup()->set_hide_on_window_lose_focus(true);
-	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/new", TTR("New Script")), FILE_NEW);
-	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/new_textfile", TTR("New TextFile")), FILE_NEW_TEXTFILE);
-	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/open", TTR("Open")), FILE_OPEN);
+	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/new", TTR("New Script...")), FILE_NEW);
+	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/new_textfile", TTR("New TextFile...")), FILE_NEW_TEXTFILE);
+	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/open", TTR("Open...")), FILE_OPEN);
 	file_menu->get_popup()->add_submenu_item(TTR("Open Recent"), "RecentScripts", FILE_OPEN_RECENT);
 
 	recent_scripts = memnew(PopupMenu);
@@ -2997,7 +2997,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	file_menu->get_popup()->add_separator();
 	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/reload_script_soft", TTR("Soft Reload Script"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_R), FILE_TOOL_RELOAD_SOFT);
 	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/copy_path", TTR("Copy Script Path")), FILE_COPY_PATH);
-	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/show_in_file_system", TTR("Show In File System")), SHOW_IN_FILE_SYSTEM);
+	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/show_in_file_system", TTR("Show in FileSystem")), SHOW_IN_FILE_SYSTEM);
 	file_menu->get_popup()->add_separator();
 
 	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/history_previous", TTR("History Previous"), KEY_MASK_ALT | KEY_LEFT), WINDOW_PREV);
@@ -3010,10 +3010,11 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	theme_submenu->set_name("Theme");
 	file_menu->get_popup()->add_child(theme_submenu);
 	theme_submenu->connect("id_pressed", this, "_theme_option");
-	theme_submenu->add_shortcut(ED_SHORTCUT("script_editor/import_theme", TTR("Import Theme")), THEME_IMPORT);
+	theme_submenu->add_shortcut(ED_SHORTCUT("script_editor/import_theme", TTR("Import Theme...")), THEME_IMPORT);
 	theme_submenu->add_shortcut(ED_SHORTCUT("script_editor/reload_theme", TTR("Reload Theme")), THEME_RELOAD);
+	theme_submenu->add_separator();
 	theme_submenu->add_shortcut(ED_SHORTCUT("script_editor/save_theme", TTR("Save Theme")), THEME_SAVE);
-	theme_submenu->add_shortcut(ED_SHORTCUT("script_editor/save_theme_as", TTR("Save Theme As")), THEME_SAVE_AS);
+	theme_submenu->add_shortcut(ED_SHORTCUT("script_editor/save_theme_as", TTR("Save Theme As...")), THEME_SAVE_AS);
 
 	file_menu->get_popup()->add_separator();
 	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/close_docs", TTR("Close Docs")), CLOSE_DOCS);
@@ -3029,6 +3030,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	script_search_menu = memnew(MenuButton);
 	menu_hb->add_child(script_search_menu);
 	script_search_menu->set_text(TTR("Search"));
+	script_search_menu->set_switch_on_hover(true);
 	script_search_menu->get_popup()->set_hide_on_window_lose_focus(true);
 	script_search_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/find", TTR("Find..."), KEY_MASK_CMD | KEY_F), HELP_SEARCH_FIND);
 	script_search_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/find_next", TTR("Find Next"), KEY_F3), HELP_SEARCH_FIND_NEXT);
@@ -3038,6 +3040,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	debug_menu = memnew(MenuButton);
 	menu_hb->add_child(debug_menu);
 	debug_menu->set_text(TTR("Debug"));
+	debug_menu->set_switch_on_hover(true);
 	debug_menu->get_popup()->set_hide_on_window_lose_focus(true);
 	debug_menu->get_popup()->add_shortcut(ED_SHORTCUT("debugger/step_over", TTR("Step Over"), KEY_F10), DEBUG_NEXT);
 	debug_menu->get_popup()->add_shortcut(ED_SHORTCUT("debugger/step_into", TTR("Step Into"), KEY_F11), DEBUG_STEP);
@@ -3072,12 +3075,6 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	site_search->connect("pressed", this, "_menu_option", varray(SEARCH_WEBSITE));
 	menu_hb->add_child(site_search);
 	site_search->set_tooltip(TTR("Open Godot online documentation"));
-
-	class_search = memnew(ToolButton);
-	class_search->set_text(TTR("Classes"));
-	class_search->connect("pressed", this, "_menu_option", varray(SEARCH_CLASSES));
-	menu_hb->add_child(class_search);
-	class_search->set_tooltip(TTR("Search the class hierarchy."));
 
 	help_search = memnew(ToolButton);
 	help_search->set_text(TTR("Search Help"));
@@ -3164,17 +3161,12 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	add_child(help_search_dialog);
 	help_search_dialog->connect("go_to_help", this, "_help_class_goto");
 
-	help_index = memnew(EditorHelpIndex);
-	add_child(help_index);
-	help_index->connect("open_class", this, "_help_class_open");
-
 	find_in_files_dialog = memnew(FindInFilesDialog);
 	find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_FIND_REQUESTED, this, "_start_find_in_files", varray(false));
 	find_in_files_dialog->connect(FindInFilesDialog::SIGNAL_REPLACE_REQUESTED, this, "_start_find_in_files", varray(true));
 	add_child(find_in_files_dialog);
 	find_in_files = memnew(FindInFilesPanel);
 	find_in_files_button = editor->add_bottom_panel_item(TTR("Search Results"), find_in_files);
-	find_in_files_button->set_tooltip(TTR("Search in files"));
 	find_in_files->set_custom_minimum_size(Size2(0, 200) * EDSCALE);
 	find_in_files->connect(FindInFilesPanel::SIGNAL_RESULT_SELECTED, this, "_on_find_in_files_result_selected");
 	find_in_files->connect(FindInFilesPanel::SIGNAL_FILES_MODIFIED, this, "_on_find_in_files_modified_files");

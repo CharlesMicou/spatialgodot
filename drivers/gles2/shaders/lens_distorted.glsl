@@ -1,6 +1,15 @@
 /* clang-format off */
 [vertex]
 
+#ifdef USE_GLES_OVER_GL
+#define lowp
+#define mediump
+#define highp
+#else
+precision highp float;
+precision highp int;
+#endif
+
 attribute highp vec2 vertex; // attrib:0
 /* clang-format on */
 
@@ -19,6 +28,15 @@ void main() {
 
 /* clang-format off */
 [fragment]
+
+#ifdef USE_GLES_OVER_GL
+#define lowp
+#define mediump
+#define highp
+#else
+precision mediump float;
+precision highp int;
+#endif
 
 uniform sampler2D source; //texunit:0
 /* clang-format on */

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -157,6 +157,14 @@ bool godot_icall_GD_type_exists(MonoString *p_type) {
 	return ClassDB::class_exists(GDMonoMarshal::mono_string_to_godot(p_type));
 }
 
+void godot_icall_GD_pusherror(MonoString *p_str) {
+	ERR_PRINTS(GDMonoMarshal::mono_string_to_godot(p_str));
+}
+
+void godot_icall_GD_pushwarning(MonoString *p_str) {
+	WARN_PRINTS(GDMonoMarshal::mono_string_to_godot(p_str));
+}
+
 MonoArray *godot_icall_GD_var2bytes(MonoObject *p_var) {
 	Variant var = GDMonoMarshal::mono_object_to_variant(p_var);
 
@@ -186,6 +194,8 @@ void godot_register_gd_icalls() {
 	mono_add_internal_call("Godot.GD::godot_icall_GD_convert", (void *)godot_icall_GD_convert);
 	mono_add_internal_call("Godot.GD::godot_icall_GD_hash", (void *)godot_icall_GD_hash);
 	mono_add_internal_call("Godot.GD::godot_icall_GD_instance_from_id", (void *)godot_icall_GD_instance_from_id);
+	mono_add_internal_call("Godot.GD::godot_icall_GD_pusherror", (void *)godot_icall_GD_pusherror);
+	mono_add_internal_call("Godot.GD::godot_icall_GD_pushwarning", (void *)godot_icall_GD_pushwarning);
 	mono_add_internal_call("Godot.GD::godot_icall_GD_print", (void *)godot_icall_GD_print);
 	mono_add_internal_call("Godot.GD::godot_icall_GD_printerr", (void *)godot_icall_GD_printerr);
 	mono_add_internal_call("Godot.GD::godot_icall_GD_printraw", (void *)godot_icall_GD_printraw);

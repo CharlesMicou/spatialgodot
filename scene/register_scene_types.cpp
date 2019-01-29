@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -210,20 +210,18 @@
 #include "scene/resources/physics_material.h"
 #endif
 
-static ResourceFormatLoaderTheme *resource_loader_theme = NULL;
+static Ref<ResourceFormatSaverText> resource_saver_text;
+static Ref<ResourceFormatLoaderText> resource_loader_text;
 
-static ResourceFormatSaverText *resource_saver_text = NULL;
-static ResourceFormatLoaderText *resource_loader_text = NULL;
+static Ref<ResourceFormatLoaderDynamicFont> resource_loader_dynamic_font;
 
-static ResourceFormatLoaderDynamicFont *resource_loader_dynamic_font = NULL;
+static Ref<ResourceFormatLoaderStreamTexture> resource_loader_stream_texture;
+static Ref<ResourceFormatLoaderTextureLayered> resource_loader_texture_layered;
 
-static ResourceFormatLoaderStreamTexture *resource_loader_stream_texture = NULL;
-static ResourceFormatLoaderTextureLayered *resource_loader_texture_layered = NULL;
+static Ref<ResourceFormatLoaderBMFont> resource_loader_bmfont;
 
-static ResourceFormatLoaderBMFont *resource_loader_bmfont = NULL;
-
-static ResourceFormatSaverShader *resource_saver_shader = NULL;
-static ResourceFormatLoaderShader *resource_loader_shader = NULL;
+static Ref<ResourceFormatSaverShader> resource_saver_shader;
+static Ref<ResourceFormatLoaderShader> resource_loader_shader;
 
 void register_scene_types() {
 
@@ -233,31 +231,28 @@ void register_scene_types() {
 
 	Node::init_node_hrcr();
 
-	resource_loader_dynamic_font = memnew(ResourceFormatLoaderDynamicFont);
+	resource_loader_dynamic_font.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_dynamic_font);
 
-	resource_loader_stream_texture = memnew(ResourceFormatLoaderStreamTexture);
+	resource_loader_stream_texture.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_stream_texture);
 
-	resource_loader_texture_layered = memnew(ResourceFormatLoaderTextureLayered);
+	resource_loader_texture_layered.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_texture_layered);
 
-	resource_loader_theme = memnew(ResourceFormatLoaderTheme);
-	ResourceLoader::add_resource_format_loader(resource_loader_theme);
-
-	resource_saver_text = memnew(ResourceFormatSaverText);
+	resource_saver_text.instance();
 	ResourceSaver::add_resource_format_saver(resource_saver_text, true);
 
-	resource_loader_text = memnew(ResourceFormatLoaderText);
+	resource_loader_text.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_text, true);
 
-	resource_saver_shader = memnew(ResourceFormatSaverShader);
+	resource_saver_shader.instance();
 	ResourceSaver::add_resource_format_saver(resource_saver_shader, true);
 
-	resource_loader_shader = memnew(ResourceFormatLoaderShader);
+	resource_loader_shader.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_shader, true);
 
-	resource_loader_bmfont = memnew(ResourceFormatLoaderBMFont);
+	resource_loader_bmfont.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_bmfont, true);
 
 	OS::get_singleton()->yield(); //may take time to init
@@ -457,7 +452,6 @@ void register_scene_types() {
 	ClassDB::register_class<Curve3D>();
 	ClassDB::register_class<Path>();
 	ClassDB::register_class<PathFollow>();
-	ClassDB::register_class<OrientedPathFollow>();
 	ClassDB::register_class<VisibilityNotifier>();
 	ClassDB::register_class<VisibilityEnabler>();
 	ClassDB::register_class<WorldEnvironment>();
@@ -740,29 +734,31 @@ void unregister_scene_types() {
 
 	clear_default_theme();
 
-	memdelete(resource_loader_dynamic_font);
-	memdelete(resource_loader_stream_texture);
-	memdelete(resource_loader_texture_layered);
-	memdelete(resource_loader_theme);
+	ResourceLoader::remove_resource_format_loader(resource_loader_dynamic_font);
+	resource_loader_dynamic_font.unref();
+
+	ResourceLoader::remove_resource_format_loader(resource_loader_texture_layered);
+	resource_loader_texture_layered.unref();
+
+	ResourceLoader::remove_resource_format_loader(resource_loader_stream_texture);
+	resource_loader_stream_texture.unref();
 
 	DynamicFont::finish_dynamic_fonts();
 
-	if (resource_saver_text) {
-		memdelete(resource_saver_text);
-	}
-	if (resource_loader_text) {
-		memdelete(resource_loader_text);
-	}
+	ResourceSaver::remove_resource_format_saver(resource_saver_text);
+	resource_saver_text.unref();
 
-	if (resource_saver_shader) {
-		memdelete(resource_saver_shader);
-	}
-	if (resource_loader_shader) {
-		memdelete(resource_loader_shader);
-	}
-	if (resource_loader_bmfont) {
-		memdelete(resource_loader_bmfont);
-	}
+	ResourceLoader::remove_resource_format_loader(resource_loader_text);
+	resource_loader_text.unref();
+
+	ResourceSaver::remove_resource_format_saver(resource_saver_shader);
+	resource_saver_shader.unref();
+
+	ResourceLoader::remove_resource_format_loader(resource_loader_shader);
+	resource_loader_shader.unref();
+
+	ResourceLoader::remove_resource_format_loader(resource_loader_bmfont);
+	resource_loader_bmfont.unref();
 
 	SpatialMaterial::finish_shaders();
 	ParticlesMaterial::finish_shaders();

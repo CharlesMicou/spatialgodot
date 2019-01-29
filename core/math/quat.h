@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -115,20 +115,20 @@ public:
 		z = p_z;
 		w = p_w;
 	}
-	inline Quat(real_t p_x, real_t p_y, real_t p_z, real_t p_w) {
-		x = p_x;
-		y = p_y;
-		z = p_z;
-		w = p_w;
+	inline Quat(real_t p_x, real_t p_y, real_t p_z, real_t p_w) :
+			x(p_x),
+			y(p_y),
+			z(p_z),
+			w(p_w) {
 	}
 	Quat(const Vector3 &axis, const real_t &angle) { set_axis_angle(axis, angle); }
 
 	Quat(const Vector3 &euler) { set_euler(euler); }
-	Quat(const Quat &q) {
-		x = q.x;
-		y = q.y;
-		z = q.z;
-		w = q.w;
+	Quat(const Quat &q) :
+			x(q.x),
+			y(q.y),
+			z(q.z),
+			w(q.w) {
 	}
 
 	Quat(const Vector3 &v0, const Vector3 &v1) // shortest arc
@@ -153,9 +153,11 @@ public:
 		}
 	}
 
-	inline Quat() {
-		x = y = z = 0;
-		w = 1;
+	inline Quat() :
+			x(0),
+			y(0),
+			z(0),
+			w(1) {
 	}
 };
 

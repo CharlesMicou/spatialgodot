@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -29,6 +29,7 @@
 /*************************************************************************/
 
 #include "find_in_files.h"
+
 #include "core/os/dir_access.h"
 #include "core/os/os.h"
 #include "editor_node.h"
@@ -42,8 +43,6 @@
 #include "scene/gui/line_edit.h"
 #include "scene/gui/progress_bar.h"
 #include "scene/gui/tree.h"
-
-#define ROOT_PREFIX "res://"
 
 const char *FindInFiles::SIGNAL_RESULT_FOUND = "result_found";
 const char *FindInFiles::SIGNAL_FINISHED = "finished";
@@ -88,9 +87,6 @@ static bool find_next(const String &line, String pattern, int from, bool match_c
 
 //--------------------------------------------------------------------------------
 FindInFiles::FindInFiles() {
-	_root_prefix = ROOT_PREFIX;
-	_extension_filter.insert("gd");
-	_extension_filter.insert("cs");
 	_searching = false;
 	_whole_words = true;
 	_match_case = true;
@@ -183,7 +179,7 @@ void FindInFiles::_iterate() {
 			_current_dir = _current_dir.plus_file(folder_name);
 
 			PoolStringArray sub_dirs;
-			_scan_dir(_root_prefix + _current_dir, sub_dirs);
+			_scan_dir("res://" + _current_dir, sub_dirs);
 
 			_folders_stack.push_back(sub_dirs);
 
@@ -301,8 +297,7 @@ const char *FindInFilesDialog::SIGNAL_REPLACE_REQUESTED = "replace_requested";
 
 FindInFilesDialog::FindInFilesDialog() {
 
-	set_custom_minimum_size(Size2(400, 190) * EDSCALE);
-	set_resizable(true);
+	set_custom_minimum_size(Size2(500 * EDSCALE, 0));
 	set_title(TTR("Find in Files"));
 
 	VBoxContainer *vbc = memnew(VBoxContainer);
@@ -317,7 +312,7 @@ FindInFilesDialog::FindInFilesDialog() {
 	vbc->add_child(gc);
 
 	Label *find_label = memnew(Label);
-	find_label->set_text(TTR("Find: "));
+	find_label->set_text(TTR("Find:"));
 	gc->add_child(find_label);
 
 	_search_text_line_edit = memnew(LineEdit);
@@ -326,10 +321,7 @@ FindInFilesDialog::FindInFilesDialog() {
 	_search_text_line_edit->connect("text_entered", this, "_on_search_text_entered");
 	gc->add_child(_search_text_line_edit);
 
-	{
-		Control *placeholder = memnew(Control);
-		gc->add_child(placeholder);
-	}
+	gc->add_child(memnew(Control)); // Space to mantain the grid aligned.
 
 	{
 		HBoxContainer *hbc = memnew(HBoxContainer);
@@ -346,14 +338,14 @@ FindInFilesDialog::FindInFilesDialog() {
 	}
 
 	Label *folder_label = memnew(Label);
-	folder_label->set_text(TTR("Folder: "));
+	folder_label->set_text(TTR("Folder:"));
 	gc->add_child(folder_label);
 
 	{
 		HBoxContainer *hbc = memnew(HBoxContainer);
 
 		Label *prefix_label = memnew(Label);
-		prefix_label->set_text(ROOT_PREFIX);
+		prefix_label->set_text("res://");
 		hbc->add_child(prefix_label);
 
 		_folder_line_edit = memnew(LineEdit);
@@ -374,15 +366,18 @@ FindInFilesDialog::FindInFilesDialog() {
 	}
 
 	Label *filter_label = memnew(Label);
-	filter_label->set_text(TTR("Filter: "));
+	filter_label->set_text(TTR("Filters:"));
 	gc->add_child(filter_label);
 
 	{
 		HBoxContainer *hbc = memnew(HBoxContainer);
 
+		// TODO: Unhardcode this.
 		Vector<String> exts;
 		exts.push_back("gd");
-		exts.push_back("cs");
+		if (Engine::get_singleton()->has_singleton("GodotSharp"))
+			exts.push_back("cs");
+		exts.push_back("shader");
 
 		for (int i = 0; i < exts.size(); ++i) {
 			CheckBox *cb = memnew(CheckBox);
@@ -395,39 +390,14 @@ FindInFilesDialog::FindInFilesDialog() {
 		gc->add_child(hbc);
 	}
 
-	{
-		Control *placeholder = memnew(Control);
-		placeholder->set_custom_minimum_size(Size2(0, EDSCALE * 16));
-		vbc->add_child(placeholder);
-	}
+	_find_button = add_button(TTR("Find..."), false, "find");
+	_find_button->set_disabled(true);
 
-	{
-		HBoxContainer *hbc = memnew(HBoxContainer);
-		hbc->set_alignment(HBoxContainer::ALIGN_CENTER);
+	_replace_button = add_button(TTR("Replace..."), false, "replace");
+	_replace_button->set_disabled(true);
 
-		_find_button = add_button(TTR("Find..."), false, "find");
-		_find_button->set_disabled(true);
-
-		{
-			Control *placeholder = memnew(Control);
-			placeholder->set_custom_minimum_size(Size2(EDSCALE * 16, 0));
-			hbc->add_child(placeholder);
-		}
-
-		_replace_button = add_button(TTR("Replace..."), false, "replace");
-		_replace_button->set_disabled(true);
-
-		{
-			Control *placeholder = memnew(Control);
-			placeholder->set_custom_minimum_size(Size2(EDSCALE * 16, 0));
-			hbc->add_child(placeholder);
-		}
-
-		Button *cancel_button = get_ok();
-		cancel_button->set_text(TTR("Cancel"));
-
-		vbc->add_child(hbc);
-	}
+	Button *cancel_button = get_ok();
+	cancel_button->set_text(TTR("Cancel"));
 }
 
 void FindInFilesDialog::set_search_text(String text) {

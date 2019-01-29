@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -455,7 +455,7 @@ String DirAccessPack::get_current_dir() {
 
 	while (pd->parent) {
 		pd = pd->parent;
-		p = pd->name + "/" + p;
+		p = pd->name.plus_file(p);
 	}
 
 	return "res://" + p;
@@ -488,6 +488,10 @@ Error DirAccessPack::remove(String p_name) {
 size_t DirAccessPack::get_space_left() {
 
 	return 0;
+}
+
+String DirAccessPack::get_filesystem_type() const {
+	return "PCK";
 }
 
 DirAccessPack::DirAccessPack() {

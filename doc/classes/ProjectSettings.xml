@@ -172,8 +172,8 @@
 			Path to an image used for boot splash.
 		</member>
 		<member name="application/config/custom_user_dir_name" type="String" setter="" getter="">
-			This directory is used for storing persistent data (user:// filesystem). If a custom name is set, then system paths will be used to store this on Desktop (AppData on Windows, user ~/.config on Unixes, etc), else the Godot config folder is used. This name needs to be unique, and it's recommended to set it to something before publishing.
-		the "use_custom_user_dir" setting must be enabled for this to take effect.
+			This user directory is used for storing persistent data ([code]user://[/code] filesystem). By default (no custom name defined), [code]user://[/code] resolves to a project-specific folder in Godot's own configuration folder (see [method OS.get_user_data_dir]). If a custom directory name is defined, this name will be used instead and appended to the system-specific user data directory (same parent folder as the Godot configuration folder documented in [method OS.get_user_data_dir]).
+			The [member application/config/use_custom_user_dir] setting must be enabled for this to take effect.
 		</member>
 		<member name="application/config/icon" type="String" setter="" getter="">
 			Icon used for the project, set when project loads. Exporters will use this icon when possible to.
@@ -181,8 +181,11 @@
 		<member name="application/config/name" type="String" setter="" getter="">
 			Name of the project. It is used from both project manager and by the exporters. Overriding this as name.locale allows setting it in multiple languages.
 		</member>
+		<member name="application/config/project_settings_override" type="String" setter="" getter="">
+			Specifies a file to override project settings. For example: [code]user://custom_settings.cfg[/code].
+		</member>
 		<member name="application/config/use_custom_user_dir" type="bool" setter="" getter="">
-			Allow the project to save to it's own custom user dir (in AppData on windows or ~/.config on unixes). This setting only works for desktop exporters. A name must be set in the "custom_user_dir_name" setting for this to take effect.
+			Allow the project to save to its own custom user dir (see [member application/config/custom_user_dir_name]). This setting only works for desktop platforms. A name must be set in the [member application/config/custom_user_dir_name] setting for this to take effect.
 		</member>
 		<member name="application/run/disable_stderr" type="bool" setter="" getter="">
 			Disable printing to stderr on exported build.
@@ -210,8 +213,13 @@
 		</member>
 		<member name="audio/driver" type="String" setter="" getter="">
 		</member>
+		<member name="audio/enable_audio_input" type="bool" setter="" getter="">
+			This option should be enabled if project works with microphone.
+		</member>
 		<member name="audio/mix_rate" type="int" setter="" getter="">
 			Mix rate used for audio. In general, it's better to not touch this and leave it to the host operating system.
+		</member>
+		<member name="audio/output_latency" type="int" setter="" getter="">
 		</member>
 		<member name="audio/video_delay_compensation_ms" type="int" setter="" getter="">
 			Setting to hardcode audio delay when playing video. Best to leave this untouched unless you know what you are doing.
@@ -229,6 +237,8 @@
 			Enable long distance matching in zstd.
 		</member>
 		<member name="compression/formats/zstd/window_log_size" type="int" setter="" getter="">
+		</member>
+		<member name="debug/gdscript/completion/autocomplete_setters_and_getters" type="bool" setter="" getter="">
 		</member>
 		<member name="debug/gdscript/warnings/constant_used_as_function" type="bool" setter="" getter="">
 		</member>
@@ -372,7 +382,7 @@
 		<member name="gui/timers/incremental_search_max_interval_msec" type="int" setter="" getter="">
 			Timer setting for incremental search in Tree, IntemList, etc. controls.
 		</member>
-		<member name="gui/timers/text_edit_idle_detect_sec" type="int" setter="" getter="">
+		<member name="gui/timers/text_edit_idle_detect_sec" type="float" setter="" getter="">
 			Timer for detecting idle in the editor.
 		</member>
 		<member name="input/ui_accept" type="Dictionary" setter="" getter="">
@@ -573,24 +583,16 @@
 			Log all output to a file.
 		</member>
 		<member name="logging/file_logging/log_path" type="String" setter="" getter="">
-			Path to logs withint he project. Using an user:// based path is recommended.
+			Path to logs withint he project. Using an [code]user://[/code] based path is recommended.
 		</member>
 		<member name="logging/file_logging/max_log_files" type="int" setter="" getter="">
-			Amount of log files (used for rotation)/
+			Amount of log files (used for rotation).
 		</member>
 		<member name="memory/limits/message_queue/max_size_kb" type="int" setter="" getter="">
 			Godot uses a message queue to defer some function calls. If you run out of space on it (you will see an error), you can increase the size here.
 		</member>
 		<member name="memory/limits/multithreaded_server/rid_pool_prealloc" type="int" setter="" getter="">
 			This is used by servers when used in multi threading mode (servers and visual). RIDs are preallocated to avoid stalling the server requesting them on threads. If servers get stalled too often when loading resources in a thread, increase this number.
-		</member>
-		<member name="mono/debugger_agent/port" type="int" setter="" getter="">
-		</member>
-		<member name="mono/debugger_agent/wait_for_debugger" type="bool" setter="" getter="">
-		</member>
-		<member name="mono/debugger_agent/wait_timeout" type="int" setter="" getter="">
-		</member>
-		<member name="mono/export/include_scripts_content" type="bool" setter="" getter="">
 		</member>
 		<member name="network/limits/debugger_stdout/max_chars_per_second" type="int" setter="" getter="">
 			Maximum amount of characters allowed to send as output from the debugger. Over this value, content is dropped. This helps not to stall the debugger connection.
@@ -604,8 +606,21 @@
 		<member name="network/limits/packet_peer_stream/max_buffer_po2" type="int" setter="" getter="">
 			Default size of packet peer stream for deserializing godot data. Over this size, data is dropped.
 		</member>
-		<member name="network/remote_fs/max_pages" type="int" setter="" getter="">
-			Maximum amount of pages used for remote filesystem (used by debugging).
+		<member name="network/limits/websocket_client/max_in_buffer_kb" type="int" setter="" getter="">
+		</member>
+		<member name="network/limits/websocket_client/max_in_packets" type="int" setter="" getter="">
+		</member>
+		<member name="network/limits/websocket_client/max_out_buffer_kb" type="int" setter="" getter="">
+		</member>
+		<member name="network/limits/websocket_client/max_out_packets" type="int" setter="" getter="">
+		</member>
+		<member name="network/limits/websocket_server/max_in_buffer_kb" type="int" setter="" getter="">
+		</member>
+		<member name="network/limits/websocket_server/max_in_packets" type="int" setter="" getter="">
+		</member>
+		<member name="network/limits/websocket_server/max_out_buffer_kb" type="int" setter="" getter="">
+		</member>
+		<member name="network/limits/websocket_server/max_out_packets" type="int" setter="" getter="">
 		</member>
 		<member name="network/remote_fs/page_read_ahead" type="int" setter="" getter="">
 			Amount of read ahead used by remote filesystem. Improves latency.
@@ -652,8 +667,12 @@
 		<member name="rendering/limits/rendering/max_renderable_elements" type="int" setter="" getter="">
 			Max amount of elements renderable in a frame. If more than this are visible per frame, they will be dropped. Keep in mind elements refer to mesh surfaces and not mesh themselves.
 		</member>
-		<member name="rendering/limits/time/time_rollover_secs" type="int" setter="" getter="">
+		<member name="rendering/limits/time/time_rollover_secs" type="float" setter="" getter="">
 			Shaders have a time variable that constantly increases. At some point it needs to be rolled back to zero to avoid numerical errors on shader animations. This setting specifies when.
+		</member>
+		<member name="rendering/quality/2d/gles2_use_nvidia_rect_flicker_workaround" type="bool" setter="" getter="">
+			Some Nvidia GPU drivers have a bug, which produces flickering issues for the [code]draw_rect[/code] method, especially as used in [TileMap]. Refer to https://github.com/godotengine/godot/issues/9913 for details.
+			If [code]true[/code], this option enables a "safe" code path for such Nvidia GPUs, at the cost of performance. This option only impacts the GLES2 rendering backend (so the bug stays if you use GLES3), and only desktop platforms. Default value: [code]false[/code].
 		</member>
 		<member name="rendering/quality/2d/use_pixel_snap" type="bool" setter="" getter="">
 			Force snapping of polygons to pixels in 2D rendering. May help in some pixel art styles.
@@ -691,7 +710,7 @@
 		<member name="rendering/quality/reflections/high_quality_ggx.mobile" type="bool" setter="" getter="">
 		</member>
 		<member name="rendering/quality/reflections/texture_array_reflections" type="bool" setter="" getter="">
-			For reflection probes and panorama backgrounds (sky), use a texure array instead of mipmaps. This reduces jitter noise on reflections, but costs more performance and memory.
+			For reflection probes and panorama backgrounds (sky), use a texture array instead of mipmaps. This reduces jitter noise on reflections, but costs more performance and memory.
 		</member>
 		<member name="rendering/quality/reflections/texture_array_reflections.mobile" type="bool" setter="" getter="">
 		</member>
@@ -704,7 +723,7 @@
 		<member name="rendering/quality/shading/force_lambert_over_burley.mobile" type="bool" setter="" getter="">
 		</member>
 		<member name="rendering/quality/shading/force_vertex_shading" type="bool" setter="" getter="">
-			Force vertex shading for all rendering. This can increase performance a lot, but also reduces quality inmensely. Can work to optimize on very low end mobile.
+			Force vertex shading for all rendering. This can increase performance a lot, but also reduces quality immensely. Can work to optimize on very low end mobile.
 		</member>
 		<member name="rendering/quality/shading/force_vertex_shading.mobile" type="bool" setter="" getter="">
 		</member>

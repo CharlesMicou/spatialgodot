@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -242,7 +242,8 @@ public:
 
 	virtual void set_ime_active(const bool p_active) {}
 	virtual void set_ime_position(const Point2 &p_pos) {}
-	virtual void set_ime_intermediate_text_callback(ImeCallback p_callback, void *p_inp) {}
+	virtual Point2 get_ime_selection() const { return Point2(); }
+	virtual String get_ime_text() const { return String(); }
 
 	virtual Error open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path = false) { return ERR_UNAVAILABLE; }
 	virtual Error close_dynamic_library(void *p_library_handle) { return ERR_UNAVAILABLE; }
@@ -327,6 +328,7 @@ public:
 	virtual TimeZoneInfo get_time_zone_info() const = 0;
 	virtual uint64_t get_unix_time() const;
 	virtual uint64_t get_system_time_secs() const;
+	virtual uint64_t get_system_time_msecs() const;
 
 	virtual void delay_usec(uint32_t p_usec) const = 0;
 	virtual uint64_t get_ticks_usec() const = 0;
@@ -480,6 +482,7 @@ public:
 	enum EngineContext {
 		CONTEXT_EDITOR,
 		CONTEXT_PROJECTMAN,
+		CONTEXT_ENGINE,
 	};
 
 	virtual void set_context(int p_context);

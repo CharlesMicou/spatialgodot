@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1766,6 +1766,15 @@ int Image::get_image_required_mipmaps(int p_width, int p_height, Format p_format
 	return mm;
 }
 
+int Image::get_image_mipmap_offset(int p_width, int p_height, Format p_format, int p_mipmap) {
+
+	if (p_mipmap <= 0) {
+		return 0;
+	}
+	int mm;
+	return _get_dst_image_size(p_width, p_height, p_format, mm, p_mipmap - 1);
+}
+
 bool Image::is_compressed() const {
 	return format > FORMAT_RGBE9995;
 }
@@ -1922,7 +1931,8 @@ void Image::blit_rect(const Ref<Image> &p_src, const Rect2 &p_src_rect, const Po
 	if (clipped_src_rect.size.x <= 0 || clipped_src_rect.size.y <= 0)
 		return;
 
-	Rect2i dest_rect = Rect2i(0, 0, width, height).clip(Rect2i(p_dest, clipped_src_rect.size));
+	Point2 src_underscan = Point2(MIN(0, p_src_rect.position.x), MIN(0, p_src_rect.position.y));
+	Rect2i dest_rect = Rect2i(0, 0, width, height).clip(Rect2i(p_dest - src_underscan, clipped_src_rect.size));
 
 	PoolVector<uint8_t>::Write wp = data.write();
 	uint8_t *dst_data_ptr = wp.ptr();
@@ -1976,7 +1986,8 @@ void Image::blit_rect_mask(const Ref<Image> &p_src, const Ref<Image> &p_mask, co
 	if (clipped_src_rect.size.x <= 0 || clipped_src_rect.size.y <= 0)
 		return;
 
-	Rect2i dest_rect = Rect2i(0, 0, width, height).clip(Rect2i(p_dest, clipped_src_rect.size));
+	Point2 src_underscan = Point2(MIN(0, p_src_rect.position.x), MIN(0, p_src_rect.position.y));
+	Rect2i dest_rect = Rect2i(0, 0, width, height).clip(Rect2i(p_dest - src_underscan, clipped_src_rect.size));
 
 	PoolVector<uint8_t>::Write wp = data.write();
 	uint8_t *dst_data_ptr = wp.ptr();
@@ -2033,7 +2044,8 @@ void Image::blend_rect(const Ref<Image> &p_src, const Rect2 &p_src_rect, const P
 	if (clipped_src_rect.size.x <= 0 || clipped_src_rect.size.y <= 0)
 		return;
 
-	Rect2i dest_rect = Rect2i(0, 0, width, height).clip(Rect2i(p_dest, clipped_src_rect.size));
+	Point2 src_underscan = Point2(MIN(0, p_src_rect.position.x), MIN(0, p_src_rect.position.y));
+	Rect2i dest_rect = Rect2i(0, 0, width, height).clip(Rect2i(p_dest - src_underscan, clipped_src_rect.size));
 
 	lock();
 	Ref<Image> img = p_src;
@@ -2087,7 +2099,8 @@ void Image::blend_rect_mask(const Ref<Image> &p_src, const Ref<Image> &p_mask, c
 	if (clipped_src_rect.size.x <= 0 || clipped_src_rect.size.y <= 0)
 		return;
 
-	Rect2i dest_rect = Rect2i(0, 0, width, height).clip(Rect2i(p_dest, clipped_src_rect.size));
+	Point2 src_underscan = Point2(MIN(0, p_src_rect.position.x), MIN(0, p_src_rect.position.y));
+	Rect2i dest_rect = Rect2i(0, 0, width, height).clip(Rect2i(p_dest - src_underscan, clipped_src_rect.size));
 
 	lock();
 	Ref<Image> img = p_src;
@@ -2618,6 +2631,9 @@ void Image::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("load_webp_from_buffer", "buffer"), &Image::load_webp_from_buffer);
 
 	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "_set_data", "_get_data");
+
+	BIND_CONSTANT(MAX_WIDTH);
+	BIND_CONSTANT(MAX_HEIGHT);
 
 	BIND_ENUM_CONSTANT(FORMAT_L8); //luminance
 	BIND_ENUM_CONSTANT(FORMAT_LA8); //luminance-alpha

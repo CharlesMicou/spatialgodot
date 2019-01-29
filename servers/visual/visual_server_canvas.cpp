@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -51,6 +51,30 @@ void VisualServerCanvas::_render_canvas_item_tree(Item *p_canvas_item, const Tra
 	}
 }
 
+void _collect_ysort_children(VisualServerCanvas::Item *p_canvas_item, Transform2D p_transform, VisualServerCanvas::Item **r_items, int &r_index) {
+	int child_item_count = p_canvas_item->child_items.size();
+	VisualServerCanvas::Item **child_items = p_canvas_item->child_items.ptrw();
+	for (int i = 0; i < child_item_count; i++) {
+		if (r_items) {
+			r_items[r_index] = child_items[i];
+			child_items[i]->ysort_xform = p_transform;
+			child_items[i]->ysort_pos = p_transform.xform(child_items[i]->xform.elements[2]);
+		}
+
+		r_index++;
+
+		if (child_items[i]->sort_y)
+			_collect_ysort_children(child_items[i], p_transform * child_items[i]->xform, r_items, r_index);
+	}
+}
+
+void _mark_ysort_dirty(VisualServerCanvas::Item *ysort_owner, RID_Owner<VisualServerCanvas::Item> &canvas_item_owner) {
+	while (ysort_owner && ysort_owner->sort_y) {
+		ysort_owner->ysort_children_count = -1;
+		ysort_owner = canvas_item_owner.owns(ysort_owner->parent) ? canvas_item_owner.getornull(ysort_owner->parent) : NULL;
+	}
+}
+
 void VisualServerCanvas::_render_canvas_item(Item *p_canvas_item, const Transform2D &p_transform, const Rect2 &p_clip_rect, const Color &p_modulate, int p_z, RasterizerCanvas::Item **z_list, RasterizerCanvas::Item **z_last_list, Item *p_canvas_clip, Item *p_material_owner) {
 
 	Item *ci = p_canvas_item;
@@ -58,10 +82,10 @@ void VisualServerCanvas::_render_canvas_item(Item *p_canvas_item, const Transfor
 	if (!ci->visible)
 		return;
 
-	if (p_canvas_item->children_order_dirty) {
+	if (ci->children_order_dirty) {
 
-		p_canvas_item->child_items.sort_custom<ItemIndexSort>();
-		p_canvas_item->children_order_dirty = false;
+		ci->child_items.sort_custom<ItemIndexSort>();
+		ci->children_order_dirty = false;
 	}
 
 	Rect2 rect = ci->get_rect();
@@ -82,8 +106,7 @@ void VisualServerCanvas::_render_canvas_item(Item *p_canvas_item, const Transfor
 		return;
 
 	int child_item_count = ci->child_items.size();
-	Item **child_items = (Item **)alloca(child_item_count * sizeof(Item *));
-	copymem(child_items, ci->child_items.ptr(), child_item_count * sizeof(Item *));
+	Item **child_items = ci->child_items.ptrw();
 
 	if (ci->clip) {
 		if (p_canvas_clip != NULL) {
@@ -99,6 +122,17 @@ void VisualServerCanvas::_render_canvas_item(Item *p_canvas_item, const Transfor
 
 	if (ci->sort_y) {
 
+		if (ci->ysort_children_count == -1) {
+			ci->ysort_children_count = 0;
+			_collect_ysort_children(ci, Transform2D(), NULL, ci->ysort_children_count);
+		}
+
+		child_item_count = ci->ysort_children_count;
+		child_items = (Item **)alloca(child_item_count * sizeof(Item *));
+
+		int i = 0;
+		_collect_ysort_children(ci, Transform2D(), child_items, i);
+
 		SortArray<Item *, ItemPtrSort> sorter;
 		sorter.sort(child_items, child_item_count);
 	}
@@ -110,9 +144,13 @@ void VisualServerCanvas::_render_canvas_item(Item *p_canvas_item, const Transfor
 
 	for (int i = 0; i < child_item_count; i++) {
 
-		if (!child_items[i]->behind)
+		if (!child_items[i]->behind || (ci->sort_y && child_items[i]->sort_y))
 			continue;
-		_render_canvas_item(child_items[i], xform, p_clip_rect, modulate, p_z, z_list, z_last_list, (Item *)ci->final_clip_owner, p_material_owner);
+		if (ci->sort_y) {
+			_render_canvas_item(child_items[i], xform * child_items[i]->ysort_xform, p_clip_rect, modulate, p_z, z_list, z_last_list, (Item *)ci->final_clip_owner, p_material_owner);
+		} else {
+			_render_canvas_item(child_items[i], xform, p_clip_rect, modulate, p_z, z_list, z_last_list, (Item *)ci->final_clip_owner, p_material_owner);
+		}
 	}
 
 	if (ci->copy_back_buffer) {
@@ -148,9 +186,13 @@ void VisualServerCanvas::_render_canvas_item(Item *p_canvas_item, const Transfor
 
 	for (int i = 0; i < child_item_count; i++) {
 
-		if (child_items[i]->behind)
+		if (child_items[i]->behind || (ci->sort_y && child_items[i]->sort_y))
 			continue;
-		_render_canvas_item(child_items[i], xform, p_clip_rect, modulate, p_z, z_list, z_last_list, (Item *)ci->final_clip_owner, p_material_owner);
+		if (ci->sort_y) {
+			_render_canvas_item(child_items[i], xform * child_items[i]->ysort_xform, p_clip_rect, modulate, p_z, z_list, z_last_list, (Item *)ci->final_clip_owner, p_material_owner);
+		} else {
+			_render_canvas_item(child_items[i], xform, p_clip_rect, modulate, p_z, z_list, z_last_list, (Item *)ci->final_clip_owner, p_material_owner);
+		}
 	}
 }
 
@@ -300,6 +342,8 @@ void VisualServerCanvas::canvas_item_set_parent(RID p_item, RID p_parent) {
 
 			Item *item_owner = canvas_item_owner.get(canvas_item->parent);
 			item_owner->child_items.erase(canvas_item);
+
+			_mark_ysort_dirty(item_owner, canvas_item_owner);
 		}
 
 		canvas_item->parent = RID();
@@ -318,6 +362,8 @@ void VisualServerCanvas::canvas_item_set_parent(RID p_item, RID p_parent) {
 			Item *item_owner = canvas_item_owner.get(p_parent);
 			item_owner->child_items.push_back(canvas_item);
 			item_owner->children_order_dirty = true;
+
+			_mark_ysort_dirty(item_owner, canvas_item_owner);
 
 		} else {
 
@@ -776,7 +822,7 @@ void VisualServerCanvas::canvas_item_add_mesh(RID p_item, const RID &p_mesh, RID
 
 	canvas_item->commands.push_back(m);
 }
-void VisualServerCanvas::canvas_item_add_particles(RID p_item, RID p_particles, RID p_texture, RID p_normal, int p_h_frames, int p_v_frames) {
+void VisualServerCanvas::canvas_item_add_particles(RID p_item, RID p_particles, RID p_texture, RID p_normal) {
 
 	Item *canvas_item = canvas_item_owner.getornull(p_item);
 	ERR_FAIL_COND(!canvas_item);
@@ -786,8 +832,6 @@ void VisualServerCanvas::canvas_item_add_particles(RID p_item, RID p_particles, 
 	part->particles = p_particles;
 	part->texture = p_texture;
 	part->normal_map = p_normal;
-	part->h_frames = p_h_frames;
-	part->v_frames = p_v_frames;
 
 	//take the chance and request processing for them, at least once until they become visible again
 	VSG::storage->particles_request_process(p_particles);
@@ -828,6 +872,8 @@ void VisualServerCanvas::canvas_item_set_sort_children_by_y(RID p_item, bool p_e
 	ERR_FAIL_COND(!canvas_item);
 
 	canvas_item->sort_y = p_enable;
+
+	_mark_ysort_dirty(canvas_item, canvas_item_owner);
 }
 void VisualServerCanvas::canvas_item_set_z_index(RID p_item, int p_z) {
 
@@ -1304,6 +1350,8 @@ bool VisualServerCanvas::free(RID p_rid) {
 
 				Item *item_owner = canvas_item_owner.get(canvas_item->parent);
 				item_owner->child_items.erase(canvas_item);
+
+				_mark_ysort_dirty(item_owner, canvas_item_owner);
 			}
 		}
 

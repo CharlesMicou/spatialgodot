@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -216,7 +216,7 @@ void ResourceImporterTexture::get_import_options(List<ImportOption> *r_options, 
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "stream"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "size_limit", PROPERTY_HINT_RANGE, "0,4096,1"), 0));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "detect_3d"), p_preset == PRESET_DETECT));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::REAL, "svg/scale", PROPERTY_HINT_RANGE, "0.001,100,0.1"), 1.0));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::REAL, "svg/scale", PROPERTY_HINT_RANGE, "0.001,100,0.001"), 1.0));
 }
 
 void ResourceImporterTexture::_save_stex(const Ref<Image> &p_image, const String &p_to_path, int p_compress_mode, float p_lossy_quality, Image::CompressMode p_vram_compression, bool p_mipmaps, int p_texture_flags, bool p_streamable, bool p_detect_3d, bool p_detect_srgb, bool p_force_rgbe, bool p_detect_normal, bool p_force_normal) {
@@ -235,7 +235,7 @@ void ResourceImporterTexture::_save_stex(const Ref<Image> &p_image, const String
 
 	if (p_streamable)
 		format |= StreamTexture::FORMAT_BIT_STREAM;
-	if (p_mipmaps || p_compress_mode == COMPRESS_VIDEO_RAM) //VRAM always uses mipmaps
+	if (p_mipmaps)
 		format |= StreamTexture::FORMAT_BIT_HAS_MIPMAPS; //mipmaps bit
 	if (p_detect_3d)
 		format |= StreamTexture::FORMAT_BIT_DETECT_3D;
@@ -310,7 +310,9 @@ void ResourceImporterTexture::_save_stex(const Ref<Image> &p_image, const String
 		case COMPRESS_VIDEO_RAM: {
 
 			Ref<Image> image = p_image->duplicate();
-			image->generate_mipmaps(p_force_normal);
+			if (p_mipmaps) {
+				image->generate_mipmaps(p_force_normal);
+			}
 
 			if (p_force_rgbe && image->get_format() >= Image::FORMAT_R8 && image->get_format() <= Image::FORMAT_RGBE9995) {
 				image->convert(Image::FORMAT_RGBE9995);
@@ -413,7 +415,7 @@ Error ResourceImporterTexture::import(const String &p_source_file, const String 
 			image->resize(new_width, new_height, Image::INTERPOLATE_CUBIC);
 		}
 
-		if (normal) {
+		if (normal == 1) {
 			image->normalize();
 		}
 	}

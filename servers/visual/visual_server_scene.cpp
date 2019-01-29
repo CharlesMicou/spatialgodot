@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,6 +32,7 @@
 #include "core/os/os.h"
 #include "visual_server_global.h"
 #include "visual_server_raster.h"
+#include <new>
 /* CAMERA API */
 
 RID VisualServerScene::camera_create() {
@@ -573,6 +574,19 @@ void VisualServerScene::instance_set_transform(RID p_instance, const Transform &
 	if (instance->transform == p_transform)
 		return; //must be checked to avoid worst evil
 
+#ifdef DEBUG_ENABLED
+
+	for (int i = 0; i < 4; i++) {
+		const Vector3 &v = i < 3 ? p_transform.basis.elements[i] : p_transform.origin;
+		ERR_FAIL_COND(Math::is_inf(v.x));
+		ERR_FAIL_COND(Math::is_nan(v.x));
+		ERR_FAIL_COND(Math::is_inf(v.y));
+		ERR_FAIL_COND(Math::is_nan(v.y));
+		ERR_FAIL_COND(Math::is_inf(v.z));
+		ERR_FAIL_COND(Math::is_nan(v.z));
+	}
+
+#endif
 	instance->transform = p_transform;
 	_instance_queue_update(instance, true);
 }
@@ -601,8 +615,9 @@ void VisualServerScene::instance_set_surface_material(RID p_instance, int p_surf
 	Instance *instance = instance_owner.get(p_instance);
 	ERR_FAIL_COND(!instance);
 
-	if (instance->update_item.in_list()) {
-		_update_dirty_instance(instance);
+	if (instance->base_type == VS::INSTANCE_MESH) {
+		//may not have been updated yet
+		instance->materials.resize(VSG::storage->mesh_get_surface_count(instance->base));
 	}
 
 	ERR_FAIL_INDEX(p_surface, instance->materials.size());
@@ -611,7 +626,7 @@ void VisualServerScene::instance_set_surface_material(RID p_instance, int p_surf
 		VSG::storage->material_remove_instance_owner(instance->materials[p_surface], instance);
 	}
 	instance->materials.write[p_surface] = p_material;
-	instance->base_material_changed();
+	instance->base_changed(false, true);
 
 	if (instance->materials[p_surface].is_valid()) {
 		VSG::storage->material_add_instance_owner(instance->materials[p_surface], instance);
@@ -839,7 +854,7 @@ void VisualServerScene::instance_geometry_set_cast_shadows_setting(RID p_instanc
 	ERR_FAIL_COND(!instance);
 
 	instance->cast_shadows = p_shadow_casting_setting;
-	instance->base_material_changed(); // to actually compute if shadows are visible or not
+	instance->base_changed(false, true); // to actually compute if shadows are visible or not
 }
 void VisualServerScene::instance_geometry_set_material_override(RID p_instance, RID p_material) {
 
@@ -850,7 +865,7 @@ void VisualServerScene::instance_geometry_set_material_override(RID p_instance, 
 		VSG::storage->material_remove_instance_owner(instance->material_override, instance);
 	}
 	instance->material_override = p_material;
-	instance->base_material_changed();
+	instance->base_changed(false, true);
 
 	if (instance->material_override.is_valid()) {
 		VSG::storage->material_add_instance_owner(instance->material_override, instance);
@@ -1239,7 +1254,9 @@ void VisualServerScene::_update_instance_lightmap_captures(Instance *p_instance)
 
 	//print_line("update captures for pos: " + p_instance->transform.origin);
 
-	zeromem(p_instance->lightmap_capture_data.ptrw(), 12 * sizeof(Color));
+	for (int i = 0; i < 12; i++)
+		new (&p_instance->lightmap_capture_data.ptrw()[i]) Color;
+
 	//this could use some sort of blending..
 	for (List<Instance *>::Element *E = geom->lightmap_captures.front(); E; E = E->next()) {
 		const PoolVector<RasterizerStorage::LightmapCaptureOctree> *octree = VSG::storage->lightmap_capture_get_octree_ptr(E->get()->base);
@@ -1263,12 +1280,14 @@ void VisualServerScene::_update_instance_lightmap_captures(Instance *p_instance)
 	}
 }
 
-void VisualServerScene::_light_instance_update_shadow(Instance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, Scenario *p_scenario) {
+bool VisualServerScene::_light_instance_update_shadow(Instance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, Scenario *p_scenario) {
 
 	InstanceLightData *light = static_cast<InstanceLightData *>(p_instance->base_data);
 
 	Transform light_transform = p_instance->transform;
 	light_transform.orthonormalize(); //scale does not count on lights
+
+	bool animated_material_found = false;
 
 	switch (VSG::storage->light_get_type(p_instance->base)) {
 
@@ -1300,6 +1319,10 @@ void VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 					Instance *instance = instance_shadow_cull_result[i];
 					if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows) {
 						continue;
+					}
+
+					if (static_cast<InstanceGeometryData *>(instance->base_data)->material_is_animated) {
+						animated_material_found = true;
 					}
 
 					float max, min;
@@ -1528,99 +1551,102 @@ void VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 
 			VS::LightOmniShadowMode shadow_mode = VSG::storage->light_omni_get_shadow_mode(p_instance->base);
 
-			switch (shadow_mode) {
-				case VS::LIGHT_OMNI_SHADOW_DUAL_PARABOLOID: {
+			if (shadow_mode == VS::LIGHT_OMNI_SHADOW_DUAL_PARABOLOID || !VSG::scene_render->light_instances_can_render_shadow_cube()) {
 
-					for (int i = 0; i < 2; i++) {
+				for (int i = 0; i < 2; i++) {
 
-						//using this one ensures that raster deferred will have it
-
-						float radius = VSG::storage->light_get_param(p_instance->base, VS::LIGHT_PARAM_RANGE);
-
-						float z = i == 0 ? -1 : 1;
-						Vector<Plane> planes;
-						planes.resize(5);
-						planes.write[0] = light_transform.xform(Plane(Vector3(0, 0, z), radius));
-						planes.write[1] = light_transform.xform(Plane(Vector3(1, 0, z).normalized(), radius));
-						planes.write[2] = light_transform.xform(Plane(Vector3(-1, 0, z).normalized(), radius));
-						planes.write[3] = light_transform.xform(Plane(Vector3(0, 1, z).normalized(), radius));
-						planes.write[4] = light_transform.xform(Plane(Vector3(0, -1, z).normalized(), radius));
-
-						int cull_count = p_scenario->octree.cull_convex(planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, VS::INSTANCE_GEOMETRY_MASK);
-						Plane near_plane(light_transform.origin, light_transform.basis.get_axis(2) * z);
-
-						for (int j = 0; j < cull_count; j++) {
-
-							Instance *instance = instance_shadow_cull_result[j];
-							if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows) {
-								cull_count--;
-								SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
-								j--;
-							} else {
-								instance->depth = near_plane.distance_to(instance->transform.origin);
-								instance->depth_layer = 0;
-							}
-						}
-
-						VSG::scene_render->light_instance_set_shadow_transform(light->instance, CameraMatrix(), light_transform, radius, 0, i);
-						VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerScene::InstanceBase **)instance_shadow_cull_result, cull_count);
-					}
-				} break;
-				case VS::LIGHT_OMNI_SHADOW_CUBE: {
+					//using this one ensures that raster deferred will have it
 
 					float radius = VSG::storage->light_get_param(p_instance->base, VS::LIGHT_PARAM_RANGE);
-					CameraMatrix cm;
-					cm.set_perspective(90, 1, 0.01, radius);
 
-					for (int i = 0; i < 6; i++) {
+					float z = i == 0 ? -1 : 1;
+					Vector<Plane> planes;
+					planes.resize(5);
+					planes.write[0] = light_transform.xform(Plane(Vector3(0, 0, z), radius));
+					planes.write[1] = light_transform.xform(Plane(Vector3(1, 0, z).normalized(), radius));
+					planes.write[2] = light_transform.xform(Plane(Vector3(-1, 0, z).normalized(), radius));
+					planes.write[3] = light_transform.xform(Plane(Vector3(0, 1, z).normalized(), radius));
+					planes.write[4] = light_transform.xform(Plane(Vector3(0, -1, z).normalized(), radius));
 
-						//using this one ensures that raster deferred will have it
+					int cull_count = p_scenario->octree.cull_convex(planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, VS::INSTANCE_GEOMETRY_MASK);
+					Plane near_plane(light_transform.origin, light_transform.basis.get_axis(2) * z);
 
-						static const Vector3 view_normals[6] = {
-							Vector3(-1, 0, 0),
-							Vector3(+1, 0, 0),
-							Vector3(0, -1, 0),
-							Vector3(0, +1, 0),
-							Vector3(0, 0, -1),
-							Vector3(0, 0, +1)
-						};
-						static const Vector3 view_up[6] = {
-							Vector3(0, -1, 0),
-							Vector3(0, -1, 0),
-							Vector3(0, 0, -1),
-							Vector3(0, 0, +1),
-							Vector3(0, -1, 0),
-							Vector3(0, -1, 0)
-						};
+					for (int j = 0; j < cull_count; j++) {
 
-						Transform xform = light_transform * Transform().looking_at(view_normals[i], view_up[i]);
-
-						Vector<Plane> planes = cm.get_projection_planes(xform);
-
-						int cull_count = p_scenario->octree.cull_convex(planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, VS::INSTANCE_GEOMETRY_MASK);
-
-						Plane near_plane(xform.origin, -xform.basis.get_axis(2));
-						for (int j = 0; j < cull_count; j++) {
-
-							Instance *instance = instance_shadow_cull_result[j];
-							if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows) {
-								cull_count--;
-								SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
-								j--;
-							} else {
-								instance->depth = near_plane.distance_to(instance->transform.origin);
-								instance->depth_layer = 0;
+						Instance *instance = instance_shadow_cull_result[j];
+						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows) {
+							cull_count--;
+							SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
+							j--;
+						} else {
+							if (static_cast<InstanceGeometryData *>(instance->base_data)->material_is_animated) {
+								animated_material_found = true;
 							}
-						}
 
-						VSG::scene_render->light_instance_set_shadow_transform(light->instance, cm, xform, radius, 0, i);
-						VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerScene::InstanceBase **)instance_shadow_cull_result, cull_count);
+							instance->depth = near_plane.distance_to(instance->transform.origin);
+							instance->depth_layer = 0;
+						}
 					}
 
-					//restore the regular DP matrix
-					VSG::scene_render->light_instance_set_shadow_transform(light->instance, CameraMatrix(), light_transform, radius, 0, 0);
+					VSG::scene_render->light_instance_set_shadow_transform(light->instance, CameraMatrix(), light_transform, radius, 0, i);
+					VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerScene::InstanceBase **)instance_shadow_cull_result, cull_count);
+				}
+			} else { //shadow cube
 
-				} break;
+				float radius = VSG::storage->light_get_param(p_instance->base, VS::LIGHT_PARAM_RANGE);
+				CameraMatrix cm;
+				cm.set_perspective(90, 1, 0.01, radius);
+
+				for (int i = 0; i < 6; i++) {
+
+					//using this one ensures that raster deferred will have it
+
+					static const Vector3 view_normals[6] = {
+						Vector3(-1, 0, 0),
+						Vector3(+1, 0, 0),
+						Vector3(0, -1, 0),
+						Vector3(0, +1, 0),
+						Vector3(0, 0, -1),
+						Vector3(0, 0, +1)
+					};
+					static const Vector3 view_up[6] = {
+						Vector3(0, -1, 0),
+						Vector3(0, -1, 0),
+						Vector3(0, 0, -1),
+						Vector3(0, 0, +1),
+						Vector3(0, -1, 0),
+						Vector3(0, -1, 0)
+					};
+
+					Transform xform = light_transform * Transform().looking_at(view_normals[i], view_up[i]);
+
+					Vector<Plane> planes = cm.get_projection_planes(xform);
+
+					int cull_count = p_scenario->octree.cull_convex(planes, instance_shadow_cull_result, MAX_INSTANCE_CULL, VS::INSTANCE_GEOMETRY_MASK);
+
+					Plane near_plane(xform.origin, -xform.basis.get_axis(2));
+					for (int j = 0; j < cull_count; j++) {
+
+						Instance *instance = instance_shadow_cull_result[j];
+						if (!instance->visible || !((1 << instance->base_type) & VS::INSTANCE_GEOMETRY_MASK) || !static_cast<InstanceGeometryData *>(instance->base_data)->can_cast_shadows) {
+							cull_count--;
+							SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
+							j--;
+						} else {
+							if (static_cast<InstanceGeometryData *>(instance->base_data)->material_is_animated) {
+								animated_material_found = true;
+							}
+							instance->depth = near_plane.distance_to(instance->transform.origin);
+							instance->depth_layer = 0;
+						}
+					}
+
+					VSG::scene_render->light_instance_set_shadow_transform(light->instance, cm, xform, radius, 0, i);
+					VSG::scene_render->render_shadow(light->instance, p_shadow_atlas, i, (RasterizerScene::InstanceBase **)instance_shadow_cull_result, cull_count);
+				}
+
+				//restore the regular DP matrix
+				VSG::scene_render->light_instance_set_shadow_transform(light->instance, CameraMatrix(), light_transform, radius, 0, 0);
 			}
 
 		} break;
@@ -1644,6 +1670,9 @@ void VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 					SWAP(instance_shadow_cull_result[j], instance_shadow_cull_result[cull_count]);
 					j--;
 				} else {
+					if (static_cast<InstanceGeometryData *>(instance->base_data)->material_is_animated) {
+						animated_material_found = true;
+					}
 					instance->depth = near_plane.distance_to(instance->transform.origin);
 					instance->depth_layer = 0;
 				}
@@ -1654,6 +1683,8 @@ void VisualServerScene::_light_instance_update_shadow(Instance *p_instance, cons
 
 		} break;
 	}
+
+	return animated_material_found;
 }
 
 void VisualServerScene::render_camera(RID p_camera, RID p_scenario, Size2 p_viewport_size, RID p_shadow_atlas) {
@@ -1893,9 +1924,14 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 
 			if (ins->base_type == VS::INSTANCE_PARTICLES) {
 				//particles visible? process them
-				VSG::storage->particles_request_process(ins->base);
-				//particles visible? request redraw
-				VisualServerRaster::redraw_request();
+				if (VSG::storage->particles_is_inactive(ins->base)) {
+					//but if nothing is going on, don't do it.
+					keep = false;
+				} else {
+					VSG::storage->particles_request_process(ins->base);
+					//particles visible? request redraw
+					VisualServerRaster::redraw_request();
+				}
 			}
 
 			if (geom->lighting_dirty) {
@@ -2095,7 +2131,7 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 
 			if (redraw) {
 				//must redraw!
-				_light_instance_update_shadow(ins, p_cam_transform, p_cam_projection, p_cam_orthogonal, p_shadow_atlas, scenario);
+				light->shadow_dirty = _light_instance_update_shadow(ins, p_cam_transform, p_cam_projection, p_cam_orthogonal, p_shadow_atlas, scenario);
 			}
 		}
 	}
@@ -3243,11 +3279,13 @@ void VisualServerScene::_update_dirty_instance(Instance *p_instance) {
 			InstanceGeometryData *geom = static_cast<InstanceGeometryData *>(p_instance->base_data);
 
 			bool can_cast_shadows = true;
+			bool is_animated = false;
 
 			if (p_instance->cast_shadows == VS::SHADOW_CASTING_SETTING_OFF) {
 				can_cast_shadows = false;
 			} else if (p_instance->material_override.is_valid()) {
 				can_cast_shadows = VSG::storage->material_casts_shadows(p_instance->material_override);
+				is_animated = VSG::storage->material_is_animated(p_instance->material_override);
 			} else {
 
 				if (p_instance->base_type == VS::INSTANCE_MESH) {
@@ -3262,12 +3300,15 @@ void VisualServerScene::_update_dirty_instance(Instance *p_instance) {
 
 							if (!mat.is_valid()) {
 								cast_shadows = true;
-								break;
-							}
+							} else {
 
-							if (VSG::storage->material_casts_shadows(mat)) {
-								cast_shadows = true;
-								break;
+								if (VSG::storage->material_casts_shadows(mat)) {
+									cast_shadows = true;
+								}
+
+								if (VSG::storage->material_is_animated(mat)) {
+									is_animated = true;
+								}
 							}
 						}
 
@@ -3289,12 +3330,15 @@ void VisualServerScene::_update_dirty_instance(Instance *p_instance) {
 
 							if (!mat.is_valid()) {
 								cast_shadows = true;
-								break;
-							}
 
-							if (VSG::storage->material_casts_shadows(mat)) {
-								cast_shadows = true;
-								break;
+							} else {
+
+								if (VSG::storage->material_casts_shadows(mat)) {
+									cast_shadows = true;
+								}
+								if (VSG::storage->material_is_animated(mat)) {
+									is_animated = true;
+								}
 							}
 						}
 
@@ -3310,6 +3354,10 @@ void VisualServerScene::_update_dirty_instance(Instance *p_instance) {
 						can_cast_shadows = true;
 					} else {
 						can_cast_shadows = false;
+					}
+
+					if (mat.is_valid() && VSG::storage->material_is_animated(mat)) {
+						is_animated = true;
 					}
 				} else if (p_instance->base_type == VS::INSTANCE_PARTICLES) {
 
@@ -3330,12 +3378,15 @@ void VisualServerScene::_update_dirty_instance(Instance *p_instance) {
 
 							if (!mat.is_valid()) {
 								cast_shadows = true;
-								break;
-							}
+							} else {
 
-							if (VSG::storage->material_casts_shadows(mat)) {
-								cast_shadows = true;
-								break;
+								if (VSG::storage->material_casts_shadows(mat)) {
+									cast_shadows = true;
+								}
+
+								if (VSG::storage->material_is_animated(mat)) {
+									is_animated = true;
+								}
 							}
 						}
 					}
@@ -3355,6 +3406,8 @@ void VisualServerScene::_update_dirty_instance(Instance *p_instance) {
 
 				geom->can_cast_shadows = can_cast_shadows;
 			}
+
+			geom->material_is_animated = is_animated;
 		}
 	}
 

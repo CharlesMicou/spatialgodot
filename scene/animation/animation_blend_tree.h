@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -38,10 +38,9 @@ class AnimationNodeAnimation : public AnimationRootNode {
 	GDCLASS(AnimationNodeAnimation, AnimationRootNode);
 
 	StringName animation;
+	StringName time;
 
 	uint64_t last_version;
-	float time;
-	float step;
 	bool skip;
 
 protected:
@@ -50,6 +49,8 @@ protected:
 	static void _bind_methods();
 
 public:
+	void get_parameter_list(List<PropertyInfo> *r_list) const;
+
 	static Vector<String> (*get_editable_animation_list)();
 
 	virtual String get_caption() const;
@@ -57,8 +58,6 @@ public:
 
 	void set_animation(const StringName &p_name);
 	StringName get_animation() const;
-
-	float get_playback_time() const;
 
 	AnimationNodeAnimation();
 };
@@ -92,6 +91,7 @@ private:
 	StringName prev_active;
 	StringName time;
 	StringName remaining;
+	StringName time_to_restart;
 
 protected:
 	static void _bind_methods();

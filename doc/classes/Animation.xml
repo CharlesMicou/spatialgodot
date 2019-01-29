@@ -7,7 +7,7 @@
 		An Animation resource contains data used to animate everything in the engine. Animations are divided into tracks, and each track must be linked to a node. The state of that node can be changed through time, by adding timed keys (events) to the track.
 		[codeblock]
 		# This creates an animation that makes the node "Enemy" move to the right by
-		# 100 pixels in 1 second. 
+		# 100 pixels in 1 second.
 		var animation = Animation.new()
 		var track_index = animation.add_track(Animation.TYPE_VALUE)
 		animation.track_set_path(track_index, "Enemy:position.x")
@@ -17,7 +17,7 @@
 		Animations are just data containers, and must be added to nodes such as an [AnimationPlayer] or [AnimationTreePlayer] to be played back.
 	</description>
 	<tutorials>
-		<link>http://docs.godotengine.org/en/3.0/tutorials/animation/index.html</link>
+		<link>https://docs.godotengine.org/en/latest/tutorials/animation/index.html</link>
 	</tutorials>
 	<demos>
 	</demos>
@@ -513,7 +513,7 @@
 			<argument index="1" name="interpolation" type="bool">
 			</argument>
 			<description>
-				If [code]true[/code] the track at [code]idx[/code] wraps the interpolation loop.
+				If [code]true[/code], the track at [code]idx[/code] wraps the interpolation loop.
 			</description>
 		</method>
 		<method name="track_set_interpolation_type">

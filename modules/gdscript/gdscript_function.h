@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -74,8 +74,14 @@ struct GDScriptDataType {
 					return false;
 				}
 				Object *obj = p_variant.operator Object *();
-				if (obj && !ClassDB::is_parent_class(obj->get_class_name(), native_type)) {
-					return false;
+				if (obj) {
+					if (!ClassDB::is_parent_class(obj->get_class_name(), native_type)) {
+						// Try with underscore prefix
+						StringName underscore_native_type = "_" + native_type;
+						if (!ClassDB::is_parent_class(obj->get_class_name(), underscore_native_type)) {
+							return false;
+						}
+					}
 				}
 				return true;
 			} break;
@@ -272,15 +278,13 @@ private:
 public:
 	struct CallState {
 
-		ObjectID instance_id; //by debug only
-		ObjectID script_id;
-
+		ObjectID instance_id;
 		GDScriptInstance *instance;
 		Vector<uint8_t> stack;
 		int stack_size;
 		Variant self;
 		uint32_t alloca_size;
-		GDScript *_class;
+		Ref<GDScript> script;
 		int ip;
 		int line;
 		int defarg;

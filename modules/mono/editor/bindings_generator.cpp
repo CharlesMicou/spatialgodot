@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -47,7 +47,6 @@
 #include "../utils/path_utils.h"
 #include "../utils/string_utils.h"
 #include "csharp_project.h"
-#include "net_solution.h"
 
 #define CS_INDENT "    " // 4 whitespaces
 
@@ -81,6 +80,7 @@
 #define ICALL_GET_METHODBIND ICALL_PREFIX "Object_ClassDB_get_method"
 
 #define C_LOCAL_RET "ret"
+#define C_LOCAL_VARARG_RET "vararg_ret"
 #define C_LOCAL_PTRCALL_ARGS "call_args"
 #define C_MACRO_OBJECT_CONSTRUCT "GODOTSHARP_INSTANCE_OBJECT"
 
@@ -97,7 +97,7 @@
 #define C_METHOD_MONOARRAY_TO(m_type) C_NS_MONOMARSHAL "::mono_array_to_" #m_type
 #define C_METHOD_MONOARRAY_FROM(m_type) C_NS_MONOMARSHAL "::" #m_type "_to_mono_array"
 
-#define BINDINGS_GENERATOR_VERSION UINT32_C(5)
+#define BINDINGS_GENERATOR_VERSION UINT32_C(6)
 
 const char *BindingsGenerator::TypeInterface::DEFAULT_VARARG_C_IN = "\t%0 %1_in = %1;\n";
 
@@ -401,31 +401,28 @@ void BindingsGenerator::_generate_global_constants(List<String> &p_output) {
 	p_output.push_back(CLOSE_BLOCK); // end of namespace
 }
 
-Error BindingsGenerator::generate_cs_core_project(const String &p_output_dir, bool p_verbose_output) {
+Error BindingsGenerator::generate_cs_core_project(const String &p_solution_dir, DotNetSolution &r_solution, bool p_verbose_output) {
 
 	verbose_output = p_verbose_output;
+
+	String proj_dir = p_solution_dir.plus_file(CORE_API_ASSEMBLY_NAME);
 
 	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 	ERR_FAIL_COND_V(!da, ERR_CANT_CREATE);
 
-	if (!DirAccess::exists(p_output_dir)) {
-		Error err = da->make_dir_recursive(p_output_dir);
+	if (!DirAccess::exists(proj_dir)) {
+		Error err = da->make_dir_recursive(proj_dir);
 		ERR_FAIL_COND_V(err != OK, ERR_CANT_CREATE);
 	}
 
-	da->change_dir(p_output_dir);
+	da->change_dir(proj_dir);
 	da->make_dir("Core");
 	da->make_dir("ObjectType");
 
-	String core_dir = path_join(p_output_dir, "Core");
-	String obj_type_dir = path_join(p_output_dir, "ObjectType");
+	String core_dir = path_join(proj_dir, "Core");
+	String obj_type_dir = path_join(proj_dir, "ObjectType");
 
 	Vector<String> compile_items;
-
-	NETSolution solution(API_ASSEMBLY_NAME);
-
-	if (!solution.set_path(p_output_dir))
-		return ERR_FILE_NOT_FOUND;
 
 	// Generate source file for global scope constants and enums
 	{
@@ -530,15 +527,15 @@ Error BindingsGenerator::generate_cs_core_project(const String &p_output_dir, bo
 
 	compile_items.push_back(internal_methods_file);
 
-	String guid = CSharpProject::generate_core_api_project(p_output_dir, compile_items);
+	String guid = CSharpProject::generate_core_api_project(proj_dir, compile_items);
 
-	solution.add_new_project(API_ASSEMBLY_NAME, guid);
+	DotNetSolution::ProjectInfo proj_info;
+	proj_info.guid = guid;
+	proj_info.relpath = String(CORE_API_ASSEMBLY_NAME).plus_file(CORE_API_ASSEMBLY_NAME ".csproj");
+	proj_info.configs.push_back("Debug");
+	proj_info.configs.push_back("Release");
 
-	Error sln_error = solution.save();
-	if (sln_error != OK) {
-		ERR_PRINT("Could not to save .NET solution.");
-		return sln_error;
-	}
+	r_solution.add_new_project(CORE_API_ASSEMBLY_NAME, proj_info);
 
 	if (verbose_output)
 		OS::get_singleton()->print("The solution and C# project for the Core API was generated successfully\n");
@@ -546,31 +543,28 @@ Error BindingsGenerator::generate_cs_core_project(const String &p_output_dir, bo
 	return OK;
 }
 
-Error BindingsGenerator::generate_cs_editor_project(const String &p_output_dir, const String &p_core_dll_path, bool p_verbose_output) {
+Error BindingsGenerator::generate_cs_editor_project(const String &p_solution_dir, DotNetSolution &r_solution, bool p_verbose_output) {
 
 	verbose_output = p_verbose_output;
+
+	String proj_dir = p_solution_dir.plus_file(EDITOR_API_ASSEMBLY_NAME);
 
 	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 	ERR_FAIL_COND_V(!da, ERR_CANT_CREATE);
 
-	if (!DirAccess::exists(p_output_dir)) {
-		Error err = da->make_dir_recursive(p_output_dir);
+	if (!DirAccess::exists(proj_dir)) {
+		Error err = da->make_dir_recursive(proj_dir);
 		ERR_FAIL_COND_V(err != OK, ERR_CANT_CREATE);
 	}
 
-	da->change_dir(p_output_dir);
+	da->change_dir(proj_dir);
 	da->make_dir("Core");
 	da->make_dir("ObjectType");
 
-	String core_dir = path_join(p_output_dir, "Core");
-	String obj_type_dir = path_join(p_output_dir, "ObjectType");
+	String core_dir = path_join(proj_dir, "Core");
+	String obj_type_dir = path_join(proj_dir, "ObjectType");
 
 	Vector<String> compile_items;
-
-	NETSolution solution(EDITOR_API_ASSEMBLY_NAME);
-
-	if (!solution.set_path(p_output_dir))
-		return ERR_FILE_NOT_FOUND;
 
 	for (OrderedHashMap<StringName, TypeInterface>::Element E = obj_types.front(); E; E = E.next()) {
 		const TypeInterface &itype = E.get();
@@ -632,18 +626,56 @@ Error BindingsGenerator::generate_cs_editor_project(const String &p_output_dir, 
 
 	compile_items.push_back(internal_methods_file);
 
-	String guid = CSharpProject::generate_editor_api_project(p_output_dir, p_core_dll_path, compile_items);
+	String guid = CSharpProject::generate_editor_api_project(proj_dir, "../" CORE_API_ASSEMBLY_NAME "/" CORE_API_ASSEMBLY_NAME ".csproj", compile_items);
 
-	solution.add_new_project(EDITOR_API_ASSEMBLY_NAME, guid);
+	DotNetSolution::ProjectInfo proj_info;
+	proj_info.guid = guid;
+	proj_info.relpath = String(EDITOR_API_ASSEMBLY_NAME).plus_file(EDITOR_API_ASSEMBLY_NAME ".csproj");
+	proj_info.configs.push_back("Debug");
+	proj_info.configs.push_back("Release");
 
-	Error sln_error = solution.save();
-	if (sln_error != OK) {
-		ERR_PRINT("Could not to save .NET solution.");
-		return sln_error;
-	}
+	r_solution.add_new_project(EDITOR_API_ASSEMBLY_NAME, proj_info);
 
 	if (verbose_output)
 		OS::get_singleton()->print("The solution and C# project for the Editor API was generated successfully\n");
+
+	return OK;
+}
+
+Error BindingsGenerator::generate_cs_api(const String &p_output_dir, bool p_verbose_output) {
+
+	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+	ERR_FAIL_COND_V(!da, ERR_CANT_CREATE);
+
+	if (!DirAccess::exists(p_output_dir)) {
+		Error err = da->make_dir_recursive(p_output_dir);
+		ERR_FAIL_COND_V(err != OK, ERR_CANT_CREATE);
+	}
+
+	DotNetSolution solution(API_SOLUTION_NAME);
+
+	if (!solution.set_path(p_output_dir))
+		return ERR_FILE_NOT_FOUND;
+
+	Error proj_err;
+
+	proj_err = generate_cs_core_project(p_output_dir, solution, p_verbose_output);
+	if (proj_err != OK) {
+		ERR_PRINT("Generation of the Core API C# project failed");
+		return proj_err;
+	}
+
+	proj_err = generate_cs_editor_project(p_output_dir, solution, p_verbose_output);
+	if (proj_err != OK) {
+		ERR_PRINT("Generation of the Editor API C# project failed");
+		return proj_err;
+	}
+
+	Error sln_error = solution.save();
+	if (sln_error != OK) {
+		ERR_PRINT("Failed to save API solution");
+		return sln_error;
+	}
 
 	return OK;
 }
@@ -1470,6 +1502,15 @@ Error BindingsGenerator::_generate_glue_method(const BindingsGenerator::TypeInte
 			String ptrcall_return_type;
 			String initialization;
 
+			if (p_imethod.is_vararg && return_type->cname != name_cache.type_Variant) {
+				// VarArg methods always return Variant, but there are some cases in which MethodInfo provides
+				// a specific return type. We trust this information is valid. We need a temporary local to keep
+				// the Variant alive until the method returns. Otherwise, if the returned Variant holds a RefPtr,
+				// it could be deleted too early. This is the case with GDScript.new() which returns OBJECT.
+				// Alternatively, we could just return Variant, but that would result in a worse API.
+				p_output.push_back("\tVariant " C_LOCAL_VARARG_RET ";\n");
+			}
+
 			if (return_type->is_object_type) {
 				ptrcall_return_type = return_type->is_reference ? "Ref<Reference>" : return_type->c_type;
 				initialization = return_type->is_reference ? "" : " = NULL";
@@ -1527,12 +1568,23 @@ Error BindingsGenerator::_generate_glue_method(const BindingsGenerator::TypeInte
 		if (p_imethod.is_vararg) {
 			p_output.push_back("\tVariant::CallError vcall_error;\n\t");
 
-			if (!ret_void)
-				p_output.push_back(C_LOCAL_RET " = ");
+			if (!ret_void) {
+				// See the comment on the C_LOCAL_VARARG_RET declaration
+				if (return_type->cname != name_cache.type_Variant) {
+					p_output.push_back(C_LOCAL_VARARG_RET " = ");
+				} else {
+					p_output.push_back(C_LOCAL_RET " = ");
+				}
+			}
 
 			p_output.push_back(CS_PARAM_METHODBIND "->call(" CS_PARAM_INSTANCE ", ");
 			p_output.push_back(p_imethod.arguments.size() ? "(const Variant**)" C_LOCAL_PTRCALL_ARGS ".ptr()" : "NULL");
 			p_output.push_back(", total_length, vcall_error);\n");
+
+			// See the comment on the C_LOCAL_VARARG_RET declaration
+			if (return_type->cname != name_cache.type_Variant) {
+				p_output.push_back("\t" C_LOCAL_RET " = " C_LOCAL_VARARG_RET ";\n");
+			}
 		} else {
 			p_output.push_back("\t" CS_PARAM_METHODBIND "->ptrcall(" CS_PARAM_INSTANCE ", ");
 			p_output.push_back(p_imethod.arguments.size() ? C_LOCAL_PTRCALL_ARGS ", " : "NULL, ");
@@ -2368,12 +2420,11 @@ void BindingsGenerator::initialize() {
 
 void BindingsGenerator::handle_cmdline_args(const List<String> &p_cmdline_args) {
 
-	const int NUM_OPTIONS = 3;
+	const int NUM_OPTIONS = 2;
 	int options_left = NUM_OPTIONS;
 
 	String mono_glue_option = "--generate-mono-glue";
-	String cs_core_api_option = "--generate-cs-core-api";
-	String cs_editor_api_option = "--generate-cs-editor-api";
+	String cs_api_option = "--generate-cs-api";
 
 	verbose_output = true;
 
@@ -2387,42 +2438,24 @@ void BindingsGenerator::handle_cmdline_args(const List<String> &p_cmdline_args) 
 
 			if (path_elem) {
 				if (get_singleton()->generate_glue(path_elem->get()) != OK)
-					ERR_PRINT("Mono glue generation failed");
+					ERR_PRINTS(mono_glue_option + ": Failed to generate mono glue");
 				elem = elem->next();
 			} else {
-				ERR_PRINTS("--generate-mono-glue: No output directory specified");
+				ERR_PRINTS(mono_glue_option + ": No output directory specified");
 			}
 
 			--options_left;
 
-		} else if (elem->get() == cs_core_api_option) {
+		} else if (elem->get() == cs_api_option) {
 
 			const List<String>::Element *path_elem = elem->next();
 
 			if (path_elem) {
-				if (get_singleton()->generate_cs_core_project(path_elem->get()) != OK)
-					ERR_PRINT("Generation of solution and C# project for the Core API failed");
+				if (get_singleton()->generate_cs_api(path_elem->get()) != OK)
+					ERR_PRINTS(cs_api_option + ": Failed to generate the C# API");
 				elem = elem->next();
 			} else {
-				ERR_PRINTS(cs_core_api_option + ": No output directory specified");
-			}
-
-			--options_left;
-
-		} else if (elem->get() == cs_editor_api_option) {
-
-			const List<String>::Element *path_elem = elem->next();
-
-			if (path_elem) {
-				if (path_elem->next()) {
-					if (get_singleton()->generate_cs_editor_project(path_elem->get(), path_elem->next()->get()) != OK)
-						ERR_PRINT("Generation of solution and C# project for the Editor API failed");
-					elem = path_elem->next();
-				} else {
-					ERR_PRINTS(cs_editor_api_option + ": No hint path for the Core API dll specified");
-				}
-			} else {
-				ERR_PRINTS(cs_editor_api_option + ": No output directory specified");
+				ERR_PRINTS(cs_api_option + ": No output directory specified");
 			}
 
 			--options_left;
@@ -2434,7 +2467,7 @@ void BindingsGenerator::handle_cmdline_args(const List<String> &p_cmdline_args) 
 	verbose_output = false;
 
 	if (options_left != NUM_OPTIONS)
-		exit(0);
+		::exit(0);
 }
 
 #endif

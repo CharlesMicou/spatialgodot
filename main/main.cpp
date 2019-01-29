@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -205,8 +205,8 @@ void finalize_physics() {
 void Main::print_help(const char *p_binary) {
 
 	print_line(String(VERSION_NAME) + " v" + get_full_version_string() + " - https://godotengine.org");
-	OS::get_singleton()->print("(c) 2007-2018 Juan Linietsky, Ariel Manzur.\n");
-	OS::get_singleton()->print("(c) 2014-2018 Godot Engine contributors.\n");
+	OS::get_singleton()->print("(c) 2007-2019 Juan Linietsky, Ariel Manzur.\n");
+	OS::get_singleton()->print("(c) 2014-2019 Godot Engine contributors.\n");
 	OS::get_singleton()->print("\n");
 	OS::get_singleton()->print("Usage: %s [options] [path to scene or 'project.godot' file]\n", p_binary);
 	OS::get_singleton()->print("\n");
@@ -722,6 +722,29 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		I = N;
 	}
 
+	// Network file system needs to be configured before globals, since globals are based on the
+	// 'project.godot' file which will only be available through the network if this is enabled
+	FileAccessNetwork::configure();
+	if (remotefs != "") {
+
+		file_access_network_client = memnew(FileAccessNetworkClient);
+		int port;
+		if (remotefs.find(":") != -1) {
+			port = remotefs.get_slicec(':', 1).to_int();
+			remotefs = remotefs.get_slicec(':', 0);
+		} else {
+			port = 6010;
+		}
+
+		Error err = file_access_network_client->connect(remotefs, port, remotefs_pass);
+		if (err) {
+			OS::get_singleton()->printerr("Could not connect to remotefs: %s:%i.\n", remotefs.utf8().get_data(), port);
+			goto error;
+		}
+
+		FileAccess::make_default<FileAccessNetwork>(FileAccess::ACCESS_RESOURCES);
+	}
+
 	if (globals->setup(project_path, main_pack, upwards) == OK) {
 		found_project = true;
 	} else {
@@ -738,9 +761,13 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	GLOBAL_DEF("memory/limits/multithreaded_server/rid_pool_prealloc", 60);
+	ProjectSettings::get_singleton()->set_custom_property_info("memory/limits/multithreaded_server/rid_pool_prealloc", PropertyInfo(Variant::INT, "memory/limits/multithreaded_server/rid_pool_prealloc", PROPERTY_HINT_RANGE, "0,500,1")); // No negative and limit to 500 due to crashes
 	GLOBAL_DEF("network/limits/debugger_stdout/max_chars_per_second", 2048);
+	ProjectSettings::get_singleton()->set_custom_property_info("network/limits/debugger_stdout/max_chars_per_second", PropertyInfo(Variant::INT, "network/limits/debugger_stdout/max_chars_per_second", PROPERTY_HINT_RANGE, "0, 4096, 1, or_greater"));
 	GLOBAL_DEF("network/limits/debugger_stdout/max_messages_per_frame", 10);
+	ProjectSettings::get_singleton()->set_custom_property_info("network/limits/debugger_stdout/max_messages_per_frame", PropertyInfo(Variant::INT, "network/limits/debugger_stdout/max_messages_per_frame", PROPERTY_HINT_RANGE, "0, 20, 1, or_greater"));
 	GLOBAL_DEF("network/limits/debugger_stdout/max_errors_per_frame", 10);
+	ProjectSettings::get_singleton()->set_custom_property_info("network/limits/debugger_stdout/max_errors_per_frame", PropertyInfo(Variant::INT, "network/limits/debugger_stdout/max_errors_per_frame", PROPERTY_HINT_RANGE, "0, 20, 1, or_greater"));
 
 	if (debug_mode == "remote") {
 
@@ -763,28 +790,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 		script_debugger = memnew(ScriptDebuggerLocal);
 		OS::get_singleton()->initialize_debugging();
-	}
-
-	FileAccessNetwork::configure();
-
-	if (remotefs != "") {
-
-		file_access_network_client = memnew(FileAccessNetworkClient);
-		int port;
-		if (remotefs.find(":") != -1) {
-			port = remotefs.get_slicec(':', 1).to_int();
-			remotefs = remotefs.get_slicec(':', 0);
-		} else {
-			port = 6010;
-		}
-
-		Error err = file_access_network_client->connect(remotefs, port, remotefs_pass);
-		if (err) {
-			OS::get_singleton()->printerr("Could not connect to remotefs: %s:%i.\n", remotefs.utf8().get_data(), port);
-			goto error;
-		}
-
-		FileAccess::make_default<FileAccessNetwork>(FileAccess::ACCESS_RESOURCES);
 	}
 	if (script_debugger) {
 		//there is a debugger, parse breakpoints
@@ -813,6 +818,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF("logging/file_logging/enable_file_logging", false);
 	GLOBAL_DEF("logging/file_logging/log_path", "user://logs/log.txt");
 	GLOBAL_DEF("logging/file_logging/max_log_files", 10);
+	ProjectSettings::get_singleton()->set_custom_property_info("logging/file_logging/max_log_files", PropertyInfo(Variant::INT, "logging/file_logging/max_log_files", PROPERTY_HINT_RANGE, "0,20,1,or_greater")); //no negative numbers
 	if (FileAccess::get_create_func(FileAccess::ACCESS_USERDATA) && GLOBAL_GET("logging/file_logging/enable_file_logging")) {
 		String base_path = GLOBAL_GET("logging/file_logging/log_path");
 		int max_files = GLOBAL_GET("logging/file_logging/max_log_files");
@@ -873,6 +879,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	GLOBAL_DEF("rendering/quality/driver/driver_fallback", "Best");
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/driver/driver_fallback", PropertyInfo(Variant::STRING, "rendering/quality/driver/driver_fallback", PROPERTY_HINT_ENUM, "Best,Never"));
+
+	// Assigning here even though it's GLES2-specific, to be sure that it appears in docs
+	GLOBAL_DEF("rendering/quality/2d/gles2_use_nvidia_rect_flicker_workaround", false);
 
 	GLOBAL_DEF("display/window/size/width", 1024);
 	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/width", PropertyInfo(Variant::INT, "display/window/size/width", PROPERTY_HINT_RANGE, "0,7680,or_greater")); // 8K resolution
@@ -1003,6 +1012,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	Engine::get_singleton()->set_iterations_per_second(GLOBAL_DEF("physics/common/physics_fps", 60));
 	Engine::get_singleton()->set_physics_jitter_fix(GLOBAL_DEF("physics/common/physics_jitter_fix", 0.5));
 	Engine::get_singleton()->set_target_fps(GLOBAL_DEF("debug/settings/fps/force_fps", 0));
+	ProjectSettings::get_singleton()->set_custom_property_info("debug/settings/fps/force_fps", PropertyInfo(Variant::INT, "debug/settings/fps/force_fps", PROPERTY_HINT_RANGE, "0,120,1,or_greater"));
 
 	GLOBAL_DEF("debug/settings/stdout/print_fps", false);
 
@@ -1011,16 +1021,16 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	if (frame_delay == 0) {
 		frame_delay = GLOBAL_DEF("application/run/frame_delay_msec", 0);
+		ProjectSettings::get_singleton()->set_custom_property_info("application/run/frame_delay_msec", PropertyInfo(Variant::INT, "application/run/frame_delay_msec", PROPERTY_HINT_RANGE, "0,100,1,or_greater")); // No negative numbers
 	}
 
 	OS::get_singleton()->set_low_processor_usage_mode(GLOBAL_DEF("application/run/low_processor_mode", false));
 	OS::get_singleton()->set_low_processor_usage_mode_sleep_usec(GLOBAL_DEF("application/run/low_processor_mode_sleep_usec", 8000));
+	ProjectSettings::get_singleton()->set_custom_property_info("application/run/low_processor_mode_sleep_usec", PropertyInfo(Variant::INT, "application/run/low_processor_mode_sleep_usec", PROPERTY_HINT_RANGE, "0,33200,1,or_greater")); // No negative numbers
 
 	Engine::get_singleton()->set_frame_delay(frame_delay);
 
 	message_queue = memnew(MessageQueue);
-
-	ProjectSettings::get_singleton()->register_global_defaults();
 
 	if (p_second_phase)
 		return setup2();
@@ -1221,6 +1231,7 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 
 	register_driver_types();
 
+	// This loads global classes, so it must happen before custom loaders and savers are registered
 	ScriptServer::init_languages();
 
 	MAIN_PRINT("Main: Load Translations");
@@ -1480,6 +1491,9 @@ bool Main::start() {
 		}
 #endif
 
+		ResourceLoader::add_custom_loaders();
+		ResourceSaver::add_custom_savers();
+
 		if (!project_manager && !editor) { // game
 			if (game_path != "" || script != "") {
 				//autoload
@@ -1643,7 +1657,7 @@ bool Main::start() {
 			GLOBAL_DEF("display/window/stretch/aspect", "ignore");
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/aspect", PropertyInfo(Variant::STRING, "display/window/stretch/aspect", PROPERTY_HINT_ENUM, "ignore,keep,keep_width,keep_height,expand"));
 			GLOBAL_DEF("display/window/stretch/shrink", 1);
-			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/shrink", PropertyInfo(Variant::STRING, "display/window/stretch/shrink", PROPERTY_HINT_RANGE, "1,8,1"));
+			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/shrink", PropertyInfo(Variant::REAL, "display/window/stretch/shrink", PROPERTY_HINT_RANGE, "1,8,1"));
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
 			GLOBAL_DEF("gui/common/snap_controls_to_pixels", true);
@@ -1688,12 +1702,17 @@ bool Main::start() {
 #ifdef TOOLS_ENABLED
 			if (editor) {
 
-				Error serr = editor_node->load_scene(local_game_path);
-				if (serr != OK)
-					ERR_PRINT("Failed to load scene");
+				if (game_path != GLOBAL_GET("application/run/main_scene") || !editor_node->has_scenes_in_session()) {
+					Error serr = editor_node->load_scene(local_game_path);
+					if (serr != OK)
+						ERR_PRINT("Failed to load scene");
+				}
 				OS::get_singleton()->set_context(OS::CONTEXT_EDITOR);
 			}
 #endif
+			if (!editor) {
+				OS::get_singleton()->set_context(OS::CONTEXT_ENGINE);
+			}
 		}
 
 		if (!project_manager && !editor) { // game
@@ -1770,12 +1789,21 @@ uint64_t Main::target_ticks = 0;
 uint32_t Main::frames = 0;
 uint32_t Main::frame = 0;
 bool Main::force_redraw_requested = false;
+int Main::iterating = 0;
+bool Main::is_iterating() {
+	return iterating > 0;
+}
 
 // For performance metrics
 static uint64_t physics_process_max = 0;
 static uint64_t idle_process_max = 0;
 
 bool Main::iteration() {
+
+	//for now do not error on this
+	//ERR_FAIL_COND_V(iterating, false);
+
+	iterating++;
 
 	uint64_t ticks = OS::get_singleton()->get_ticks_usec();
 	Engine::get_singleton()->_frame_ticks = ticks;
@@ -1904,6 +1932,8 @@ bool Main::iteration() {
 		frames = 0;
 	}
 
+	iterating--;
+
 	if (fixed_fps != -1)
 		return exit;
 
@@ -1916,7 +1946,7 @@ bool Main::iteration() {
 	}
 
 	int target_fps = Engine::get_singleton()->get_target_fps();
-	if (target_fps > 0) {
+	if (target_fps > 0 && !Engine::get_singleton()->is_editor_hint()) {
 		uint64_t time_step = 1000000L / target_fps;
 		target_ticks += time_step;
 		uint64_t current_ticks = OS::get_singleton()->get_ticks_usec();
@@ -1947,10 +1977,12 @@ void Main::force_redraw() {
  * so that the engine closes cleanly without leaking memory or crashing.
  * The order matters as some of those steps are linked with each other.
  */
-
 void Main::cleanup() {
 
 	ERR_FAIL_COND(!_start_success);
+
+	ResourceLoader::remove_custom_loaders();
+	ResourceSaver::remove_custom_savers();
 
 	message_queue->flush();
 	memdelete(message_queue);
@@ -1982,6 +2014,8 @@ void Main::cleanup() {
 		// cleanup now before we pull the rug from underneath...
 		memdelete(arvr_server);
 	}
+
+	ImageLoader::cleanup();
 
 	unregister_driver_types();
 	unregister_module_types();

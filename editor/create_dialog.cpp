@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -89,8 +89,9 @@ void CreateDialog::popup_create(bool p_dont_clear, bool p_replace_mode) {
 	_save_and_update_favorite_list();
 
 	// Restore valid window bounds or pop up at default size.
-	if (EditorSettings::get_singleton()->has_setting("interface/dialogs/create_new_node_bounds")) {
-		popup(EditorSettings::get_singleton()->get("interface/dialogs/create_new_node_bounds"));
+	Rect2 saved_size = EditorSettings::get_singleton()->get_project_metadata("dialog_bounds", "create_new_node", Rect2());
+	if (saved_size != Rect2()) {
+		popup(saved_size);
 	} else {
 
 		Size2 popup_size = Size2(900, 700) * editor_get_scale();
@@ -118,8 +119,10 @@ void CreateDialog::popup_create(bool p_dont_clear, bool p_replace_mode) {
 	if (enable_rl) {
 		search_options->add_constant_override("draw_relationship_lines", 1);
 		search_options->add_color_override("relationship_line_color", rl_color);
+		search_options->add_constant_override("draw_guides", 0);
 	} else {
 		search_options->add_constant_override("draw_relationship_lines", 0);
+		search_options->add_constant_override("draw_guides", 1);
 	}
 
 	is_replace_mode = p_replace_mode;
@@ -205,7 +208,7 @@ void CreateDialog::add_type(const String &p_type, HashMap<String, TreeItem *> &p
 	if (!can_instance) {
 		item->set_custom_color(0, get_color("disabled_font_color", "Editor"));
 		item->set_selectable(0, false);
-	} else {
+	} else if (!(*to_select && (*to_select)->get_text(0) == search_box->get_text())) {
 		bool is_search_subsequence = search_box->get_text().is_subsequence_ofi(p_type);
 		String to_select_type = *to_select ? (*to_select)->get_text(0) : "";
 		to_select_type = to_select_type.split(" ")[0];
@@ -218,11 +221,11 @@ void CreateDialog::add_type(const String &p_type, HashMap<String, TreeItem *> &p
 		} else {
 			current_item_is_preferred = ed.script_class_is_parent(p_type, preferred_search_result_type) && !ed.script_class_is_parent(to_select_type, preferred_search_result_type) && search_box->get_text() != to_select_type;
 		}
-		if (*to_select && p_type.length() < (*to_select)->get_text(0).length()) {
+		if (search_box->get_text() == p_type || (*to_select && p_type.length() < (*to_select)->get_text(0).length())) {
 			current_item_is_preferred = true;
 		}
 
-		if (((!*to_select || current_item_is_preferred) && is_search_subsequence) || search_box->get_text() == p_type) {
+		if (((!*to_select || current_item_is_preferred) && is_search_subsequence)) {
 			*to_select = item;
 		}
 	}
@@ -413,7 +416,7 @@ void CreateDialog::_notification(int p_what) {
 			}
 		} break;
 		case NOTIFICATION_POPUP_HIDE: {
-			EditorSettings::get_singleton()->set("interface/dialogs/create_new_node_bounds", get_rect());
+			EditorSettings::get_singleton()->get_project_metadata("dialog_bounds", "create_new_node", get_rect());
 		} break;
 	}
 }

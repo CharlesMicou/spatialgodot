@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -35,6 +35,12 @@
 #include "core/os/os.h"
 #include "core/project_settings.h"
 #include "core/script_language.h"
+
+#define FLUSH_QUERY_CHECK                                                                                                                        \
+	if (flushing_queries) {                                                                                                                      \
+		ERR_EXPLAIN("Can't change this state while flushing queries. Use call_deferred() or set_deferred() to change monitoring state instead"); \
+		ERR_FAIL();                                                                                                                              \
+	}
 
 RID Physics2DServerSW::_shape_create(ShapeType p_shape) {
 
@@ -169,7 +175,9 @@ void Physics2DServerSW::_shape_col_cbk(const Vector2 &p_point_A, const Vector2 &
 			cbk->invalid_by_dir++;
 			return;
 		}
-		if (cbk->valid_dir.dot((p_point_A - p_point_B).normalized()) < 0.7071) {
+		Vector2 rel_dir = (p_point_A - p_point_B).normalized();
+
+		if (cbk->valid_dir.dot(rel_dir) < 0.7071) { //sqrt(2)/2.0 - 45 degrees
 			cbk->invalid_by_dir++;
 
 			/*
@@ -201,12 +209,14 @@ void Physics2DServerSW::_shape_col_cbk(const Vector2 &p_point_A, const Vector2 &
 			return;
 		cbk->ptr[min_depth_idx * 2 + 0] = p_point_A;
 		cbk->ptr[min_depth_idx * 2 + 1] = p_point_B;
+		cbk->passed++;
 
 	} else {
 
 		cbk->ptr[cbk->amount * 2 + 0] = p_point_A;
 		cbk->ptr[cbk->amount * 2 + 1] = p_point_B;
 		cbk->amount++;
+		cbk->passed++;
 	}
 }
 
@@ -225,6 +235,7 @@ bool Physics2DServerSW::shape_collide(RID p_shape_A, const Transform2D &p_xform_
 	CollCbkData cbk;
 	cbk.max = p_result_max;
 	cbk.amount = 0;
+	cbk.passed = 0;
 	cbk.ptr = r_results;
 
 	bool res = CollisionSolver2DSW::solve(shape_A, p_xform_A, p_motion_A, shape_B, p_xform_B, p_motion_B, _shape_col_cbk, &cbk);
@@ -399,6 +410,8 @@ void Physics2DServerSW::area_set_shape_transform(RID p_area, int p_shape_idx, co
 
 void Physics2DServerSW::area_set_shape_disabled(RID p_area, int p_shape, bool p_disabled) {
 
+	FLUSH_QUERY_CHECK
+
 	Area2DSW *area = area_owner.get(p_area);
 	ERR_FAIL_COND(!area);
 
@@ -469,6 +482,27 @@ ObjectID Physics2DServerSW::area_get_object_instance_id(RID p_area) const {
 	return area->get_instance_id();
 }
 
+void Physics2DServerSW::area_attach_canvas_instance_id(RID p_area, ObjectID p_ID) {
+
+	if (space_owner.owns(p_area)) {
+		Space2DSW *space = space_owner.get(p_area);
+		p_area = space->get_default_area()->get_self();
+	}
+	Area2DSW *area = area_owner.get(p_area);
+	ERR_FAIL_COND(!area);
+	area->set_canvas_instance_id(p_ID);
+}
+ObjectID Physics2DServerSW::area_get_canvas_instance_id(RID p_area) const {
+
+	if (space_owner.owns(p_area)) {
+		Space2DSW *space = space_owner.get(p_area);
+		p_area = space->get_default_area()->get_self();
+	}
+	Area2DSW *area = area_owner.get(p_area);
+	ERR_FAIL_COND_V(!area, 0);
+	return area->get_canvas_instance_id();
+}
+
 void Physics2DServerSW::area_set_param(RID p_area, AreaParameter p_param, const Variant &p_value) {
 
 	if (space_owner.owns(p_area)) {
@@ -515,6 +549,8 @@ void Physics2DServerSW::area_set_pickable(RID p_area, bool p_pickable) {
 }
 
 void Physics2DServerSW::area_set_monitorable(RID p_area, bool p_monitorable) {
+
+	FLUSH_QUERY_CHECK
 
 	Area2DSW *area = area_owner.get(p_area);
 	ERR_FAIL_COND(!area);
@@ -593,6 +629,8 @@ RID Physics2DServerSW::body_get_space(RID p_body) const {
 };
 
 void Physics2DServerSW::body_set_mode(RID p_body, BodyMode p_mode) {
+
+	FLUSH_QUERY_CHECK
 
 	Body2DSW *body = body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
@@ -696,6 +734,8 @@ void Physics2DServerSW::body_clear_shapes(RID p_body) {
 
 void Physics2DServerSW::body_set_shape_disabled(RID p_body, int p_shape_idx, bool p_disabled) {
 
+	FLUSH_QUERY_CHECK
+
 	Body2DSW *body = body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
 
@@ -703,14 +743,14 @@ void Physics2DServerSW::body_set_shape_disabled(RID p_body, int p_shape_idx, boo
 
 	body->set_shape_as_disabled(p_shape_idx, p_disabled);
 }
-void Physics2DServerSW::body_set_shape_as_one_way_collision(RID p_body, int p_shape_idx, bool p_enable) {
+void Physics2DServerSW::body_set_shape_as_one_way_collision(RID p_body, int p_shape_idx, bool p_enable, float p_margin) {
 
 	Body2DSW *body = body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
 
 	ERR_FAIL_INDEX(p_shape_idx, body->get_shape_count());
 
-	body->set_shape_as_one_way_collision(p_shape_idx, p_enable);
+	body->set_shape_as_one_way_collision(p_shape_idx, p_enable, p_margin);
 }
 
 void Physics2DServerSW::body_set_continuous_collision_detection_mode(RID p_body, CCDMode p_mode) {
@@ -742,6 +782,22 @@ uint32_t Physics2DServerSW::body_get_object_instance_id(RID p_body) const {
 	ERR_FAIL_COND_V(!body, 0);
 
 	return body->get_instance_id();
+};
+
+void Physics2DServerSW::body_attach_canvas_instance_id(RID p_body, uint32_t p_ID) {
+
+	Body2DSW *body = body_owner.get(p_body);
+	ERR_FAIL_COND(!body);
+
+	body->set_canvas_instance_id(p_ID);
+};
+
+uint32_t Physics2DServerSW::body_get_canvas_instance_id(RID p_body) const {
+
+	Body2DSW *body = body_owner.get(p_body);
+	ERR_FAIL_COND_V(!body, 0);
+
+	return body->get_canvas_instance_id();
 };
 
 void Physics2DServerSW::body_set_collision_layer(RID p_body, uint32_t p_layer) {
@@ -1026,6 +1082,7 @@ Physics2DDirectBodyState *Physics2DServerSW::body_get_direct_state(RID p_body) {
 
 	Body2DSW *body = body_owner.get(p_body);
 	ERR_FAIL_COND_V(!body, NULL);
+	ERR_FAIL_COND_V(!body->get_space(), NULL);
 
 	if (body->get_space()->is_locked()) {
 
@@ -1309,6 +1366,8 @@ void Physics2DServerSW::flush_queries() {
 	if (!active)
 		return;
 
+	flushing_queries = true;
+
 	uint64_t time_beg = OS::get_singleton()->get_ticks_usec();
 
 	for (Set<const Space2DSW *>::Element *E = active_spaces.front(); E; E = E->next()) {
@@ -1316,6 +1375,8 @@ void Physics2DServerSW::flush_queries() {
 		Space2DSW *space = (Space2DSW *)E->get();
 		space->call_queries();
 	}
+
+	flushing_queries = false;
 
 	if (ScriptDebugger::get_singleton() && ScriptDebugger::get_singleton()->is_profiling()) {
 
@@ -1395,6 +1456,7 @@ Physics2DServerSW::Physics2DServerSW() {
 	active_objects = 0;
 	collision_pairs = 0;
 	using_threads = int(ProjectSettings::get_singleton()->get("physics/2d/thread_model")) == 2;
+	flushing_queries = false;
 };
 
 Physics2DServerSW::~Physics2DServerSW(){

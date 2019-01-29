@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -37,6 +37,7 @@
 #include "../godotsharp_dirs.h"
 #include "../mono_gd/gd_mono_class.h"
 #include "../mono_gd/gd_mono_marshal.h"
+#include "csharp_project.h"
 #include "godotsharp_builds.h"
 
 static MonoString *godot_icall_GodotSharpExport_GetTemplatesDir() {
@@ -84,47 +85,55 @@ void GodotSharpExport::_export_begin(const Set<String> &p_features, bool p_debug
 	ERR_FAIL_NULL(TOOLS_DOMAIN);
 	ERR_FAIL_NULL(GDMono::get_singleton()->get_editor_tools_assembly());
 
-	String build_config = p_debug ? "Debug" : "Release";
+	if (FileAccess::exists(GodotSharpDirs::get_project_sln_path())) {
+		String build_config = p_debug ? "Debug" : "Release";
 
-	ERR_FAIL_COND(!GodotSharpBuilds::build_project_blocking(build_config));
+		String scripts_metadata_path = GodotSharpDirs::get_res_metadata_dir().plus_file("scripts_metadata." + String(p_debug ? "debug" : "release"));
+		Error metadata_err = CSharpProject::generate_scripts_metadata(GodotSharpDirs::get_project_csproj_path(), scripts_metadata_path);
+		ERR_FAIL_COND(metadata_err != OK);
 
-	// Add dependency assemblies
+		ERR_FAIL_COND(!_add_file(scripts_metadata_path, scripts_metadata_path));
 
-	Map<String, String> dependencies;
+		ERR_FAIL_COND(!GodotSharpBuilds::build_project_blocking(build_config));
 
-	String project_dll_name = ProjectSettings::get_singleton()->get("application/config/name");
-	if (project_dll_name.empty()) {
-		project_dll_name = "UnnamedProject";
-	}
+		// Add dependency assemblies
 
-	String project_dll_src_dir = GodotSharpDirs::get_res_temp_assemblies_base_dir().plus_file(build_config);
-	String project_dll_src_path = project_dll_src_dir.plus_file(project_dll_name + ".dll");
-	dependencies.insert(project_dll_name, project_dll_src_path);
+		Map<String, String> dependencies;
 
-	{
-		MonoDomain *export_domain = GDMonoUtils::create_domain("GodotEngine.ProjectExportDomain");
-		ERR_FAIL_NULL(export_domain);
-		_GDMONO_SCOPE_EXIT_DOMAIN_UNLOAD_(export_domain);
+		String project_dll_name = ProjectSettings::get_singleton()->get("application/config/name");
+		if (project_dll_name.empty()) {
+			project_dll_name = "UnnamedProject";
+		}
 
-		_GDMONO_SCOPE_DOMAIN_(export_domain);
+		String project_dll_src_dir = GodotSharpDirs::get_res_temp_assemblies_base_dir().plus_file(build_config);
+		String project_dll_src_path = project_dll_src_dir.plus_file(project_dll_name + ".dll");
+		dependencies.insert(project_dll_name, project_dll_src_path);
 
-		GDMonoAssembly *scripts_assembly = NULL;
-		bool load_success = GDMono::get_singleton()->load_assembly_from(project_dll_name,
-				project_dll_src_dir, &scripts_assembly, /* refonly: */ true);
+		{
+			MonoDomain *export_domain = GDMonoUtils::create_domain("GodotEngine.ProjectExportDomain");
+			ERR_FAIL_NULL(export_domain);
+			_GDMONO_SCOPE_EXIT_DOMAIN_UNLOAD_(export_domain);
 
-		ERR_EXPLAIN("Cannot load refonly assembly: " + project_dll_name);
-		ERR_FAIL_COND(!load_success);
+			_GDMONO_SCOPE_DOMAIN_(export_domain);
 
-		Vector<String> search_dirs;
-		GDMonoAssembly::fill_search_dirs(search_dirs);
-		Error depend_error = _get_assembly_dependencies(scripts_assembly, search_dirs, dependencies);
-		ERR_FAIL_COND(depend_error != OK);
-	}
+			GDMonoAssembly *scripts_assembly = NULL;
+			bool load_success = GDMono::get_singleton()->load_assembly_from(project_dll_name,
+					project_dll_src_path, &scripts_assembly, /* refonly: */ true);
 
-	for (Map<String, String>::Element *E = dependencies.front(); E; E = E->next()) {
-		String depend_src_path = E->value();
-		String depend_dst_path = GodotSharpDirs::get_res_assemblies_dir().plus_file(depend_src_path.get_file());
-		ERR_FAIL_COND(!_add_assembly(depend_src_path, depend_dst_path));
+			ERR_EXPLAIN("Cannot load refonly assembly: " + project_dll_name);
+			ERR_FAIL_COND(!load_success);
+
+			Vector<String> search_dirs;
+			GDMonoAssembly::fill_search_dirs(search_dirs);
+			Error depend_error = _get_assembly_dependencies(scripts_assembly, search_dirs, dependencies);
+			ERR_FAIL_COND(depend_error != OK);
+		}
+
+		for (Map<String, String>::Element *E = dependencies.front(); E; E = E->next()) {
+			String depend_src_path = E->value();
+			String depend_dst_path = GodotSharpDirs::get_res_assemblies_dir().plus_file(depend_src_path.get_file());
+			ERR_FAIL_COND(!_add_file(depend_src_path, depend_dst_path));
+		}
 	}
 
 	// Mono specific export template extras (data dir)
@@ -155,7 +164,7 @@ void GodotSharpExport::_export_begin(const Set<String> &p_features, bool p_debug
 	}
 }
 
-bool GodotSharpExport::_add_assembly(const String &p_src_path, const String &p_dst_path) {
+bool GodotSharpExport::_add_file(const String &p_src_path, const String &p_dst_path, bool p_remap) {
 
 	FileAccessRef f = FileAccess::open(p_src_path, FileAccess::READ);
 	ERR_FAIL_COND_V(!f, false);
@@ -164,7 +173,7 @@ bool GodotSharpExport::_add_assembly(const String &p_src_path, const String &p_d
 	data.resize(f->get_len());
 	f->get_buffer(data.ptrw(), data.size());
 
-	add_file(p_dst_path, data, false);
+	add_file(p_dst_path, data, p_remap);
 
 	return true;
 }
@@ -191,21 +200,21 @@ Error GodotSharpExport::_get_assembly_dependencies(GDMonoAssembly *p_assembly, c
 			if (has_extension) {
 				path = search_dir.plus_file(ref_name);
 				if (FileAccess::exists(path)) {
-					GDMono::get_singleton()->load_assembly_from(ref_name.get_basename(), search_dir, ref_aname, &ref_assembly, true);
+					GDMono::get_singleton()->load_assembly_from(ref_name.get_basename(), path, &ref_assembly, true);
 					if (ref_assembly != NULL)
 						break;
 				}
 			} else {
 				path = search_dir.plus_file(ref_name + ".dll");
 				if (FileAccess::exists(path)) {
-					GDMono::get_singleton()->load_assembly_from(ref_name, search_dir, ref_aname, &ref_assembly, true);
+					GDMono::get_singleton()->load_assembly_from(ref_name, path, &ref_assembly, true);
 					if (ref_assembly != NULL)
 						break;
 				}
 
 				path = search_dir.plus_file(ref_name + ".exe");
 				if (FileAccess::exists(path)) {
-					GDMono::get_singleton()->load_assembly_from(ref_name, search_dir, ref_aname, &ref_assembly, true);
+					GDMono::get_singleton()->load_assembly_from(ref_name, path, &ref_assembly, true);
 					if (ref_assembly != NULL)
 						break;
 				}

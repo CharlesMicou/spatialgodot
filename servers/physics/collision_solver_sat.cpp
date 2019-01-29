@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2019 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2019 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -98,7 +98,6 @@ static void _generate_contacts_edge_edge(const Vector3 *p_points_A, int p_point_
 
 	Vector3 c = rel_A.cross(rel_B).cross(rel_B);
 
-	//if ( Math::abs(rel_A.dot(c) )<_EDGE_IS_VALID_SUPPORT_TRESHOLD ) {
 	if (Math::abs(rel_A.dot(c)) < CMP_EPSILON) {
 
 		// should handle somehow..
